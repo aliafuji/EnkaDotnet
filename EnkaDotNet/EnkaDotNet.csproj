@@ -17,7 +17,7 @@
     <RepositoryUrl>https://github.com/aliafuji/EnkaDotnet</RepositoryUrl>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-    <Version>1.0.2</Version>
+    <Version>1.0.3.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
