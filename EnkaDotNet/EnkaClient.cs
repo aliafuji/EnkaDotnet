@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using EnkaDotNet.Assets;
+﻿using EnkaDotNet.Assets;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Components.Genshin;
 using EnkaDotNet.Enums;
@@ -21,7 +17,7 @@ namespace EnkaDotNet
         private readonly GameType _gameType;
         private bool _disposed = false;
 
-        public EnkaClient(string assetsBasePath, GameType gameType = GameType.Genshin, string language = "en", string? customUserAgent = null)
+        public EnkaClient(string assetsBasePath = "enka_assets", GameType gameType = GameType.Genshin, string language = "en", string? customUserAgent = null)
         {
             _gameType = gameType;
             ValidateGameType(gameType);

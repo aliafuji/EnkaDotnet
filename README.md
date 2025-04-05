@@ -37,49 +37,41 @@ dotnet add package EnkaDotNet
 ```csharp
 using EnkaDotNet;
 
-// Initialize the client with asset path
-var client = new EnkaClient("enka_assets");
-
-// Get a player's profile including character builds
-async Task GetPlayerProfile()
+async Task DisplayPlayerInfo(int uid)
 {
+    using var client = new EnkaClient();
+    
     try
     {
-        int uid = 829344442; // Replace with the UID you want to look up
-        var (playerInfo, characters) = await client.GetUserProfile(uid);
-
-        Console.WriteLine($"Player: {playerInfo.Nickname} (AR {playerInfo.Level})");
+        // Fetch player profile
+        var (player, characters) = await client.GetUserProfile(uid);
+        
+        // Display basic player info
+        Console.WriteLine($"Player: {player.Nickname} (AR {player.Level})");
         Console.WriteLine($"Characters: {characters.Count}");
-
-        foreach (var character in characters)
+        
+        // Display character details
+        foreach (var char in characters)
         {
-            Console.WriteLine($"- {character.Name} (Lvl {character.Level})");
-            Console.WriteLine($"  Element: {character.Element}");
-            Console.WriteLine($"  Weapon: {character.Weapon?.Name} (R{character.Weapon?.Refinement})");
-
-            foreach (var artifact in character.Artifacts)
+            Console.WriteLine($"- {char.Name} (Lvl {char.Level}) | {char.Element}");
+            Console.WriteLine($"  Weapon: {char.Weapon?.Name} (R{char.Weapon?.Refinement})");
+            
+            foreach (var artifact in char.Artifacts)
             {
                 Console.WriteLine($"  {artifact.Slot}: {artifact.Name} - {artifact.MainStat}");
             }
         }
     }
-    catch (EnkaDotNet.Exceptions.PlayerNotFoundException ex)
+    catch (Exception ex) when (
+        ex is EnkaDotNet.Exceptions.PlayerNotFoundException ||
+        ex is EnkaDotNet.Exceptions.ProfilePrivateException ||
+        ex is EnkaDotNet.Exceptions.EnkaNetworkException)
     {
-        Console.WriteLine($"Player not found: {ex.Message}");
-    }
-    catch (EnkaDotNet.Exceptions.ProfilePrivateException ex)
-    {
-        Console.WriteLine($"Profile is private: {ex.Message}");
-    }
-    catch (EnkaDotNet.Exceptions.EnkaNetworkException ex)
-    {
-        Console.WriteLine($"API error: {ex.Message}");
+        Console.WriteLine($"Error: {ex.Message}");
     }
 }
 
-await GetPlayerProfile();
-
-client.Dispose();
+await DisplayPlayerInfo(829344442);
 ```
 
 ### Working with Artifacts and Stats

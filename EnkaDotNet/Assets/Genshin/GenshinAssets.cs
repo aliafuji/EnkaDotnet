@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
-using EnkaDotNet.Assets;
+﻿using System.Text.Json;
 using EnkaDotNet.Assets.Genshin.Models;
 using EnkaDotNet.Enums;
 using EnkaDotNet.Enums.Genshin;
 using EnkaDotNet.Utils.Genshin;
-using EnkaDotNet.Components.Genshin;
 
 namespace EnkaDotNet.Assets.Genshin
 {
