@@ -2,7 +2,7 @@
 
 Enka.DotNet is a wrapper for accessing and processing character data from the Enka.Network API. It provides a simple interface to retrieve detailed information about Genshin Impact characters, artifacts, weapons, and player profiles.
 
-[![NuGet](https://img.shields.io/nuget/v/EnkaSharp.svg)](https://www.nuget.org/packages/EnkaSharp/)
+[![NuGet](https://img.shields.io/nuget/v/EnkaDotNet.svg)](https://www.nuget.org/packages/EnkaDotNet/)
 
 ## Features
 
@@ -12,31 +12,31 @@ Enka.DotNet is a wrapper for accessing and processing character data from the En
 
 ## Supported Games
 
-| Game | Status | API Support |
-|------|--------|-------------|
-| Genshin Impact | ✅ Ready | Full |
-| Honkai: Star Rail | ⏳ Coming Soon | Planned |
-| Zenless Zone Zero | ⏳ Coming Soon | Planned |
+| Game              | Status         | API Support |
+| ----------------- | -------------- | ----------- |
+| Genshin Impact    | ✅ Ready       | Full        |
+| Honkai: Star Rail | ⏳ Coming Soon | Planned     |
+| Zenless Zone Zero | ⏳ Coming Soon | Planned     |
 
 ## Installation
 
-Install EnkaSharp via NuGet package manager:
+Install EnkaDotNet via NuGet package manager:
 
 ```
-Install-Package EnkaSharp
+Install-Package EnkaDotNet
 ```
 
 Or via the .NET CLI:
 
 ```
-dotnet add package EnkaSharp
+dotnet add package EnkaDotNet
 ```
 
 ## Quick Start
 
 ```csharp
-using EnkaSharp;
-using EnkaSharp.Components.Genshin;
+using EnkaDotNet;
+using EnkaDotNet.Components.Genshin;
 using System;
 using System.Threading.Tasks;
 
@@ -50,16 +50,16 @@ async Task GetPlayerProfileAsync()
     {
         int uid = 829344442; // Replace with the UID you want to look up
         var (playerInfo, characters) = await client.GetUserProfileAsync(uid);
-        
+
         Console.WriteLine($"Player: {playerInfo.Nickname} (AR {playerInfo.Level})");
         Console.WriteLine($"Characters: {characters.Count}");
-        
+
         foreach (var character in characters)
         {
             Console.WriteLine($"- {character.Name} (Lvl {character.Level})");
             Console.WriteLine($"  Element: {character.Element}");
             Console.WriteLine($"  Weapon: {character.Weapon?.Name} (R{character.Weapon?.Refinement})");
-            
+
             foreach (var artifact in character.Artifacts)
             {
                 Console.WriteLine($"  {artifact.Slot}: {artifact.Name} - {artifact.MainStat}");
