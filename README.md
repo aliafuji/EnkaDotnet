@@ -36,9 +36,6 @@ dotnet add package EnkaDotNet
 
 ```csharp
 using EnkaDotNet;
-using EnkaDotNet.Components.Genshin;
-using System;
-using System.Threading.Tasks;
 
 // Initialize the client with asset path
 var client = new EnkaClient("enka_assets");
