@@ -100,14 +100,6 @@ double critDmg = character.GetStatValue(StatType.CriticalDamage);
 Console.WriteLine($"Crit Ratio: {critRate:P1} / {critDmg:P1}");
 ```
 
-## Error Handling
-
-EnkaSharp provides specific exception types to handle different scenarios:
-
-- `PlayerNotFoundException`: The UID does not exist
-- `ProfilePrivateException`: The profile exists but character details are hidden
-- `EnkaNetworkException`: Base exception type for network and API errors
-
 ## Requirements
 
 - .NET 8.0 or higher
