@@ -34,6 +34,9 @@ namespace EnkaDotNet.Models.Genshin
 
     public class StatPropertyModel
     {
+        [JsonPropertyName("mainPropId")]
+        public string? MainPropId { get; set; }
+
         [JsonPropertyName("appendPropId")]
         public string? AppendPropId { get; set; }
 

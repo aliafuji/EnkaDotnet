@@ -41,15 +41,15 @@ using System;
 using System.Threading.Tasks;
 
 // Initialize the client with asset path
-var client = new EnkaClient("path/to/assets");
+var client = new EnkaClient("enka_assets");
 
 // Get a player's profile including character builds
-async Task GetPlayerProfileAsync()
+async Task GetPlayerProfile()
 {
     try
     {
         int uid = 829344442; // Replace with the UID you want to look up
-        var (playerInfo, characters) = await client.GetUserProfileAsync(uid);
+        var (playerInfo, characters) = await client.GetUserProfile(uid);
 
         Console.WriteLine($"Player: {playerInfo.Nickname} (AR {playerInfo.Level})");
         Console.WriteLine($"Characters: {characters.Count}");
@@ -66,21 +66,22 @@ async Task GetPlayerProfileAsync()
             }
         }
     }
-    catch (EnkaSharp.Exceptions.PlayerNotFoundException ex)
+    catch (EnkaDotNet.Exceptions.PlayerNotFoundException ex)
     {
         Console.WriteLine($"Player not found: {ex.Message}");
     }
-    catch (EnkaSharp.Exceptions.ProfilePrivateException ex)
+    catch (EnkaDotNet.Exceptions.ProfilePrivateException ex)
     {
         Console.WriteLine($"Profile is private: {ex.Message}");
     }
-    catch (EnkaSharp.Exceptions.EnkaNetworkException ex)
+    catch (EnkaDotNet.Exceptions.EnkaNetworkException ex)
     {
         Console.WriteLine($"API error: {ex.Message}");
     }
 }
 
-// Don't forget to dispose when done
+await GetPlayerProfile();
+
 client.Dispose();
 ```
 

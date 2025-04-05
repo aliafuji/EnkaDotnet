@@ -246,9 +246,15 @@ public class DataMapper
 
     private StatProperty? MapStatProperty(StatPropertyModel? model)
     {
-        if (model == null || string.IsNullOrEmpty(model.AppendPropId)) return null;
-        StatType type = MapStatTypeValue(model.AppendPropId);
+        if (model == null) return null;
+
+        string? propId = model.MainPropId ?? model.AppendPropId;
+
+        if (string.IsNullOrEmpty(propId)) return null;
+
+        StatType type = MapStatTypeValue(propId);
         if (type == StatType.None) return null;
+
         return new StatProperty { Type = type, Value = model.StatValue };
     }
 

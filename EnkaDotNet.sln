@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.11.35327.3
+VisualStudioVersion = 17.13.35919.96 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnkaDotNet", "EnkaSharp\EnkaDotNet.csproj", "{DE22BEB4-F92A-490E-9BFD-5D9C961BF50F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnkaDotNet", "EnkaDotNet\EnkaDotNet.csproj", "{49C7EA9F-744B-D269-B73A-AC20A0DE03E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{DE22BEB4-F92A-490E-9BFD-5D9C961BF50F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DE22BEB4-F92A-490E-9BFD-5D9C961BF50F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DE22BEB4-F92A-490E-9BFD-5D9C961BF50F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DE22BEB4-F92A-490E-9BFD-5D9C961BF50F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{49C7EA9F-744B-D269-B73A-AC20A0DE03E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49C7EA9F-744B-D269-B73A-AC20A0DE03E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49C7EA9F-744B-D269-B73A-AC20A0DE03E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49C7EA9F-744B-D269-B73A-AC20A0DE03E8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {542D3ED4-B7A5-44E1-994C-80CAB1225250}
+		SolutionGuid = {F08F9D60-FC52-4938-A235-D24861D545A6}
 	EndGlobalSection
 EndGlobal
