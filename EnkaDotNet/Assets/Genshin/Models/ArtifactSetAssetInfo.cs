@@ -1,12 +1,13 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace EnkaDotNet.Assets.Genshin.Models;
-
-public class ArtifactSetAssetInfo
+namespace EnkaDotNet.Assets.Genshin.Models
 {
-    [JsonPropertyName("NameTextMapHash")]
-    public string? NameTextMapHash { get; set; }
+    public class ArtifactSetAssetInfo
+    {
+        [JsonPropertyName("NameTextMapHash")]
+        public string? NameTextMapHash { get; set; }
 
-    [JsonPropertyName("SetNeedNum")]
-    public List<int>? SetNeedNum { get; set; }
+        [JsonPropertyName("SetNeedNum")]
+        public List<int>? SetNeedNum { get; set; }
+    }
 }

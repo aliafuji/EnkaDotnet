@@ -6,7 +6,6 @@ namespace EnkaDotNet.Assets
     {
         GameType GameType { get; }
         string Language { get; }
-        string AssetsPath { get; }
         string GetText(string? hash);
     }
 }
