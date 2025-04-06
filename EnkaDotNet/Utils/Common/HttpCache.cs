@@ -4,22 +4,43 @@ using System.Net.Http;
 
 namespace EnkaDotNet.Utils.Common
 {
+    /// <summary>
+    /// Provides HTTP response caching capability
+    /// </summary>
     public class HttpCache
     {
-        private static readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
-        private static readonly TimeSpan _defaultCacheDuration = TimeSpan.FromMinutes(5);
+        private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
+        private readonly TimeSpan _defaultCacheDuration;
         private const int MaxCacheEntries = 1000;
 
+        /// <summary>
+        /// Creates a new HttpCache with the specified default cache duration
+        /// </summary>
+        /// <param name="defaultCacheDurationMinutes">Default cache duration in minutes</param>
+        public HttpCache(int defaultCacheDurationMinutes = 5)
+        {
+            _defaultCacheDuration = TimeSpan.FromMinutes(defaultCacheDurationMinutes);
+        }
+
+        /// <summary>
+        /// Tries to get a cached entry with the specified key
+        /// </summary>
         public bool TryGetValue(string cacheKey, out CacheEntry? cacheEntry)
         {
             return _cache.TryGetValue(cacheKey, out cacheEntry);
         }
 
+        /// <summary>
+        /// Generates a cache key from a relative URL
+        /// </summary>
         public string GenerateCacheKey(string relativeUrl)
         {
             return relativeUrl.ToLowerInvariant();
         }
 
+        /// <summary>
+        /// Stores a response in the cache
+        /// </summary>
         public void StoreResponse(string cacheKey, string jsonResponse, HttpResponseMessage response)
         {
             if (_cache.Count > MaxCacheEntries)
@@ -38,28 +59,37 @@ namespace EnkaDotNet.Utils.Common
             };
 
             _cache[cacheKey] = cacheEntry;
-
-            Console.WriteLine($"[HttpCache] Cached response for {cacheKey} until {expiration}, ETag: {etag ?? "none"}");
         }
 
+        /// <summary>
+        /// Updates the expiration of a cache entry
+        /// </summary>
         public void UpdateCacheEntryExpiration(string cacheKey, CacheEntry cacheEntry, HttpResponseMessage response)
         {
             cacheEntry.Expiration = CalculateExpiration(response);
             _cache[cacheKey] = cacheEntry;
         }
 
+        /// <summary>
+        /// Clears the entire cache
+        /// </summary>
         public void Clear()
         {
             _cache.Clear();
-            Console.WriteLine("[HttpCache] Cache cleared");
         }
 
+        /// <summary>
+        /// Removes a specific entry from the cache
+        /// </summary>
         public void Remove(string cacheKey)
         {
             _cache.TryRemove(cacheKey, out _);
-            Console.WriteLine($"[HttpCache] Removed from cache: {cacheKey}");
         }
 
+        /// <summary>
+        /// Gets statistics about the cache
+        /// </summary>
+        /// <returns>Tuple containing total count and expired count</returns>
         public (int Count, int ExpiredCount) GetStats()
         {
             int expiredCount = 0;
@@ -82,7 +112,7 @@ namespace EnkaDotNet.Utils.Common
                 return DateTimeOffset.UtcNow.Add(response.Headers.CacheControl.MaxAge.Value);
             }
 
-            // Check for Expires in Content.Headers (not directly in Headers)
+            // Check for Expires in Content.Headers
             if (response.Content?.Headers?.Expires != null)
             {
                 return response.Content.Headers.Expires.Value;
@@ -96,6 +126,7 @@ namespace EnkaDotNet.Utils.Common
         {
             var keysToRemove = new List<string>();
 
+            // First, remove expired entries
             foreach (var kvp in _cache)
             {
                 if (kvp.Value.IsExpired)
@@ -109,6 +140,7 @@ namespace EnkaDotNet.Utils.Common
                 _cache.TryRemove(key, out _);
             }
 
+            // If we still have too many items, remove oldest entries
             if (_cache.Count > MaxCacheEntries * 0.9)
             {
                 var oldestEntries = _cache
@@ -121,11 +153,7 @@ namespace EnkaDotNet.Utils.Common
                 {
                     _cache.TryRemove(key, out _);
                 }
-
-                Console.WriteLine($"[HttpCache] Pruned {oldestEntries.Count} oldest cache entries");
             }
-
-            Console.WriteLine($"[HttpCache] Cache pruned, current count: {_cache.Count}");
         }
     }
 }

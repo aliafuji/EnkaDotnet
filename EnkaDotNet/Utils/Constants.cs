@@ -1,15 +1,20 @@
 ﻿using EnkaDotNet.Enums;
 using System;
 
-namespace EnkaDotNet.Utils.Genshin
+namespace EnkaDotNet.Utils
 {
     public static class Constants
     {
+        private const string DEFAULT_GENSHIN_API_URL = "https://enka.network/api/";
+        private const string DEFAULT_GENSHIN_ASSET_URL = "https://enka.network/ui/";
+
+        public const string DefaultUserAgent = "EnkaDotNet/1.0";
+
         public static string GetBaseUrl(GameType gameType)
         {
             return gameType switch
             {
-                GameType.Genshin => "https://enka.network/api/",
+                GameType.Genshin => DEFAULT_GENSHIN_API_URL,
                 _ => throw new NotSupportedException($"Game type {gameType} is not supported.")
             };
         }
@@ -27,11 +32,14 @@ namespace EnkaDotNet.Utils.Genshin
         {
             return gameType switch
             {
-                GameType.Genshin => "https://enka.network/ui/",
+                GameType.Genshin => DEFAULT_GENSHIN_ASSET_URL,
                 _ => throw new NotSupportedException($"Game type {gameType} is not supported.")
             };
         }
 
-        public const string DefaultUserAgent = "EnkaSharp/1.0";
+        public static bool IsGameTypeSupported(GameType gameType)
+        {
+            return gameType == GameType.Genshin;
+        }
     }
 }

@@ -32,64 +32,113 @@ Or via the .NET CLI:
 dotnet add package EnkaDotNet
 ```
 
-## Quick Start
+## Example Code
 
 ```csharp
 using EnkaDotNet;
+using EnkaDotNet.Enums.Genshin;
 
-async Task DisplayPlayerInfo(int uid)
+var options = new EnkaClientOptions
 {
-    using var client = new EnkaClient();
-    
-    try
+    Language = "ja",
+    UserAgent = "EnkaDotNet/1.0",
+};
+
+using var client = new EnkaClient(options);
+
+try
+{
+    int uid = 829344442;
+
+    Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+    Console.WriteLine($"Fetching profile for UID {uid}...");
+
+    var (player, characters) = await client.GetUserProfile(uid);
+
+    Console.WriteLine($"\nPlayer: {player.Nickname} (AR {player.Level})");
+    Console.WriteLine($"World Level: {player.WorldLevel}");
+    Console.WriteLine($"Signature: {player.Signature}");
+    Console.WriteLine($"Characters in profile: {characters.Count}");
+
+    Console.WriteLine("\nCharacter Details:");
+    foreach (var character in characters)
     {
-        // Fetch player profile
-        var (player, characters) = await client.GetUserProfile(uid);
-        
-        // Display basic player info
-        Console.WriteLine($"Player: {player.Nickname} (AR {player.Level})");
-        Console.WriteLine($"Characters: {characters.Count}");
-        
-        // Display character details
-        foreach (var char in characters)
+        Console.WriteLine($"\n{character.Name} | Level {character.Level} | C{character.ConstellationLevel}");
+
+        if (character.Weapon != null)
         {
-            Console.WriteLine($"- {char.Name} (Lvl {char.Level}) | {char.Element}");
-            Console.WriteLine($"  Weapon: {char.Weapon?.Name} (R{char.Weapon?.Refinement})");
-            
-            foreach (var artifact in char.Artifacts)
+            Console.WriteLine($"Weapon: {character.Weapon.Name} | R{character.Weapon.Refinement} | Level {character.Weapon.Level}");
+            Console.WriteLine($"Base ATK: {character.Weapon.BaseAttack} | Substat: {character.Weapon.SecondaryStat}");
+            Console.WriteLine($"Icon: {character.Weapon.IconUrl}");
+        }
+
+        // Print all stats
+        Console.WriteLine("\nStats:");
+        var stats = character.GetStats();
+        foreach (var category in stats)
+        {
+            Console.WriteLine($"{category.Key}:");
+            foreach (var stat in category.Value)
             {
-                Console.WriteLine($"  {artifact.Slot}: {artifact.Name} - {artifact.MainStat}");
+                Console.WriteLine($"  {stat.Key}: {stat.Value.Formatted} ({stat.Value.Raw})");
             }
         }
+
+        // Print artifact sets
+        Console.WriteLine("\nArtifact Sets:");
+        var artifactSets = character.Artifacts
+            .GroupBy(a => a.SetName)
+            .Select(g => new { SetName = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count);
+
+        foreach (var set in artifactSets)
+        {
+            Console.WriteLine($"Set: {set.SetName} ({set.Count}pc)");
+        }
+
+        // Print all artifacts
+        Console.WriteLine("\nArtifacts:");
+        foreach (var artifact in character.Artifacts)
+        {
+            Console.WriteLine($"Artifact: {artifact.Name} | Level {artifact.Level} | Rarity {artifact.Rarity} | Set {artifact.SetName}");
+            Console.WriteLine($"Main Stat: {artifact.MainStat}");
+            Console.WriteLine($"Substats: {string.Join(", ", artifact.SubStats.Select(s => $"{s.Type}: {s.Value}"))}");
+            Console.WriteLine($"Icon: {artifact.IconUrl}");
+        }
+
+        // Print specific stats
+        Console.WriteLine("\nSpecific Stats:");
+        character.GetStatValue(StatType.BaseAttack, out var value);
+        Console.WriteLine($"Base Attack: {value}");
+        character.GetStatValue(StatType.BaseHP, out value);
+        Console.WriteLine($"Base HP: {value}");
+        character.GetStatValue(StatType.BaseDefense, out value);
+        Console.WriteLine($"Base Defense: {value}");
+        character.GetStatValue(StatType.CriticalRate, out value);
+        Console.WriteLine($"Critical Rate: {value}");
+        character.GetStatValue(StatType.CriticalDamage, out value);
+        Console.WriteLine($"Critical Damage: {value}");
+
+        // Constellation data
+        Console.WriteLine("\nConstellations:");
+        foreach (var constellation in character.Constellations)
+        {
+            Console.WriteLine($"Name: {constellation.Name}");
+            Console.WriteLine($"Icon: {constellation.IconUrl}");
+            Console.WriteLine($"Position: {constellation.Position}");
+            Console.WriteLine($"ID: {constellation.Id}");
+        }
+
     }
-    catch (Exception ex) when (
+}
+catch (Exception ex) when (
         ex is EnkaDotNet.Exceptions.PlayerNotFoundException ||
         ex is EnkaDotNet.Exceptions.ProfilePrivateException ||
         ex is EnkaDotNet.Exceptions.EnkaNetworkException)
-    {
-        Console.WriteLine($"Error: {ex.Message}");
-    }
+{
+    Console.WriteLine($"Error: {ex.Message}");
 }
-
-await DisplayPlayerInfo(829344442);
-```
-
-### Working with Artifacts and Stats
-
-```csharp
-// Get artifacts for a character
-var artifacts = character.Artifacts;
-
-// Get artifact set bonuses (if any)
-var setNames = artifacts.GroupBy(a => a.SetName)
-    .Select(g => new { SetName = g.Key, Count = g.Count() })
-    .Where(s => s.Count >= 2)
-    .ToList();
-
-// Get critical stats
-double critRate = character.GetStatValue(StatType.CriticalRate);
-double critDmg = character.GetStatValue(StatType.CriticalDamage);
-Console.WriteLine($"Crit Ratio: {critRate:P1} / {critDmg:P1}");
 ```
 
 ## Requirements
@@ -103,7 +152,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - [Enka.Network](https://enka.network/) for providing the API
-- [seriaati](https://github.com/seriaati) for contributions and inspiration
+- [seriaati](https://github.com/seriaati) for the inspiration
 
 ---
 

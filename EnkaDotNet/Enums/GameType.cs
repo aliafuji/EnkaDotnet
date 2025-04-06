@@ -1,7 +1,10 @@
-﻿namespace EnkaDotNet.Enums
+﻿using System.ComponentModel;
+
+namespace EnkaDotNet.Enums
 {
     public enum GameType
     {
-        Genshin
+        [Description("Genshin Impact")]
+        Genshin = 0,
     }
 }

@@ -1,147 +1,118 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using EnkaDotNet.Enums;
-using EnkaDotNet.Utils.Genshin;
-using EnkaDotNet.Exceptions;
 using EnkaDotNet.Utils.Common;
+using EnkaDotNet.Utils;
 
 namespace EnkaDotNet.Assets
 {
     public abstract class BaseAssets : IAssets
     {
         private static readonly HttpClient _httpClient = new HttpClient();
-        protected readonly string _baseAssetsPath;
-        protected readonly string _gameSpecificPath;
+        protected readonly Dictionary<string, object> _assetCache = new Dictionary<string, object>();
         protected Dictionary<string, string>? _textMap;
 
         public GameType GameType { get; }
         public string Language { get; }
-        public string AssetsPath => _gameSpecificPath;
 
-        protected BaseAssets(string assetsBasePath, string language, GameType gameType)
+        protected BaseAssets(string language, GameType gameType)
         {
-            _baseAssetsPath = assetsBasePath ?? throw new ArgumentNullException(nameof(assetsBasePath));
-            Language = language;
+            Language = language ?? throw new ArgumentNullException(nameof(language));
             GameType = gameType;
 
-            _gameSpecificPath = Path.Combine(_baseAssetsPath, gameType.ToString().ToLowerInvariant());
-
-            bool assetsReady = EnsureAssetsDownloadedAsync().GetAwaiter().GetResult();
-
-            if (!assetsReady)
-            {
-                throw new InvalidOperationException($"Failed to download or verify essential asset files in '{_gameSpecificPath}'. Cannot initialize Assets.");
-            }
-
-            LoadTextMap(language);
-            LoadAssets();
+            // Initialize essential assets
+            LoadTextMap(language).GetAwaiter().GetResult();
+            LoadAssets().GetAwaiter().GetResult();
         }
 
         protected abstract Dictionary<string, string> GetAssetUrls();
-        protected abstract void LoadAssets();
+        protected abstract Task LoadAssets();
+
         public string GetText(string? hash) => hash != null && _textMap != null && _textMap.TryGetValue(hash, out var text) ? text ?? string.Empty : hash ?? string.Empty;
 
-        protected async Task<bool> EnsureAssetsDownloadedAsync()
+        protected async Task<string> FetchAssetAsync(string assetKey)
         {
-            var assetLinks = GetAssetUrls();
-            if (assetLinks == null || assetLinks.Count == 0)
+            var assetUrls = GetAssetUrls();
+            if (!assetUrls.TryGetValue(assetKey, out var url))
             {
-                throw new UnsupportedGameTypeException(GameType, $"No asset links defined for game type {GameType}.");
+                throw new InvalidOperationException($"No URL defined for asset '{assetKey}' in game type {GameType}.");
             }
 
             try
             {
-                Directory.CreateDirectory(_gameSpecificPath);
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.UserAgent.ParseAdd(Constants.DefaultUserAgent);
 
-                foreach (var kvp in assetLinks)
+                HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
                 {
-                    string relativePath = kvp.Key;
-                    string url = kvp.Value;
-                    string localFilePath = Path.Combine(_gameSpecificPath, relativePath);
-                    string? directory = Path.GetDirectoryName(localFilePath);
-                    if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
-
-                    if (!File.Exists(localFilePath))
-                    {
-                        Console.WriteLine($"[Assets] Downloading '{relativePath}' for {GameType} from {url}...");
-                        try
-                        {
-                            using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                            request.Headers.UserAgent.ParseAdd(Constants.DefaultUserAgent);
-                            HttpResponseMessage response = await _httpClient.SendAsync(request);
-
-                            if (!response.IsSuccessStatusCode)
-                            {
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine($" -> FAILED to download '{relativePath}': HTTP {(int)response.StatusCode} ({response.ReasonPhrase})");
-                                Console.ResetColor();
-                                if (response.StatusCode == System.Net.HttpStatusCode.NotFound) Console.WriteLine($" -> Check if the URL is correct: {url}");
-                                return false;
-                            }
-                            string content = await response.Content.ReadAsStringAsync();
-                            if (string.IsNullOrWhiteSpace(content))
-                            {
-                                Console.ForegroundColor = ConsoleColor.Yellow;
-                                Console.WriteLine($" -> WARNING: Downloaded content for '{relativePath}' is empty.");
-                                Console.ResetColor();
-                            }
-                            await File.WriteAllTextAsync(localFilePath, content);
-                            Console.WriteLine($" -> Saved to '{localFilePath}' (Size: {new FileInfo(localFilePath).Length} bytes)");
-                        }
-                        catch (HttpRequestException ex)
-                        {
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine($" -> FAILED to download '{relativePath}' (Network Error): {ex.Message}");
-                            Console.ResetColor();
-                            return false;
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine($" -> FAILED to save '{relativePath}': {ex.Message}");
-                            Console.ResetColor();
-                            return false;
-                        }
-                    }
+                    throw new HttpRequestException($"Failed to fetch '{assetKey}': HTTP {(int)response.StatusCode} ({response.ReasonPhrase})");
                 }
-                return true;
+
+                string content = await response.Content.ReadAsStringAsync();
+
+                return content;
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[Assets] FAILED to fetch '{assetKey}' (Network Error): {ex.Message}");
+                Console.ResetColor();
+                throw;
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"[Assets] Error preparing asset directory '{_gameSpecificPath}': {ex.Message}");
+                Console.WriteLine($"[Assets] Unexpected error fetching '{assetKey}': {ex.Message}");
                 Console.ResetColor();
-                throw new DirectoryNotFoundException($"Failed to create or access asset directory '{_gameSpecificPath}'.", ex);
+                throw;
             }
         }
 
-        protected void LoadTextMap(string language)
+        protected async Task<T> FetchAndDeserializeAssetAsync<T>(string assetKey)
         {
-            string filePath = Path.Combine(_gameSpecificPath, "text_map.json");
-            _textMap = new Dictionary<string, string>();
+            // Check if we already have it cached
+            if (_assetCache.TryGetValue(assetKey, out var cachedAsset) && cachedAsset is T typedAsset)
+            {
+                return typedAsset;
+            }
+
+            string jsonContent = await FetchAssetAsync(assetKey);
+
             try
             {
-                if (!File.Exists(filePath))
+                var options = GetJsonOptions();
+                var result = JsonSerializer.Deserialize<T>(jsonContent, options);
+
+                if (result == null)
                 {
-                    throw new FileNotFoundException($"TextMap file not found at the expected location.", filePath);
-                }
-                var jsonData = File.ReadAllText(filePath);
-                if (string.IsNullOrWhiteSpace(jsonData))
-                {
-                    throw new InvalidOperationException("TextMap file is empty.");
+                    throw new JsonException($"Failed to deserialize {assetKey} - result was null");
                 }
 
-                var allLanguageMaps = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(jsonData);
+                // Cache the result
+                _assetCache[assetKey] = result;
 
-                if (allLanguageMaps == null)
-                {
-                    throw new InvalidOperationException("Failed to deserialize TextMap structure.");
-                }
+                return result;
+            }
+            catch (JsonException ex)
+            {
+                Console.WriteLine($"[Assets] Error parsing {assetKey} JSON: {ex.Message}");
+                throw;
+            }
+        }
+
+        protected async Task LoadTextMap(string language)
+        {
+            try
+            {
+                _textMap = new Dictionary<string, string>();
+
+                var allLanguageMaps = await FetchAndDeserializeAssetAsync<Dictionary<string, Dictionary<string, string>>>("text_map.json");
 
                 if (allLanguageMaps.TryGetValue(language, out var languageSpecificMap))
                 {
                     _textMap = languageSpecificMap;
-                    Console.WriteLine($"[Assets] Loaded {_textMap.Count} entries for language '{language}'");
                 }
                 else
                 {
@@ -170,14 +141,14 @@ namespace EnkaDotNet.Assets
                     }
                 }
             }
-            catch (FileNotFoundException ex)
+            catch (HttpRequestException ex)
             {
-                Console.WriteLine($"[Assets] Error: {ex.Message}");
-                throw new InvalidOperationException($"Failed to load essential TextMap", ex);
+                Console.WriteLine($"[Assets] Error fetching TextMap: {ex.Message}");
+                throw new InvalidOperationException($"Failed to fetch essential TextMap", ex);
             }
             catch (JsonException ex)
             {
-                Console.WriteLine($"[Assets] Error parsing TextMap JSON: {ex.Message} (Path: {ex.Path}, Line: {ex.LineNumber}, Pos: {ex.BytePositionInLine})");
+                Console.WriteLine($"[Assets] Error parsing TextMap JSON: {ex.Message}");
                 throw new InvalidOperationException($"Failed to parse essential TextMap JSON structure", ex);
             }
             catch (Exception ex)

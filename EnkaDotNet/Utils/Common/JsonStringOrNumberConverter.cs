@@ -22,7 +22,7 @@ namespace EnkaDotNet.Utils.Common
 
             if (reader.TokenType == JsonTokenType.String)
             {
-                return reader.GetString();
+                return reader.GetString() ?? string.Empty;
             }
 
             if (reader.TokenType == JsonTokenType.Null)

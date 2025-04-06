@@ -6,18 +6,18 @@ namespace EnkaDotNet.Assets
 {
     public static class AssetsFactory
     {
-        public static IAssets Create(string assetsBasePath, string language = "en", GameType gameType = GameType.Genshin)
+        public static IAssets Create(string language = "en", GameType gameType = GameType.Genshin)
         {
             return gameType switch
             {
-                GameType.Genshin => new GenshinAssets(assetsBasePath, language),
+                GameType.Genshin => new GenshinAssets(language),
                 _ => throw new UnsupportedGameTypeException(gameType, $"Game type {gameType} is not supported.")
             };
         }
 
-        public static IGenshinAssets CreateGenshin(string assetsBasePath, string language = "en")
+        public static IGenshinAssets CreateGenshin(string language = "en")
         {
-            return new GenshinAssets(assetsBasePath, language);
+            return new GenshinAssets(language);
         }
     }
 }
