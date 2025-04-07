@@ -32,7 +32,7 @@ Or via the .NET CLI:
 dotnet add package EnkaDotNet
 ```
 
-## Example Code
+## Example Code for Genshin Impact
 
 ```csharp
 using EnkaDotNet;
@@ -41,7 +41,7 @@ using EnkaDotNet.Enums.Genshin;
 var options = new EnkaClientOptions
 {
     Language = "ja",
-    UserAgent = "EnkaDotNet/1.0",
+    UserAgent = "EnkaDotNet/1.5",
 };
 
 using var client = new EnkaClient(options);
@@ -59,7 +59,27 @@ try
     Console.WriteLine($"\nPlayer: {player.Nickname} (AR {player.Level})");
     Console.WriteLine($"World Level: {player.WorldLevel}");
     Console.WriteLine($"Signature: {player.Signature}");
+    Console.WriteLine($"IconUrl: {player.IconUrl}");
+    Console.WriteLine($"NameCard: {player.NameCardIcon} | {player.NameCardId}");
     Console.WriteLine($"Characters in profile: {characters.Count}");
+
+    // Print Abyss data
+    Console.WriteLine("\nAbyss data:");
+    Console.WriteLine($"Spiral Abyss Floor: {player.Challenge?.SpiralAbyss?.Floor}");
+    Console.WriteLine($"Spiral Abyss Chamber: {player.Challenge?.SpiralAbyss?.Chamber}");
+    Console.WriteLine($"Spiral Abyss Stars: {player.Challenge?.SpiralAbyss?.Star}");
+
+    // Print Theater data
+    Console.WriteLine("\nTheater data:");
+    Console.WriteLine($"Theater Mechanicus Act: {player.Challenge?.Theater?.Act}");
+    Console.WriteLine($"Theater Mechanicus Stars: {player.Challenge?.Theater?.Star}");
+
+    // Print Namecards
+    Console.WriteLine("\nNamecards Showcase:");
+    foreach (var namecard in player.ShowcaseNameCards)
+    {
+        Console.WriteLine($"Icon: {namecard.IconUrl} | ID: {namecard.Id}");
+    }
 
     Console.WriteLine("\nCharacter Details:");
     foreach (var character in characters)
@@ -69,7 +89,7 @@ try
         if (character.Weapon != null)
         {
             Console.WriteLine($"Weapon: {character.Weapon.Name} | R{character.Weapon.Refinement} | Level {character.Weapon.Level}");
-            Console.WriteLine($"Base ATK: {character.Weapon.BaseAttack} | Substat: {character.Weapon.SecondaryStat}");
+            Console.WriteLine($"Base ATK: {character.Weapon.BaseAttack} | Substat: {character.Weapon.SecondaryStat?.Value} | Type: {character.Weapon.SecondaryStat?.Type}");
             Console.WriteLine($"Icon: {character.Weapon.IconUrl}");
         }
 
@@ -102,7 +122,7 @@ try
         foreach (var artifact in character.Artifacts)
         {
             Console.WriteLine($"Artifact: {artifact.Name} | Level {artifact.Level} | Rarity {artifact.Rarity} | Set {artifact.SetName}");
-            Console.WriteLine($"Main Stat: {artifact.MainStat}");
+            Console.WriteLine($"Main Stat: {artifact.MainStat?.Type} | {artifact.MainStat?.Value}");
             Console.WriteLine($"Substats: {string.Join(", ", artifact.SubStats.Select(s => $"{s.Type}: {s.Value}"))}");
             Console.WriteLine($"Icon: {artifact.IconUrl}");
         }

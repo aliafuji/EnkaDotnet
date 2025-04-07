@@ -23,24 +23,27 @@ namespace EnkaDotNet.Components.Genshin
         {
             if (Stats.TryGetValue(statType, out double RawValue))
             {
-                bool isPercent = statType.ToString().Contains("Percentage") ||
-                                 statType.ToString().Contains("Bonus") ||
+                bool isPercent = statType.ToString().Contains("Bonus") ||
                                  statType == StatType.CriticalRate ||
                                  statType == StatType.CriticalDamage ||
                                  statType == StatType.EnergyRecharge;
 
                 if (isPercent)
                 {
-                    value = $"{RawValue:P1}";
-                }
-                else if (RawValue == (int)RawValue)
-                {
-                    value = $"{RawValue:N0}";
+                    double percentValue = RawValue * 100;
+                    if (Math.Abs(percentValue - Math.Round(percentValue)) < 0.001)
+                        value = $"{Math.Round(percentValue)}";
+                    else
+                        value = $"{percentValue:F1}";
                 }
                 else
                 {
-                    value = $"{RawValue:N0}";
+                    if (Math.Abs(RawValue - Math.Round(RawValue)) < 0.001)
+                        value = $"{Math.Round(RawValue)}";
+                    else
+                        value = $"{RawValue:F1}";
                 }
+
                 return RawValue;
             }
             else

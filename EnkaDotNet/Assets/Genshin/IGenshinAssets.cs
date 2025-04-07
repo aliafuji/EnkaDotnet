@@ -22,5 +22,6 @@ namespace EnkaDotNet.Assets.Genshin
         string GetConstellationName(int constellationId);
         string GetConstellationIconUrl(int constellationId);
         string GetNameCardIconUrl(int nameCardId);
+        string GetProfilePictureIconUrl(int profilePictureId);
     }
 }

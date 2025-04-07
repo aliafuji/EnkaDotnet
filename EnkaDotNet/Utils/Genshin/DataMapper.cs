@@ -23,18 +23,31 @@ namespace EnkaDotNet.Utils.Genshin
             var playerInfo = new PlayerInfo
             {
                 Nickname = model.Nickname ?? "Unknown",
-                Level = model.Level,
+                Level = model.Level ?? 0,
                 Signature = model.Signature ?? "",
-                WorldLevel = model.WorldLevel,
-                NameCardId = model.NameCardId,
-                FinishedAchievements = model.FinishAchievementNum,
-                TowerFloor = model.TowerFloorIndex,
-                TowerChamber = model.TowerLevelIndex,
+                IconUrl = _assets.GetProfilePictureIconUrl(model.ProfilePicture?.Id ?? 0),
+                WorldLevel = model.WorldLevel ?? 0,
+                NameCardId = model.NameCardId ?? 0,
+                FinishedAchievements = model.FinishAchievementNum ?? 0,
                 ShowcaseCharacterIds = model.ShowAvatarInfoList?.Select(a => a.AvatarId).ToList() ?? new List<int>(),
                 ShowcaseNameCardIds = model.ShowNameCardIdList ?? new List<int>(),
-                ProfilePictureCharacterId = model.ProfilePicture?.AvatarId ?? 0,
+                ProfilePictureCharacterId = model.ProfilePicture?.Id ?? 0,
                 ShowcaseNameCardIcons = model.ShowNameCardIdList?.Select(id => _assets.GetNameCardIconUrl(id)).ToList() ?? new List<string>(),
-                NameCardIcon = _assets.GetNameCardIconUrl(model.NameCardId),
+                NameCardIcon = _assets.GetNameCardIconUrl(model.NameCardId ?? 0),
+                Challenge = new ChallengeData
+                {
+                    SpiralAbyss = new ChallengeData.SpiralAbyssData
+                    {
+                        Floor = model.TowerFloorIndex ?? 0,
+                        Chamber = model.TowerLevelIndex ?? 0,
+                        Star = model.TowerStarIndex ?? 0
+                    },
+                    Theater = new ChallengeData.TheatreData
+                    {
+                        Act = model.TheaterActIndex ?? 0,
+                        Star = model.TheaterStarIndex ?? 0
+                    }
+                }
             };
             return playerInfo;
         }
