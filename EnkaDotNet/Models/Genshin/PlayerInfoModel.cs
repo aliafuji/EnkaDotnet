@@ -8,25 +8,34 @@ namespace EnkaDotNet.Models.Genshin
         public string? Nickname { get; set; }
 
         [JsonPropertyName("level")]
-        public int Level { get; set; }
+        public int? Level { get; set; }
 
         [JsonPropertyName("signature")]
         public string? Signature { get; set; }
 
         [JsonPropertyName("worldLevel")]
-        public int WorldLevel { get; set; }
+        public int? WorldLevel { get; set; }
 
         [JsonPropertyName("nameCardId")]
-        public int NameCardId { get; set; }
+        public int? NameCardId { get; set; }
 
         [JsonPropertyName("finishAchievementNum")]
-        public int FinishAchievementNum { get; set; }
+        public int? FinishAchievementNum { get; set; }
 
         [JsonPropertyName("towerFloorIndex")]
-        public int TowerFloorIndex { get; set; }
+        public int? TowerFloorIndex { get; set; }
 
         [JsonPropertyName("towerLevelIndex")]
-        public int TowerLevelIndex { get; set; }
+        public int? TowerLevelIndex { get; set; }
+
+        [JsonPropertyName("towerStarIndex")]
+        public int? TowerStarIndex { get; set; }
+
+        [JsonPropertyName("theaterActIndex")]
+        public int? TheaterActIndex { get; set; }
+
+        [JsonPropertyName("theaterStarIndex")]
+        public int? TheaterStarIndex { get; set; }
 
         [JsonPropertyName("showAvatarInfoList")]
         public List<ShowAvatarInfoModel>? ShowAvatarInfoList { get; set; }
@@ -52,8 +61,11 @@ namespace EnkaDotNet.Models.Genshin
 
     public class ProfilePictureModel
     {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
         [JsonPropertyName("avatarId")]
-        public int AvatarId { get; set; }
+        public int? AvatarId { get; set; }
 
         [JsonPropertyName("costumeId")]
         public int? CostumeId { get; set; }

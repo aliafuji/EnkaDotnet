@@ -4,18 +4,33 @@ namespace EnkaDotNet.Components.Genshin
 {
     public class PlayerInfo
     {
+        public string Uid { get; internal set; } = string.Empty;
+        public string TTL { get; internal set; }
+
         public string Nickname { get; internal set; } = string.Empty;
+
         public int Level { get; internal set; }
+
         public string Signature { get; internal set; } = string.Empty;
+
+        public string IconUrl { get; internal set; } = string.Empty;
+
         public int WorldLevel { get; internal set; }
+
         public int NameCardId { get; internal set; }
+
         public string NameCardIcon { get; internal set; } = string.Empty;
+
         public int FinishedAchievements { get; internal set; }
-        public int TowerFloor { get; internal set; }
-        public int TowerChamber { get; internal set; }
+
+        public ChallengeData? Challenge { get; internal set; }
+
         public List<int> ShowcaseCharacterIds { get; internal set; } = new();
+
         public List<int> ShowcaseNameCardIds { get; internal set; } = new();
+
         public List<string> ShowcaseNameCardIcons { get; internal set; } = new();
+
         public int ProfilePictureCharacterId { get; internal set; }
 
         public IReadOnlyList<NameCard> ShowcaseNameCards
@@ -44,6 +59,24 @@ namespace EnkaDotNet.Components.Genshin
                     return new ReadOnlyCollection<NameCard>(new List<NameCard>());
                 }
             }
+        }
+    }
+
+    public class ChallengeData
+    {
+        public SpiralAbyssData? SpiralAbyss { get; set; }
+        public TheatreData? Theater { get; set; }
+        public class SpiralAbyssData
+        {
+            public int? Floor { get; internal set; }
+            public int? Chamber { get; internal set; }
+            public int? Star { get; internal set; }
+        }
+
+        public class TheatreData
+        {
+            public int? Act { get; internal set; }
+            public int? Star { get; internal set; }
         }
     }
 }

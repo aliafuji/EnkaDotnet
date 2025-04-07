@@ -25,6 +25,7 @@ namespace EnkaDotNet.Assets.Genshin
         private readonly Dictionary<int, TalentAssetInfo> _talents = new();
         private readonly Dictionary<string, ConstellationAssetInfo> _constellations = new();
         private readonly Dictionary<string, NameCardAssetInfo> _namecards = new();
+        private readonly Dictionary<string, PfpAssetInfo> _pfps = new();
 
         public GenshinAssets(string language = "en")
             : base(language, GameType.Genshin)
@@ -35,10 +36,16 @@ namespace EnkaDotNet.Assets.Genshin
 
         protected override async Task LoadAssets()
         {
-            await LoadCharacters();
-            await LoadTalents();
-            await LoadConstellations();
-            await LoadNamecards();
+            var tasks = new List<Task>
+            {
+                LoadCharacters(),
+                LoadTalents(),
+                LoadConstellations(),
+                LoadNamecards(),
+                LoadPfps()
+            };
+
+            await Task.WhenAll(tasks);
         }
 
         private async Task LoadCharacters()
@@ -58,6 +65,26 @@ namespace EnkaDotNet.Assets.Genshin
             {
                 Console.WriteLine($"[Assets] Error loading characters: {ex.Message}");
                 throw new InvalidOperationException($"Failed to load essential characters data", ex);
+            }
+        }
+
+        private async Task LoadPfps()
+        {
+            _pfps.Clear();
+            try
+            {
+                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, PfpAssetInfo>>("pfps.json");
+
+                foreach (var kvp in deserializedMap)
+                {
+                    if (int.TryParse(kvp.Key, out int pfpId))
+                        _pfps[kvp.Key] = kvp.Value;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Assets] Error loading pfps: {ex.Message}");
+                throw new InvalidOperationException($"Failed to load essential pfps data", ex);
             }
         }
 
@@ -181,6 +208,19 @@ namespace EnkaDotNet.Assets.Genshin
             }
 
             return $"Talent_{talentId}";
+        }
+
+        public string GetProfilePictureIconUrl(int characterId)
+        {
+            if (_pfps.TryGetValue(characterId.ToString(), out var pfpInfo))
+            {
+                if (!string.IsNullOrEmpty(pfpInfo.IconPath))
+                {
+                    string NewIcon = pfpInfo.IconPath.Replace("_Circle", "");
+                    return $"{Constants.GetAssetBaseUrl(GameType)}{NewIcon}.png";
+                }
+            }
+            return string.Empty;
         }
 
         public string GetNameCardIconUrl(int nameCardId) => _namecards.TryGetValue(nameCardId.ToString(), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon) ? $"{Constants.GetAssetBaseUrl(GameType)}{nameCardInfo.Icon}.png" : string.Empty;
