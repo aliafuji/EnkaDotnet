@@ -30,7 +30,7 @@ namespace EnkaDotNet.Components.Genshin
 
                 if (isPercent)
                 {
-                    double percentValue = RawValue * 100;
+                    double percentValue = RawValue;
                     if (Math.Abs(percentValue - Math.Round(percentValue)) < 0.001)
                         value = $"{Math.Round(percentValue)}";
                     else

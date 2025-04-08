@@ -7,17 +7,18 @@ using EnkaDotNet.Utils.Common;
 using EnkaDotNet.Utils;
 using EnkaDotNet.Exceptions;
 using EnkaDotNet.Utils.Genshin;
+using EnkaDotNet.Utils.ZZZ;
+using EnkaDotNet.Assets.ZZZ;
 
 namespace EnkaDotNet
 {
-    /// <summary>
-    /// Client for accessing Enka Network API data
-    /// </summary>
-    public class EnkaClient : IDisposable
+    public partial class EnkaClient : IDisposable
     {
         private readonly HttpHelper _httpHelper;
         private readonly DataMapper? _dataMapper;
+        private readonly ZZZDataMapper? _zzzDataMapper;
         private readonly IGenshinAssets? _genshinAssets;
+        private readonly IZZZAssets? _zzzAssets;
         private readonly EnkaClientOptions _options;
         private bool _disposed = false;
 
@@ -45,6 +46,10 @@ namespace EnkaDotNet
                 case GameType.Genshin:
                     _genshinAssets = AssetsFactory.CreateGenshin(_options.Language);
                     _dataMapper = new DataMapper(_genshinAssets);
+                    break;
+                case GameType.ZZZ:
+                    _zzzAssets = new ZZZAssets(_options.Language);
+                    _zzzDataMapper = new ZZZDataMapper(_zzzAssets);
                     break;
             }
         }
