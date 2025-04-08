@@ -180,7 +180,9 @@ namespace ZZZStatsViewer
                 var options = new EnkaClientOptions
                 {
                     GameType = GameType.ZZZ,
-                    Language = "ja"
+                    Language = "en",
+                    EnableCaching = true,
+                    UserAgent = "EnkaDotNet/5.0",
                 };
 
                 using var client = new EnkaClient(options);
@@ -211,8 +213,8 @@ namespace ZZZStatsViewer
                     Console.WriteLine($"Type: {medal.Type}");
                 }
 
-                // Display agent info
-                var agent = playerInfo.ShowcaseAgents[2];
+                // Display agent's info
+                var agent = playerInfo.ShowcaseAgents[0];
                 Console.WriteLine($"\nAGENT: {agent.Name} (Lv.{agent.Level})");
                 Console.WriteLine($"Rarity: {agent.Rarity} | Profession: {agent.ProfessionType}");
                 Console.WriteLine($"Elements: {string.Join(", ", agent.ElementTypes)}");
@@ -225,6 +227,14 @@ namespace ZZZStatsViewer
                 Console.WriteLine($"Circle Icon URL: {agent.CircleIconUrl}");
                 Console.WriteLine($"Promotion Level: {agent.PromotionLevel}");
 
+                // Display agent's obtained timestamp
+                Console.WriteLine($"Obtained Time: {agent.ObtainmentTimestamp.ToLocalTime()}");
+
+                // Display agent's weapon effect state
+                Console.WriteLine($"Weapon Effect State: {agent.WeaponEffectState}");
+
+                // Display agent's stats
+                Console.WriteLine("\nAGENT STATS:");
                 var stats = agent.GetAllStats();
                 foreach (var stat in stats)
                 {
@@ -240,8 +250,7 @@ namespace ZZZStatsViewer
                     Console.WriteLine($"Main Stat: {agent.Weapon.MainStat}");
                     Console.WriteLine($"Secondary Stat: {agent.Weapon.SecondaryStat}");
                     Console.WriteLine($"Effect State: {agent.WeaponEffectState}");
-                    Console.WriteLine($"Enhancements: {string.Join(", ", agent.CoreSkillEnhancements)}");
-                    Console.WriteLine($"Enhancement Level: {agent.CoreSkillEnhancement}");
+                    
                     Console.WriteLine($"Overclock: {agent.Weapon.UpgradeLevel}");
                     Console.WriteLine($"Icon URL: {agent.Weapon.ImageUrl}");
                 }
@@ -288,6 +297,27 @@ namespace ZZZStatsViewer
                             }
                         }
                     }
+                }
+
+                // Display core skills
+                if (agent.CoreSkillEnhancements.Count > 0)
+                {
+                    Console.WriteLine("\nCORE SKILLS:");
+                    foreach (var skill in agent.CoreSkillEnhancements)
+                    {
+                        if (agent.CoreSkillEnhancements.Count > 0)
+                        {
+                            char skillLetter = (char)('A' + skill);
+                            Console.WriteLine($"- {skillLetter} ({skill})");
+                        }
+                    }
+                }
+
+                // Display skill levels
+                Console.WriteLine("\nSKILL LEVELS:");
+                foreach (var skill in agent.SkillLevels)
+                {
+                    Console.WriteLine($"- {skill.Key}: {skill.Value}");
                 }
             }
             catch (Exception ex)
