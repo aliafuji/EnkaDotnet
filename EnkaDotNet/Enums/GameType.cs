@@ -6,5 +6,8 @@ namespace EnkaDotNet.Enums
     {
         [Description("Genshin Impact")]
         Genshin = 0,
+
+        [Description("Zenless Zone Zero")]
+        ZZZ = 1,
     }
 }

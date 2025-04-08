@@ -16,7 +16,7 @@ Enka.DotNet is a wrapper for accessing and processing character data from the En
 | ----------------- | -------------- | ----------- |
 | Genshin Impact    | ✅ Ready       | Full        |
 | Honkai: Star Rail | ⏳ Coming Soon | Planned     |
-| Zenless Zone Zero | ⏳ Coming Soon | Planned     |
+| Zenless Zone Zero | ✅ Ready       | Full        |
 
 ## Installation
 
@@ -161,9 +161,151 @@ catch (Exception ex) when (
 }
 ```
 
+## Example Code for Zenless Zone Zero
+
+```csharp
+using EnkaDotNet;
+using EnkaDotNet.Enums;
+
+namespace ZZZStatsViewer
+{
+    class Program
+    {
+        static async Task Main(string[] args)
+        {
+            try
+            {
+                Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+                var options = new EnkaClientOptions
+                {
+                    GameType = GameType.ZZZ,
+                    Language = "ja"
+                };
+
+                using var client = new EnkaClient(options);
+
+                int uid = args.Length > 0 && int.TryParse(args[0], out int parsedUid) ? parsedUid : 1302375046;
+
+                Console.WriteLine($"Fetching player data for UID: {uid}...");
+                var playerInfo = await client.GetZZZPlayerInfo(uid);
+
+                Console.WriteLine($"Player: {playerInfo.Nickname} (Lv.{playerInfo.Level})");
+                Console.WriteLine($"Title: {playerInfo.TitleText}");
+                Console.WriteLine($"Signature: {playerInfo.Signature}");
+                Console.WriteLine($"Player Icon: {playerInfo.ProfilePictureIcon}");
+                Console.WriteLine($"Player Namecard Icon: {playerInfo.NameCardIcon}");
+
+                if (playerInfo.ShowcaseAgents.Count == 0)
+                {
+                    Console.WriteLine("\nNo showcase agents found.");
+                    return;
+                }
+
+                // Display medals
+                Console.WriteLine("\nMEDALS:");
+                foreach (var medal in playerInfo.Medals)
+                {
+                    Console.WriteLine($"Name: {medal.Name} (Lv.{medal.Value})");
+                    Console.WriteLine($"Icon: {medal.Icon}");
+                    Console.WriteLine($"Type: {medal.Type}");
+                }
+
+                // Display agent info
+                var agent = playerInfo.ShowcaseAgents[2];
+                Console.WriteLine($"\nAGENT: {agent.Name} (Lv.{agent.Level})");
+                Console.WriteLine($"Rarity: {agent.Rarity} | Profession: {agent.ProfessionType}");
+                Console.WriteLine($"Elements: {string.Join(", ", agent.ElementTypes)}");
+
+                // Display Mindscapes
+                Console.WriteLine($"Mindscapes: M{agent.TalentLevel}");
+
+                // Display agent's image URL
+                Console.WriteLine($"Image URL: {agent.ImageUrl}");
+                Console.WriteLine($"Circle Icon URL: {agent.CircleIconUrl}");
+                Console.WriteLine($"Promotion Level: {agent.PromotionLevel}");
+
+                var stats = agent.GetAllStats();
+                foreach (var stat in stats)
+                {
+                    Console.WriteLine($"{stat.Key}: {stat.Value}");
+                }
+
+                // Display weapon
+                if (agent.Weapon != null)
+                {
+                    Console.WriteLine("\nW-ENGINE:");
+                    Console.WriteLine($"Name: {agent.Weapon.Name} (Lv.{agent.Weapon.Level}/{agent.Weapon.BreakLevel})");
+                    Console.WriteLine($"Rarity: {agent.Weapon.Rarity}");
+                    Console.WriteLine($"Main Stat: {agent.Weapon.MainStat}");
+                    Console.WriteLine($"Secondary Stat: {agent.Weapon.SecondaryStat}");
+                    Console.WriteLine($"Effect State: {agent.WeaponEffectState}");
+                    Console.WriteLine($"Enhancements: {string.Join(", ", agent.CoreSkillEnhancements)}");
+                    Console.WriteLine($"Enhancement Level: {agent.CoreSkillEnhancement}");
+                    Console.WriteLine($"Overclock: {agent.Weapon.UpgradeLevel}");
+                    Console.WriteLine($"Icon URL: {agent.Weapon.ImageUrl}");
+                }
+
+                // Display equipped disc sets
+                var discSets = agent.GetEquippedDiscSets();
+                if (discSets.Count > 0)
+                {
+                    Console.WriteLine("\nDRIVE DISC SETS:");
+                    foreach (var set in discSets)
+                    {
+                        Console.WriteLine($"- {set.SuitName} ({set.PieceCount} pieces)");
+                        foreach (var disc in set.BonusStats)
+                        {
+                            Console.WriteLine($"  - {disc.StatType}: {disc.Value}");
+                        }
+                    }
+                }
+
+                // Display equipped discs
+                if (agent.EquippedDiscs.Count > 0)
+                {
+                    Console.WriteLine("\nEQUIPPED DISCS:");
+                    foreach (var disc in agent.EquippedDiscs)
+                    {
+                        Console.WriteLine($"- {disc.SuitName} (Lv.{disc.Level})");
+                        Console.WriteLine($"  - Main Stats: {disc.MainStat}");
+                        Console.WriteLine($"  - Rarity: {disc.Rarity}");
+                        Console.WriteLine($"  - Slot: {disc.Slot}");
+                        Console.WriteLine($"  - Icon URL: {disc.IconUrl}");
+                        Console.WriteLine($"  - Locked: {disc.IsLocked}");
+                        Console.WriteLine($"  - Available: {disc.IsAvailable}");
+                        Console.WriteLine($"  - Trash: {disc.IsTrash}");
+
+                        foreach (var stat in disc.SubStats)
+                        {
+                            if (stat.IsPercentage)
+                            {
+                                Console.WriteLine($"  - {stat.Type}: {stat.Value * stat.Level:F1}% +{stat.Level}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"  - {stat.Type}: {(int)stat.Value * stat.Level} +{stat.Level}");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
 ## Requirements
 
 - .NET 8.0 or higher
+
+## Support
+
+Having questions or issues? Join our Discord server: [Alg's Dev Env](https://discord.gg/d4UgxagmwF)
 
 ## License
 
