@@ -245,9 +245,9 @@ namespace EnkaDotNet.Utils.ZZZ
         private List<ElementType> FilterUnknownElements(List<ElementType> elements)
         {
             if (elements == null || elements.Count == 0)
-                return new List<ElementType> { ElementType.Unknown }; // Return Unknown if empty
+                return new List<ElementType> { ElementType.Unknown };
 
-            var validElements = elements.Where(e => e != ElementType.Unknown).ToList();
+            var validElements = elements.Where(e => e != ElementType.Unknown).Distinct().ToList();
 
             return validElements.Count > 0 ? validElements : elements;
         }
