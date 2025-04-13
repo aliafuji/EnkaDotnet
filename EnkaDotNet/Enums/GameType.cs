@@ -9,5 +9,8 @@ namespace EnkaDotNet.Enums
 
         [Description("Zenless Zone Zero")]
         ZZZ = 1,
+
+        [Description("Honkai Star Rail")]
+        HSR = 2,
     }
 }

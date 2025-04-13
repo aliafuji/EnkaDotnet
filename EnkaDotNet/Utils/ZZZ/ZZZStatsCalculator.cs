@@ -1,8 +1,6 @@
 ﻿using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
-using System;
-using System.Collections.Generic;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
@@ -71,7 +69,6 @@ namespace EnkaDotNet.Utils.ZZZ
 
                     double totalRawContribution = baseValueRaw + growthValueRaw + promotionValueRaw + coreEnhancementValueRaw;
 
-                    // Cache the result
                     _calculationCache[propCacheKey] = totalRawContribution;
 
                     stats[statType] = totalRawContribution;
