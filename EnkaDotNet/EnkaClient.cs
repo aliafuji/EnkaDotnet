@@ -1,14 +1,17 @@
 ﻿using EnkaDotNet.Assets;
 using EnkaDotNet.Assets.Genshin;
-using EnkaDotNet.Components.Genshin;
-using EnkaDotNet.Enums;
-using EnkaDotNet.Models.Genshin;
-using EnkaDotNet.Utils.Common;
-using EnkaDotNet.Utils;
-using EnkaDotNet.Exceptions;
-using EnkaDotNet.Utils.Genshin;
-using EnkaDotNet.Utils.ZZZ;
+using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Assets.ZZZ;
+using EnkaDotNet.Components.Genshin;
+using EnkaDotNet.Components.HSR;
+using EnkaDotNet.Enums;
+using EnkaDotNet.Exceptions;
+using EnkaDotNet.Models.Genshin;
+using EnkaDotNet.Utils;
+using EnkaDotNet.Utils.Common;
+using EnkaDotNet.Utils.Genshin;
+using EnkaDotNet.Utils.HSR;
+using EnkaDotNet.Utils.ZZZ;
 
 namespace EnkaDotNet
 {
@@ -17,8 +20,10 @@ namespace EnkaDotNet
         private readonly HttpHelper _httpHelper;
         private readonly DataMapper? _dataMapper;
         private readonly ZZZDataMapper? _zzzDataMapper;
+        private readonly HSRDataMapper? _hsrDataMapper;
         private readonly IGenshinAssets? _genshinAssets;
         private readonly IZZZAssets? _zzzAssets;
+        private readonly IHSRAssets? _hsrAssets;
         private readonly EnkaClientOptions _options;
         private bool _disposed = false;
 
@@ -48,8 +53,12 @@ namespace EnkaDotNet
                     _dataMapper = new DataMapper(_genshinAssets);
                     break;
                 case GameType.ZZZ:
-                    _zzzAssets = new ZZZAssets(_options.Language);
+                    _zzzAssets = AssetsFactory.CreateZZZ(_options.Language);
                     _zzzDataMapper = new ZZZDataMapper(_zzzAssets);
+                    break;
+                case GameType.HSR:
+                    _hsrAssets = AssetsFactory.CreateHSR(_options.Language);
+                    _hsrDataMapper = new HSRDataMapper(_hsrAssets);
                     break;
             }
         }

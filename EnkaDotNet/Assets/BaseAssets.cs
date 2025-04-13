@@ -20,7 +20,6 @@ namespace EnkaDotNet.Assets
             Language = language ?? throw new ArgumentNullException(nameof(language));
             GameType = gameType;
 
-            // Initialize essential assets
             LoadTextMap(language).GetAwaiter().GetResult();
             LoadAssets().GetAwaiter().GetResult();
         }
@@ -72,7 +71,6 @@ namespace EnkaDotNet.Assets
 
         protected async Task<T> FetchAndDeserializeAssetAsync<T>(string assetKey)
         {
-            // Check if we already have it cached
             if (_assetCache.TryGetValue(assetKey, out var cachedAsset) && cachedAsset is T typedAsset)
             {
                 return typedAsset;
@@ -90,7 +88,6 @@ namespace EnkaDotNet.Assets
                     throw new JsonException($"Failed to deserialize {assetKey} - result was null");
                 }
 
-                // Cache the result
                 _assetCache[assetKey] = result;
 
                 return result;

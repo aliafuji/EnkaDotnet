@@ -107,7 +107,7 @@ namespace EnkaDotNet.Utils.ZZZ
     public class BonusStats
     {
         public StatType StatType { get; set; }
-        public string Value { get; set; }
+        public string? Value { get; set; }
         public string Description { get; set; } = string.Empty;
     }
     }
