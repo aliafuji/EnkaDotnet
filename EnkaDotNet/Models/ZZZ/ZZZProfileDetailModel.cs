@@ -12,13 +12,18 @@ namespace EnkaDotNet.Models.ZZZ
 
         [JsonPropertyName("Uid")]
         [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
-        public long Uid { get; set; }  // Changed from string to long to handle numeric UIDs
+        public long Uid { get; set; }
 
         [JsonPropertyName("Level")]
         public int Level { get; set; }
 
         [JsonPropertyName("Title")]
+        [Obsolete("Use TitleInfo field if available.")]
         public int Title { get; set; }
+
+        [JsonPropertyName("TitleInfo")]
+        public ZZZTitleInfoModel? TitleInfo { get; set; }
+
 
         [JsonPropertyName("ProfileId")]
         public int ProfileId { get; set; }

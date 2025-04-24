@@ -3,6 +3,7 @@ using EnkaDotNet.Assets.ZZZ.Models;
 using EnkaDotNet.Enums;
 using EnkaDotNet.Enums.ZZZ;
 using EnkaDotNet.Utils;
+using EnkaDotNet.Utils.ZZZ;
 
 namespace EnkaDotNet.Assets.ZZZ
 {
@@ -18,7 +19,10 @@ namespace EnkaDotNet.Assets.ZZZ
             { "namecards.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/namecards.json" },
             { "medals.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/medals.json" },
             { "titles.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/titles.json" },
-            { "property.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/property.json" }
+            { "property.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/property.json" },
+            { "equipment_level.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/zzz/equipment_level.json" },
+            { "weapon_level.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/zzz/weapon_level.json" },
+            { "weapon_star.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/zzz/weapon_star.json" }
         };
 
         private readonly Dictionary<string, ZZZAvatarAssetInfo> _avatars = new();
@@ -31,6 +35,10 @@ namespace EnkaDotNet.Assets.ZZZ
         private readonly Dictionary<string, ZZZEquipmentItemInfo> _equipmentItems = new();
         private readonly Dictionary<string, ZZZEquipmentSuitInfo> _equipmentSuits = new();
         private Dictionary<string, string>? _localization;
+
+        private List<ZZZEquipmentLevelItem>? _equipmentLevelData;
+        private List<ZZZWeaponLevelItem>? _weaponLevelData;
+        private List<ZZZWeaponStarItem>? _weaponStarData;
 
         public ZZZAssets(string language = "en")
             : base(language, GameType.ZZZ)
@@ -51,11 +59,60 @@ namespace EnkaDotNet.Assets.ZZZ
                 LoadNamecards(),
                 LoadMedals(),
                 LoadTitles(),
-                LoadProperties()
+                LoadProperties(),
+                LoadEquipmentLevel(),
+                LoadWeaponLevel(),
+                LoadWeaponStar()
             };
 
             await Task.WhenAll(tasks);
         }
+
+        private async Task LoadEquipmentLevel()
+        {
+            try
+            {
+                var data = await FetchAndDeserializeAssetAsync<ZZZEquipmentLevelData>("equipment_level.json");
+                _equipmentLevelData = data?.Items ?? new List<ZZZEquipmentLevelItem>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Assets] Error loading equipment_level: {ex.Message}");
+                _equipmentLevelData = new List<ZZZEquipmentLevelItem>(); // Ensure it's initialized
+                throw new InvalidOperationException($"Failed to load essential equipment level data", ex);
+            }
+        }
+
+        private async Task LoadWeaponLevel()
+        {
+            try
+            {
+                var data = await FetchAndDeserializeAssetAsync<ZZZWeaponLevelData>("weapon_level.json");
+                _weaponLevelData = data?.Items ?? new List<ZZZWeaponLevelItem>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Assets] Error loading weapon_level: {ex.Message}");
+                _weaponLevelData = new List<ZZZWeaponLevelItem>();
+                throw new InvalidOperationException($"Failed to load essential weapon level data", ex);
+            }
+        }
+
+        private async Task LoadWeaponStar()
+        {
+            try
+            {
+                var data = await FetchAndDeserializeAssetAsync<ZZZWeaponStarData>("weapon_star.json");
+                _weaponStarData = data?.Items ?? new List<ZZZWeaponStarItem>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Assets] Error loading weapon_star: {ex.Message}");
+                _weaponStarData = new List<ZZZWeaponStarItem>();
+                throw new InvalidOperationException($"Failed to load essential weapon star data", ex);
+            }
+        }
+
 
         private async Task LoadLocalizations()
         {
@@ -451,7 +508,7 @@ namespace EnkaDotNet.Assets.ZZZ
             string propertyIdStr = propertyId.ToString();
             if (_properties.TryGetValue(propertyIdStr, out var propertyInfo) && !string.IsNullOrEmpty(propertyInfo.Name))
             {
-                return propertyInfo.Name;
+                return GetLocalizedText(propertyInfo.Name);
             }
             return $"Property_{propertyId}";
         }
@@ -463,23 +520,25 @@ namespace EnkaDotNet.Assets.ZZZ
             {
                 try
                 {
-                    return string.Format(propertyInfo.Format, value);
+                    if (propertyInfo.Format.Contains("%"))
+                    {
+                        return string.Format(System.Globalization.CultureInfo.InvariantCulture, propertyInfo.Format, value);
+                    }
+                    else
+                    {
+                        return string.Format(System.Globalization.CultureInfo.InvariantCulture, propertyInfo.Format, Math.Floor(value));
+                    }
                 }
-                catch
+                catch (FormatException ex)
                 {
-                    return value.ToString();
+                    Console.WriteLine($"[Assets] Error formatting property {propertyId}: {ex.Message}");
+                    bool isPercent = ZZZStatsHelpers.IsDisplayPercentageStat((StatType)propertyId);
+                    return isPercent ? $"{value:F1}%" : $"{Math.Floor(value)}";
                 }
             }
 
-            bool isPercent = propertyId.ToString().EndsWith("2");
-            if (isPercent)
-            {
-                return $"{value:F1}%";
-            }
-            else
-            {
-                return $"{value:F0}";
-            }
+            bool isPercentage = ZZZStatsHelpers.IsDisplayPercentageStat((StatType)propertyId);
+            return isPercentage ? $"{value:F1}%" : $"{Math.Floor(value)}";
         }
 
         public string GetTitleText(int titleId)
@@ -536,6 +595,10 @@ namespace EnkaDotNet.Assets.ZZZ
         {
             return string.Empty;
         }
+
+        public List<ZZZEquipmentLevelItem>? GetEquipmentLevelData() => _equipmentLevelData;
+        public List<ZZZWeaponLevelItem>? GetWeaponLevelData() => _weaponLevelData;
+        public List<ZZZWeaponStarItem>? GetWeaponStarData() => _weaponStarData;
 
         private ElementType MapElementNameToEnum(string elementName)
         {

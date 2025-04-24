@@ -1,9 +1,6 @@
 ﻿using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
@@ -388,7 +385,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 var catBreakdown = breakdown[category];
 
                 double totalPercentBonus = (catBreakdown["Agent_Percent"] + catBreakdown["Weapon_Percent"] +
-                                 catBreakdown["Discs_Percent"] + catBreakdown["SetBonus_Percent"]) / 100.0;
+                                    catBreakdown["Discs_Percent"] + catBreakdown["SetBonus_Percent"]) / 100.0;
 
                 double totalFlatBonus = catBreakdown["Agent_Flat"] + catBreakdown["Weapon_Flat"] +
                                       catBreakdown["Discs_Flat"];
@@ -397,162 +394,148 @@ namespace EnkaDotNet.Utils.ZZZ
                 double weaponBase = catBreakdown.ContainsKey("WeaponBase") ? catBreakdown["WeaponBase"] : 0;
 
                 double finalValue = 0;
-
                 double bonusFlat = catBreakdown["SetBonus_Flat"] / 10;
 
                 switch (category)
                 {
                     case "HP":
-                        double flooredHPBase = Math.Floor(agentBase);
-                        double percentBonus = flooredHPBase * totalPercentBonus;
-                        finalValue = flooredHPBase + Math.Round(percentBonus) + totalFlatBonus;
-                        catBreakdown["BaseDisplay"] = flooredHPBase;
-                        catBreakdown["AddedDisplay"] = finalValue - flooredHPBase;
+                        double percentBonus = agentBase * totalPercentBonus;
+                        finalValue = Math.Floor(agentBase + percentBonus + totalFlatBonus);
+                        catBreakdown["BaseDisplay"] = agentBase;
+                        catBreakdown["AddedDisplay"] = finalValue - agentBase;
                         break;
+
                     case "ATK":
-                        double flooredAgentATK = Math.Floor(agentBase);
-                        double flooredWeaponATK = Math.Floor(weaponBase);
-                        double combinedBaseATK = flooredAgentATK + flooredWeaponATK;
+                        double combinedBaseATK = agentBase + weaponBase;
                         double discPercentBonus = catBreakdown["Discs_Percent"] != 0 ? catBreakdown["Discs_Percent"] / 100.0 : 0;
                         double weaponPercentBonus = catBreakdown["Weapon_Percent"] != 0 ? catBreakdown["Weapon_Percent"] / 100.0 : 0;
                         double agentPercentBonus = catBreakdown["Agent_Percent"] != 0 ? catBreakdown["Agent_Percent"] / 100.0 : 0;
                         double setBonusPercent = catBreakdown["SetBonus_Percent"] != 0 ? (catBreakdown["SetBonus_Percent"] / 10.0) : 0;
+
                         double atkDiscPercentBonus = combinedBaseATK * discPercentBonus;
                         double atkSetBonusValue = combinedBaseATK * setBonusPercent;
                         double atkAgentWeaponPercentBonus = combinedBaseATK * (agentPercentBonus + weaponPercentBonus);
+
                         double flatBonuses = catBreakdown["Agent_Flat"] + catBreakdown["Weapon_Flat"] +
                                            catBreakdown["Discs_Flat"] + catBreakdown["SetBonus_Flat"];
-                        double addedValue = Math.Floor(atkDiscPercentBonus) + Math.Round(atkSetBonusValue) + Math.Floor(atkAgentWeaponPercentBonus) + flatBonuses;
-                        finalValue = combinedBaseATK + addedValue;
+
+                        double addedValue = atkDiscPercentBonus + atkSetBonusValue + atkAgentWeaponPercentBonus + flatBonuses;
+                        finalValue = Math.Floor(combinedBaseATK + addedValue);
+
                         catBreakdown["BaseDisplay"] = combinedBaseATK;
-                        catBreakdown["AddedDisplay"] = addedValue;
+                        catBreakdown["AddedDisplay"] = finalValue - combinedBaseATK;
                         break;
 
                     case "Def":
-                        double flooredDefBase = Math.Floor(agentBase);
-
                         double defDiscPercentBonus = catBreakdown["Discs_Percent"] != 0 ? catBreakdown["Discs_Percent"] / 100.0 : 0;
                         double defWeaponPercentBonus = catBreakdown["Weapon_Percent"] != 0 ? catBreakdown["Weapon_Percent"] / 100.0 : 0;
                         double defAgentPercentBonus = catBreakdown["Agent_Percent"] != 0 ? catBreakdown["Agent_Percent"] / 100.0 : 0;
                         double defSetBonusPercent = catBreakdown["SetBonus_Percent"] != 0 ? (catBreakdown["SetBonus_Percent"] / 10.0) : 0;
 
-                        double defDiscValue = flooredDefBase * defDiscPercentBonus;
-                        double defSetValue = flooredDefBase * defSetBonusPercent;
-                        double defAgentWeaponValue = flooredDefBase * (defAgentPercentBonus + defWeaponPercentBonus);
+                        double defDiscValue = agentBase * defDiscPercentBonus;
+                        double defSetValue = agentBase * defSetBonusPercent;
+                        double defAgentWeaponValue = agentBase * (defAgentPercentBonus + defWeaponPercentBonus);
 
                         double defFlatBonuses = catBreakdown["Agent_Flat"] + catBreakdown["Weapon_Flat"] +
                                               catBreakdown["Discs_Flat"] + catBreakdown["SetBonus_Flat"];
 
-                        double defAddedValue = Math.Floor(defDiscValue) + Math.Round(defSetValue) +
-                                             Math.Floor(defAgentWeaponValue) + defFlatBonuses;
+                        double defAddedValue = defDiscValue + defSetValue + defAgentWeaponValue + defFlatBonuses;
+                        finalValue = Math.Floor(agentBase + defAddedValue);
 
-                        finalValue = flooredDefBase + defAddedValue;
-                        catBreakdown["BaseDisplay"] = flooredDefBase;
-                        catBreakdown["AddedDisplay"] = defAddedValue;
+                        catBreakdown["BaseDisplay"] = agentBase;
+                        catBreakdown["AddedDisplay"] = finalValue - agentBase;
                         break;
 
                     case "Impact":
-                        double flooredImpactBase = Math.Floor(agentBase);
-
                         double impactDiscPercentBonus = catBreakdown["Discs_Percent"] != 0 ? catBreakdown["Discs_Percent"] / 100.0 : 0;
                         double impactWeaponPercentBonus = catBreakdown["Weapon_Percent"] != 0 ? catBreakdown["Weapon_Percent"] / 100.0 : 0;
                         double impactAgentPercentBonus = catBreakdown["Agent_Percent"] != 0 ? catBreakdown["Agent_Percent"] / 100.0 : 0;
                         double impactSetBonusPercent = catBreakdown["SetBonus_Percent"] != 0 ? (catBreakdown["SetBonus_Percent"] / 10.0) : 0;
 
-                        double impactDiscValue = flooredImpactBase * impactDiscPercentBonus;
-                        double impactSetValue = flooredImpactBase * impactSetBonusPercent;
-                        double impactAgentWeaponValue = flooredImpactBase * (impactAgentPercentBonus + impactWeaponPercentBonus);
+                        double impactDiscValue = agentBase * impactDiscPercentBonus;
+                        double impactSetValue = agentBase * impactSetBonusPercent;
+                        double impactAgentWeaponValue = agentBase * (impactAgentPercentBonus + impactWeaponPercentBonus);
 
                         double impactFlatBonuses = catBreakdown["Agent_Flat"] + catBreakdown["Weapon_Flat"] +
                                                  catBreakdown["Discs_Flat"] + catBreakdown["SetBonus_Flat"];
 
-                        double impactAddedValue = Math.Floor(impactDiscValue) + Math.Round(impactSetValue) +
-                                               Math.Round(impactAgentWeaponValue) + impactFlatBonuses;
+                        double impactAddedValue = impactDiscValue + impactSetValue + impactAgentWeaponValue + impactFlatBonuses;
+                        finalValue = Math.Floor(agentBase + impactAddedValue);
 
-                        finalValue = flooredImpactBase + impactAddedValue;
-                        catBreakdown["BaseDisplay"] = flooredImpactBase;
-                        catBreakdown["AddedDisplay"] = impactAddedValue;
+                        catBreakdown["BaseDisplay"] = agentBase;
+                        catBreakdown["AddedDisplay"] = finalValue - agentBase;
                         break;
 
                     case "Anomaly Mastery":
-                        double flooredAnomalyMasteryBase = Math.Floor(agentBase);
-
                         double anomalyMasteryDiscPercentBonus = catBreakdown["Discs_Percent"] != 0 ? catBreakdown["Discs_Percent"] / 100.0 : 0;
                         double anomalyMasteryWeaponPercentBonus = catBreakdown["Weapon_Percent"] != 0 ? catBreakdown["Weapon_Percent"] / 100.0 : 0;
                         double anomalyMasteryAgentPercentBonus = catBreakdown["Agent_Percent"] != 0 ? catBreakdown["Agent_Percent"] / 100.0 : 0;
                         double anomalyMasterySetBonusPercent = catBreakdown["SetBonus_Percent"] != 0 ? (catBreakdown["SetBonus_Percent"] / 10.0) : 0;
 
-                        double anomalyMasteryDiscValue = flooredAnomalyMasteryBase * anomalyMasteryDiscPercentBonus;
-                        double anomalyMasterySetValue = flooredAnomalyMasteryBase * anomalyMasterySetBonusPercent;
-                        double anomalyMasteryAgentWeaponValue = flooredAnomalyMasteryBase * (anomalyMasteryAgentPercentBonus + anomalyMasteryWeaponPercentBonus);
+                        double anomalyMasteryDiscValue = agentBase * anomalyMasteryDiscPercentBonus;
+                        double anomalyMasterySetValue = agentBase * anomalyMasterySetBonusPercent;
+                        double anomalyMasteryAgentWeaponValue = agentBase * (anomalyMasteryAgentPercentBonus + anomalyMasteryWeaponPercentBonus);
 
                         double anomalyMasteryFlatBonuses = catBreakdown["Agent_Flat"] + catBreakdown["Weapon_Flat"] +
                                                          catBreakdown["Discs_Flat"] + catBreakdown["SetBonus_Flat"];
 
-                        double anomalyMasteryAddedValue = Math.Floor(anomalyMasteryDiscValue) + Math.Round(anomalyMasterySetValue) +
-                                                       Math.Floor(anomalyMasteryAgentWeaponValue) + anomalyMasteryFlatBonuses;
+                        double anomalyMasteryAddedValue = anomalyMasteryDiscValue + anomalyMasterySetValue + anomalyMasteryAgentWeaponValue + anomalyMasteryFlatBonuses;
+                        finalValue = Math.Floor(agentBase + anomalyMasteryAddedValue);
 
-                        finalValue = flooredAnomalyMasteryBase + anomalyMasteryAddedValue;
-                        catBreakdown["BaseDisplay"] = flooredAnomalyMasteryBase;
-                        catBreakdown["AddedDisplay"] = anomalyMasteryAddedValue;
+                        catBreakdown["BaseDisplay"] = agentBase;
+                        catBreakdown["AddedDisplay"] = finalValue - agentBase;
                         break;
 
                     case "Anomaly Proficiency":
-                        double flooredAnomalyProficiencyBase = Math.Floor(agentBase);
-
                         double anomalyProficiencyDiscPercentBonus = catBreakdown["Discs_Percent"] != 0 ? catBreakdown["Discs_Percent"] / 100.0 : 0;
                         double anomalyProficiencyWeaponPercentBonus = catBreakdown["Weapon_Percent"] != 0 ? catBreakdown["Weapon_Percent"] / 100.0 : 0;
                         double anomalyProficiencyAgentPercentBonus = catBreakdown["Agent_Percent"] != 0 ? catBreakdown["Agent_Percent"] / 100.0 : 0;
                         double anomalyProficiencySetBonusPercent = catBreakdown["SetBonus_Percent"] != 0 ? (catBreakdown["SetBonus_Percent"] / 10.0) : 0;
 
-                        double anomalyProficiencyDiscValue = flooredAnomalyProficiencyBase * anomalyProficiencyDiscPercentBonus;
-                        double anomalyProficiencySetValue = flooredAnomalyProficiencyBase * anomalyProficiencySetBonusPercent;
-                        double anomalyProficiencyAgentWeaponValue = flooredAnomalyProficiencyBase * (anomalyProficiencyAgentPercentBonus + anomalyProficiencyWeaponPercentBonus);
+                        double anomalyProficiencyDiscValue = agentBase * anomalyProficiencyDiscPercentBonus;
+                        double anomalyProficiencySetValue = agentBase * anomalyProficiencySetBonusPercent;
+                        double anomalyProficiencyAgentWeaponValue = agentBase * (anomalyProficiencyAgentPercentBonus + anomalyProficiencyWeaponPercentBonus);
 
                         double anomalyProficiencyFlatBonuses = catBreakdown["Agent_Flat"] + catBreakdown["Weapon_Flat"] +
                                                              catBreakdown["Discs_Flat"] + catBreakdown["SetBonus_Flat"];
 
-                        double anomalyProficiencyAddedValue = Math.Floor(anomalyProficiencyDiscValue) + Math.Round(anomalyProficiencySetValue) +
-                                                           Math.Floor(anomalyProficiencyAgentWeaponValue) + anomalyProficiencyFlatBonuses;
+                        double anomalyProficiencyAddedValue = anomalyProficiencyDiscValue + anomalyProficiencySetValue + anomalyProficiencyAgentWeaponValue + anomalyProficiencyFlatBonuses;
+                        finalValue = Math.Floor(agentBase + anomalyProficiencyAddedValue);
 
-                        finalValue = flooredAnomalyProficiencyBase + anomalyProficiencyAddedValue;
-                        catBreakdown["BaseDisplay"] = flooredAnomalyProficiencyBase;
-                        catBreakdown["AddedDisplay"] = anomalyProficiencyAddedValue;
+                        catBreakdown["BaseDisplay"] = agentBase;
+                        catBreakdown["AddedDisplay"] = finalValue - agentBase;
                         break;
 
                     case "PEN":
-                        double flooredPENBase = Math.Floor(agentBase);
-
                         double penDiscPercentBonus = catBreakdown["Discs_Percent"] != 0 ? catBreakdown["Discs_Percent"] / 100.0 : 0;
                         double penWeaponPercentBonus = catBreakdown["Weapon_Percent"] != 0 ? catBreakdown["Weapon_Percent"] / 100.0 : 0;
                         double penAgentPercentBonus = catBreakdown["Agent_Percent"] != 0 ? catBreakdown["Agent_Percent"] / 100.0 : 0;
                         double penSetBonusPercent = catBreakdown["SetBonus_Percent"] != 0 ? (catBreakdown["SetBonus_Percent"] / 10.0) : 0;
 
-                        double penDiscValue = flooredPENBase * penDiscPercentBonus;
-                        double penSetValue = flooredPENBase * penSetBonusPercent;
-                        double penAgentWeaponValue = flooredPENBase * (penAgentPercentBonus + penWeaponPercentBonus);
+                        double penDiscValue = agentBase * penDiscPercentBonus;
+                        double penSetValue = agentBase * penSetBonusPercent;
+                        double penAgentWeaponValue = agentBase * (penAgentPercentBonus + penWeaponPercentBonus);
 
                         double penFlatBonuses = catBreakdown["Agent_Flat"] + catBreakdown["Weapon_Flat"] +
                                               catBreakdown["Discs_Flat"] + catBreakdown["SetBonus_Flat"];
 
-                        double penAddedValue = Math.Floor(penDiscValue) + Math.Round(penSetValue) +
-                                             Math.Floor(penAgentWeaponValue) + penFlatBonuses;
+                        double penAddedValue = penDiscValue + penSetValue + penAgentWeaponValue + penFlatBonuses;
+                        finalValue = Math.Floor(agentBase + penAddedValue);
 
-                        finalValue = flooredPENBase + penAddedValue;
-                        catBreakdown["BaseDisplay"] = flooredPENBase;
-                        catBreakdown["AddedDisplay"] = penAddedValue;
+                        catBreakdown["BaseDisplay"] = agentBase;
+                        catBreakdown["AddedDisplay"] = finalValue - agentBase;
                         break;
 
                     case "Crit Rate":
                         finalValue = (BASE_CRIT_RATE + totalFlatBonus + totalPercentBonus + bonusFlat) * 100;
                         catBreakdown["BaseDisplay"] = (BASE_CRIT_RATE * 100);
-                        catBreakdown["AddedDisplay"] = totalFlatBonus + totalPercentBonus + bonusFlat;
+                        catBreakdown["AddedDisplay"] = finalValue - (BASE_CRIT_RATE * 100);
                         break;
 
                     case "Crit DMG":
-                        finalValue = (BASE_CRIT_DMG + totalFlatBonus + totalPercentBonus + bonusFlat) * 100;
+                        finalValue = (BASE_CRIT_DMG + totalFlatBonus + totalPercentBonus + bonusFlat) * 100;        
                         catBreakdown["BaseDisplay"] = (BASE_CRIT_DMG * 100);
-                        catBreakdown["AddedDisplay"] = totalFlatBonus + totalPercentBonus + bonusFlat;
+                        catBreakdown["AddedDisplay"] = finalValue - (BASE_CRIT_DMG * 100);
                         break;
 
                     case "Energy Regen":
@@ -562,8 +545,9 @@ namespace EnkaDotNet.Utils.ZZZ
 
                         finalValue = agentBase + totalFlatBonus + discRegenBonus + setBonusRegenBonus;
                         catBreakdown["BaseDisplay"] = agentBase;
-                        catBreakdown["AddedDisplay"] = totalFlatBonus + weaponRegenBonus + discRegenBonus + setBonusRegenBonus;
+                        catBreakdown["AddedDisplay"] = finalValue - agentBase;
                         break;
+
                     case "Pen Ratio":
                     case "Physical DMG":
                     case "Fire DMG":
@@ -584,12 +568,13 @@ namespace EnkaDotNet.Utils.ZZZ
 
                         double elemTotalValue = elemDiscValue + elemSetValue + elemAgentWeaponValue + elemFlatBonuses;
 
-                        finalValue = elemTotalValue;
+                        finalValue = Math.Floor(elemTotalValue);
                         catBreakdown["BaseDisplay"] = 0;
                         catBreakdown["AddedDisplay"] = finalValue;
                         break;
+
                     default:
-                        finalValue = agentBase * (1.0 + totalPercentBonus) + totalFlatBonus;
+                        finalValue = Math.Floor(agentBase * (1.0 + totalPercentBonus) + totalFlatBonus);
                         catBreakdown["BaseDisplay"] = agentBase;
                         catBreakdown["AddedDisplay"] = finalValue - agentBase;
                         break;

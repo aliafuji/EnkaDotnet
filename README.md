@@ -4,18 +4,19 @@ Enka.DotNet is a wrapper for accessing and processing character data from the En
 
 [![NuGet](https://img.shields.io/nuget/v/EnkaDotNet.svg)](https://www.nuget.org/packages/EnkaDotNet/)
 
-## Features
+## Features  
 
-- Fetch detailed character builds including artifacts, weapons, and stats
-- Access player profile information
-- Strong typing for all Genshin Impact game entities
+- Fetch detailed character builds including artifacts, weapons, stats, and constellations  
+- Access player profile information, including namecards and achievements  
+- Strong typing for all Genshin Impact game entities  
+- Support for multiple games: Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero
 
-## Supported Games
+## Supported Games  
 
-| Game              | Status         | API Support |
-| ----------------- | -------------- | ----------- |
-| Genshin Impact    | ✅ Ready       | Full        |
-| Honkai: Star Rail | ⏳ Coming Soon | Planned     |
+| Game              | Status         | API Support |  
+| ----------------- | -------------- | ----------- |  
+| Genshin Impact    | ✅ Ready       | Full        |  
+| Honkai: Star Rail | ✅ Ready       | Full        |  
 | Zenless Zone Zero | ✅ Ready       | Full        |
 
 ## Installation
@@ -323,6 +324,174 @@ namespace ZZZStatsViewer
             catch (Exception ex)
             {
                 Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+## Example Code for Honkai Star Rail
+
+```csharp
+using EnkaDotNet;
+using EnkaDotNet.Enums;
+using EnkaDotNet.Enums.HSR;
+using EnkaDotNet.Components.HSR;
+using EnkaDotNet.Utils.HSR;
+
+namespace HSRStatsViewer
+{
+    class Program
+    {
+        static async Task Main(string[] args)
+        {
+            try
+            {
+                Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+                var options = new EnkaClientOptions
+                {
+                    GameType = GameType.HSR,
+                    Language = "en",
+                    EnableCaching = true,
+                    UserAgent = "EnkaDotNet/5.0",
+                };
+
+                using var client = new EnkaClient(options);
+
+                int uid = args.Length > 0 && int.TryParse(args[0], out int parsedUid) ? parsedUid : 802175546;
+
+                Console.WriteLine($"Fetching player data for UID: {uid}...");
+                var playerInfo = await client.GetHSRPlayerInfo(uid);
+
+                Console.WriteLine($"Player: {playerInfo.Nickname} (Lv.{playerInfo.Level}, World Level: {playerInfo.WorldLevel})");
+                Console.WriteLine($"Signature: {playerInfo.Signature}");
+                Console.WriteLine($"Platform: {playerInfo.Platform}");
+                Console.WriteLine($"Player Icon: {playerInfo.ProfilePictureIcon}");
+
+                // Display record info
+                Console.WriteLine("\nRECORD INFO:");
+                Console.WriteLine($"Achievements: {playerInfo.RecordInfo.AchievementCount}");
+                Console.WriteLine($"Characters: {playerInfo.RecordInfo.AvatarCount}");
+                Console.WriteLine($"Light Cones: {playerInfo.RecordInfo.LightConeCount}");
+                Console.WriteLine($"Relics: {playerInfo.RecordInfo.RelicCount}");
+                Console.WriteLine($"Memory of Chaos Score: {playerInfo.RecordInfo.MemoryOfChaosScore}");
+
+                if (playerInfo.DisplayedCharacters.Count == 0)
+                {
+                    Console.WriteLine("\nNo characters found in showcase.");
+                    return;
+                }
+
+                // Display character info for first character
+                var character = playerInfo.DisplayedCharacters[6];
+                Console.WriteLine($"\nCHARACTER INFO:");
+                Console.WriteLine($"Name: {character.Name} (Lv.{character.Level}/{character.Promotion})");
+                Console.WriteLine($"Rarity: {character.Rarity} | Path: {character.Path.GetPathName()}");
+                Console.WriteLine($"Element: {character.Element}");
+                Console.WriteLine($"Rank: {character.Rank} | Position: {character.Position}");
+                Console.WriteLine($"Icon URL: {character.IconUrl}");
+                Console.WriteLine($"Avatar Icon URL: {character.AvatarIconUrl}");
+
+                // Display character stats
+                Console.WriteLine("\nSTATS:");
+                foreach (var stat in character.Stats)
+                {
+                    Console.WriteLine($"{stat.Key}: {stat.Value}");
+                }
+
+                // Display light cone
+                if (character.Equipment != null)
+                {
+                    var lightCone = character.Equipment;
+                    Console.WriteLine("\nLIGHT CONE:");
+                    Console.WriteLine($"Name: {lightCone.Name} (Lv.{lightCone.Level}/{lightCone.Promotion})");
+                    Console.WriteLine($"Rarity: {lightCone.Rarity} | Path: {lightCone.Path}");
+                    Console.WriteLine($"Superimposition: {lightCone.Rank}");
+                    Console.WriteLine($"Base HP: {lightCone.BaseHP:F0}");
+                    Console.WriteLine($"Base ATK: {lightCone.BaseAttack:F0}");
+                    Console.WriteLine($"Base DEF: {lightCone.BaseDefense:F0}");
+                    Console.WriteLine($"Icon URL: {lightCone.IconUrl}");
+                }
+
+                // Display eidolons
+                Console.WriteLine("\nEIDOLONS:");
+                foreach (var eidolon in character.Eidolons)
+                {
+                    Console.WriteLine($"- Id: {eidolon.Id}");
+                    Console.WriteLine($"- Icon URL: {eidolon.Icon}");
+                    Console.WriteLine($"- Unlocked: {eidolon.Unlocked}");
+                }
+
+                // Display relics
+                if (character.RelicList.Count > 0)
+                {
+                    Console.WriteLine("\nRELICS:");
+                    foreach (var relic in character.RelicList)
+                    {
+                        Console.WriteLine($"- {relic.SetName} ({relic.RelicType.GetRelicName()}) - Lv.{relic.Level}");
+                        Console.WriteLine($"  Rarity: {relic.Rarity}");
+                        Console.WriteLine($"  Main Stat: {relic.MainStat}");
+                        Console.WriteLine($"  Icon URL: {relic.IconUrl}");
+
+                        Console.WriteLine("  Sub Stats:");
+                        foreach (var subStat in relic.SubStats)
+                        {
+                            Console.WriteLine($"  - {HSRStatPropertyUtils.GetDisplayName(subStat.Type)}: {subStat.DisplayValue}");
+                        }
+                    }
+                }
+
+                // Display relic sets
+                var relicSets = character.GetEquippedRelicSets();
+                if (relicSets.Count > 0)
+                {
+                    Console.WriteLine("\nRELIC SET BONUSES:");
+                    foreach (var setBonus in relicSets)
+                    {
+                        Console.WriteLine($"    - {setBonus.SetName} ({setBonus.PieceCount}pcs)");
+                        foreach (var effectDetail in setBonus.Effects)
+                        {
+                            Console.WriteLine($"      - {effectDetail.PropertyName}: +{effectDetail.FormattedValue}");
+                        }
+                    }
+                }
+
+                // Display skill trees
+                Console.WriteLine("\nSKILL TREES:");
+                if (character.SkillTreeList != null && character.SkillTreeList.Count > 0)
+                {
+                    foreach (HSRSkillTree trace in character.SkillTreeList)
+                    {
+                        Console.WriteLine($"Type: {trace.TraceType}");
+                        Console.WriteLine($"Icon URL: {trace.Icon}");
+                        Console.WriteLine($"Anchor: {trace.Anchor}");
+
+                        string levelDisplay;
+                        if (trace.IsBoosted)
+                        {
+                            levelDisplay = $"{trace.BaseLevel} + {trace.Level - trace.BaseLevel} = {trace.Level}";
+                        }
+                        else
+                        {
+                            levelDisplay = $"{trace.Level}";
+                        }
+                        Console.WriteLine($"Level: {levelDisplay} / {trace.MaxLevel}");
+                        Console.WriteLine($"Boosted by Eidolon: {trace.IsBoosted}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"{character.Name} has no skill tree information available.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner Error: {ex.InnerException.Message}");
+                }
             }
         }
     }
