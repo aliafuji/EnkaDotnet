@@ -1,22 +1,93 @@
 ﻿using EnkaDotNet.Assets.ZZZ;
+using EnkaDotNet.Assets.ZZZ.Models;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
+using System;
+using System.Linq;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
     public class ZZZStatsCalculator
     {
         private readonly IZZZAssets _assets;
-        private Dictionary<string, double> _calculationCache = new Dictionary<string, double>();
+        private Dictionary<string, object> _calculationCache = new Dictionary<string, object>();
 
         public ZZZStatsCalculator(IZZZAssets assets)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
         }
 
+        //public Dictionary<StatType, double> CalculateAgentBaseStats(int agentId, int level, int promotionLevel, int coreSkillEnhancement)
+        //{
+        //    string cacheKey = $"agent_{agentId}_{level}_{promotionLevel}_{coreSkillEnhancement}";
+
+        //    var stats = new Dictionary<StatType, double>();
+        //    var avatarInfo = _assets.GetAvatarInfo(agentId.ToString());
+
+        //    if (avatarInfo == null || avatarInfo.BaseProps == null)
+        //        return stats;
+
+        //    foreach (var prop in avatarInfo.BaseProps)
+        //    {
+        //        if (int.TryParse(prop.Key, out int propertyId) && Enum.IsDefined(typeof(StatType), propertyId))
+        //        {
+        //            StatType statType = (StatType)propertyId;
+
+        //            string propCacheKey = $"{cacheKey}_{propertyId}";
+
+        //            if (_calculationCache.TryGetValue(propCacheKey, out double cachedValue))
+        //            {
+        //                stats[statType] = cachedValue;
+        //                continue;
+        //            }
+
+        //            double baseValueRaw = prop.Value;
+        //            double growthValueRaw = 0;
+        //            double promotionValueRaw = 0;
+        //            double coreEnhancementValueRaw = 0;
+
+        //            if (avatarInfo.GrowthProps != null && avatarInfo.GrowthProps.TryGetValue(prop.Key, out int growthValueInt))
+        //            {
+        //                growthValueRaw = (growthValueInt * (level - 1)) / 10000.0;
+        //            }
+
+        //            if (avatarInfo.PromotionProps != null && promotionLevel > 0 && promotionLevel <= avatarInfo.PromotionProps.Count)
+        //            {
+        //                var promotionProps = avatarInfo.PromotionProps[promotionLevel - 1];
+        //                if (promotionProps.TryGetValue(prop.Key, out int promoValueInt))
+        //                {
+        //                    promotionValueRaw = promoValueInt;
+        //                }
+        //            }
+
+        //            if (avatarInfo.CoreEnhancementProps != null && coreSkillEnhancement >= 0 &&
+        //                coreSkillEnhancement < avatarInfo.CoreEnhancementProps.Count)
+        //            {
+        //                var coreProps = avatarInfo.CoreEnhancementProps[coreSkillEnhancement];
+        //                if (coreProps.TryGetValue(prop.Key, out int coreValueInt))
+        //                {
+        //                    coreEnhancementValueRaw = coreValueInt;
+        //                }
+        //            }
+
+        //            double totalRawContribution = baseValueRaw + growthValueRaw + promotionValueRaw + coreEnhancementValueRaw;
+
+        //            _calculationCache[propCacheKey] = totalRawContribution;
+
+        //            stats[statType] = totalRawContribution;
+        //        }
+        //    }
+        //    return stats;
+        //}
+
         public Dictionary<StatType, double> CalculateAgentBaseStats(int agentId, int level, int promotionLevel, int coreSkillEnhancement)
         {
             string cacheKey = $"agent_{agentId}_{level}_{promotionLevel}_{coreSkillEnhancement}";
+
+            if (_calculationCache.TryGetValue(cacheKey, out object? cachedStats) && cachedStats is Dictionary<StatType, double> dictStats)
+            {
+                return dictStats;
+            }
 
             var stats = new Dictionary<StatType, double>();
             var avatarInfo = _assets.GetAvatarInfo(agentId.ToString());
@@ -29,14 +100,6 @@ namespace EnkaDotNet.Utils.ZZZ
                 if (int.TryParse(prop.Key, out int propertyId) && Enum.IsDefined(typeof(StatType), propertyId))
                 {
                     StatType statType = (StatType)propertyId;
-
-                    string propCacheKey = $"{cacheKey}_{propertyId}";
-
-                    if (_calculationCache.TryGetValue(propCacheKey, out double cachedValue))
-                    {
-                        stats[statType] = cachedValue;
-                        continue;
-                    }
 
                     double baseValueRaw = prop.Value;
                     double growthValueRaw = 0;
@@ -66,14 +129,12 @@ namespace EnkaDotNet.Utils.ZZZ
                             coreEnhancementValueRaw = coreValueInt;
                         }
                     }
-
-                    double totalRawContribution = baseValueRaw + growthValueRaw + promotionValueRaw + coreEnhancementValueRaw;
-
-                    _calculationCache[propCacheKey] = totalRawContribution;
+                    double totalRawContribution = baseValueRaw + Math.Floor(growthValueRaw) + promotionValueRaw + coreEnhancementValueRaw;
 
                     stats[statType] = totalRawContribution;
                 }
             }
+            _calculationCache[cacheKey] = stats;
             return stats;
         }
 
@@ -81,61 +142,53 @@ namespace EnkaDotNet.Utils.ZZZ
         {
             string cacheKey = $"weapon_{weaponId}_{level}_{breakLevel}";
 
-            if (_calculationCache.TryGetValue(cacheKey + "_main", out double cachedMainValue) &&
-                _calculationCache.TryGetValue(cacheKey + "_secondary", out double cachedSecondaryValue) &&
-                _calculationCache.TryGetValue(cacheKey + "_mainId", out double cachedMainId) &&
-                _calculationCache.TryGetValue(cacheKey + "_secondaryId", out double cachedSecondaryId))
+            if (_calculationCache.TryGetValue(cacheKey, out object? cachedResult) && cachedResult is ValueTuple<ZZZStat, ZZZStat> cachedTuple)
             {
-                var mainStatz = CreateStatWithProperScaling((int)cachedMainId, cachedMainValue);
-                var secondaryStatz = CreateStatWithProperScaling((int)cachedSecondaryId, cachedSecondaryValue);
-                return (mainStatz, secondaryStatz);
+                return cachedTuple;
             }
 
             var weaponInfo = _assets.GetWeaponInfo(weaponId.ToString());
+            var weaponLevelDataList = _assets.GetWeaponLevelData();
+            var weaponStarDataList = _assets.GetWeaponStarData();
 
-            if (weaponInfo?.MainStat == null || weaponInfo?.SecondaryStat == null)
+            if (weaponInfo == null || weaponInfo.MainStat == null || weaponInfo.SecondaryStat == null ||
+                weaponLevelDataList == null || weaponStarDataList == null)
+            {
                 return (new ZZZStat { Type = StatType.None }, new ZZZStat { Type = StatType.None });
+            }
+
+            int rarity = weaponInfo.Rarity;
+
+            var levelData = weaponLevelDataList.FirstOrDefault(d => d.Level == level && d.Rarity == rarity);
+            if (levelData == null)
+            {
+                Console.WriteLine($"Warning: W-Engine level data not found for level={level} and rarity={rarity}");
+                return (new ZZZStat { Type = StatType.None }, new ZZZStat { Type = StatType.None }); // Handle missing data
+            }
+            double enhanceRate = levelData.EnhanceRate;
+
+            var starData = weaponStarDataList.FirstOrDefault(d => d.Rarity == rarity && d.BreakLevel == breakLevel);
+            if (starData == null)
+            {
+                Console.WriteLine($"Warning: W-Engine star data not found for rarity={rarity} and breakLevel={breakLevel}");
+                starData = new ZZZWeaponStarItem { StarRate = 0, RandRate = 0 }; // Example fallback
+            }
+            double starRate = starData.StarRate;
+            double randRate = starData.RandRate;
 
             int mainStatPropId = weaponInfo.MainStat.PropertyId;
-            double mainStatBaseAtL1 = weaponInfo.MainStat.PropertyValue;
-            double mainStatValue = mainStatBaseAtL1 * GetWeaponLevelMultiplier(weaponId, level, breakLevel);
+            double mainStatBase = weaponInfo.MainStat.PropertyValue;
+            double mainStatValue = mainStatBase * (1 + enhanceRate / 10000.0 + starRate / 10000.0);
+            var mainStat = CreateStatWithProperScaling(mainStatPropId, Math.Floor(mainStatValue));
 
             int secondaryStatPropId = weaponInfo.SecondaryStat.PropertyId;
-            double secondaryStatBaseAtL1 = weaponInfo.SecondaryStat.PropertyValue;
-            double secondaryStatValue = secondaryStatBaseAtL1 * GetWeaponAscensionMultiplier(weaponId, breakLevel);
+            double secondaryStatBase = weaponInfo.SecondaryStat.PropertyValue;
+            double secondaryStatValue = secondaryStatBase * (1 + randRate / 10000.0);
+            var secondaryStat = CreateStatWithProperScaling(secondaryStatPropId, Math.Floor(secondaryStatValue));
 
-            _calculationCache[cacheKey + "_main"] = mainStatValue;
-            _calculationCache[cacheKey + "_secondary"] = secondaryStatValue;
-            _calculationCache[cacheKey + "_mainId"] = mainStatPropId;
-            _calculationCache[cacheKey + "_secondaryId"] = secondaryStatPropId;
-
-            var mainStat = CreateStatWithProperScaling(mainStatPropId, mainStatValue);
-            var secondaryStat = CreateStatWithProperScaling(secondaryStatPropId, secondaryStatValue);
-
-            return (mainStat, secondaryStat);
-        }
-
-        private double GetWeaponLevelMultiplier(int weaponId, int level, int breakLevel)
-        {
-            string cacheKey = $"weapon_level_mult_{weaponId}_{level}_{breakLevel}";
-
-            if (_calculationCache.TryGetValue(cacheKey, out double cachedValue))
-                return cachedValue;
-
-            double result = (1.0 + 0.1568166666666667 * level + 0.8922 * breakLevel);
+            var result = (mainStat, secondaryStat);
             _calculationCache[cacheKey] = result;
-            return result;
-        }
 
-        private double GetWeaponAscensionMultiplier(int weaponId, int breakLevel)
-        {
-            string cacheKey = $"weapon_asc_mult_{weaponId}_{breakLevel}";
-
-            if (_calculationCache.TryGetValue(cacheKey, out double cachedValue))
-                return cachedValue;
-
-            double result = (1.0 + 0.3 * breakLevel);
-            _calculationCache[cacheKey] = result;
             return result;
         }
 
@@ -143,34 +196,33 @@ namespace EnkaDotNet.Utils.ZZZ
         {
             string cacheKey = $"disc_main_{propertyId}_{baseValue}_{discLevel}_{propertyLevel}_{rarity}";
 
-            if (_calculationCache.TryGetValue(cacheKey, out double cachedValue))
-                return CreateStatWithProperScaling(propertyId, cachedValue, propertyLevel);
-
-            double rarityScale = GetRarityScale(rarity);
-            double calculatedValue = baseValue + (baseValue * discLevel * rarityScale);
-
-            _calculationCache[cacheKey] = calculatedValue;
-
-            return CreateStatWithProperScaling(propertyId, calculatedValue, propertyLevel);
-        }
-
-        private double GetRarityScale(Rarity rarity)
-        {
-            string cacheKey = $"rarity_scale_{rarity}";
-
-            if (_calculationCache.TryGetValue(cacheKey, out double cachedValue))
-                return cachedValue;
-
-            double scale = rarity switch
+            if (_calculationCache.TryGetValue(cacheKey, out object? cachedStat) && cachedStat is ZZZStat stat)
             {
-                Rarity.S => 0.2,
-                Rarity.A => 0.25,
-                Rarity.B => 0.3,
-                _ => 0.2
-            };
+                return stat;
+            }
 
-            _calculationCache[cacheKey] = scale;
-            return scale;
+            var equipmentLevelDataList = _assets.GetEquipmentLevelData();
+            if (equipmentLevelDataList == null)
+            {
+                Console.WriteLine($"Warning: Equipment level data not found.");
+                return CreateStatWithProperScaling(propertyId, baseValue, propertyLevel);
+            }
+
+            var discLevelData = equipmentLevelDataList.FirstOrDefault(d => d.Level == discLevel && d.Rarity == (int)rarity);
+            if (discLevelData == null)
+            {
+                Console.WriteLine($"Warning: Drive disc level data not found for level={discLevel} and rarity={rarity}");
+                return CreateStatWithProperScaling(propertyId, baseValue, propertyLevel);
+            }
+
+            double enhanceRate = discLevelData.EnhanceRate;
+            double calculatedValue = baseValue * (1 + enhanceRate / 10000.0);
+
+            var resultStat = CreateStatWithProperScaling(propertyId, Math.Floor(calculatedValue), propertyLevel);
+
+            _calculationCache[cacheKey] = resultStat;
+
+            return resultStat;
         }
 
         public ZZZStat CreateStatWithProperScaling(int propertyId, double rawValue, int level = 0)

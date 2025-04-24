@@ -32,6 +32,12 @@ namespace EnkaDotNet.Models.ZZZ
         public List<ZZZAvatarModel>? AvatarList { get; set; }
     }
 
+    public class ZZZTitleInfoModel
+    {
+        [JsonPropertyName("Title")]
+        public int Title { get; set; }
+    }
+
     public class ZZZSocialDetailModel
     {
         [JsonPropertyName("MedalList")]
@@ -42,6 +48,13 @@ namespace EnkaDotNet.Models.ZZZ
 
         [JsonPropertyName("Desc")]
         public string? Desc { get; set; }
+
+        [JsonPropertyName("TitleInfo")]
+        public ZZZTitleInfoModel? TitleInfo { get; set; }
+
+        [JsonPropertyName("Title")] 
+        [Obsolete("Use SocialDetail.ProfileDetail.TitleInfo or SocialDetail.ProfileDetail.Title instead. This direct Title property might be removed.")]
+        public int Title { get; set; }
     }
 
     public class ZZZMedalModel

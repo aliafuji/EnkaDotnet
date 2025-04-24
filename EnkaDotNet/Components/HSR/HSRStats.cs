@@ -18,11 +18,11 @@ namespace EnkaDotNet.Components.HSR
             {
                 if (IsPercentage)
                 {
-                    return $"{Value:F1}%";
+                    return $"{Value * 100:F1}%";
                 }
                 else if (Type == "SpeedDelta")
                 {
-                    return $"{Value:F1}";
+                    return $"{Value:F2}";
                 }
                 else
                 {
@@ -95,9 +95,10 @@ namespace EnkaDotNet.Components.HSR
     {
         public int PointId { get; set; }
         public int Level { get; set; }
+        public int BaseLevel { get; set; }
+        public string Icon { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        public string Icon { get; set; } = string.Empty;
         public TraceType TraceType { get; set; } = TraceType.Unknown;
         public bool IsBoosted { get; set; } = false;
         public int MaxLevel { get; set; } = 1;
@@ -106,7 +107,8 @@ namespace EnkaDotNet.Components.HSR
 
         public override string ToString()
         {
-            return $"Skill {PointId}: Lv.{Level}{(IsBoosted ? " (Boosted)" : "")}";
+            string levelInfo = IsBoosted ? $"{BaseLevel}+{Level - BaseLevel}={Level}" : $"{Level}";
+            return $"{Name} ({TraceType}) - Lv.{levelInfo}/{MaxLevel}";
         }
     }
 }

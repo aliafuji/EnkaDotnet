@@ -55,5 +55,8 @@ namespace EnkaDotNet.Assets.HSR
         Dictionary<string, double> GetRelicMainAffixValueAtLevel(int groupId, int affixId, int level);
         Dictionary<string, double> GetRelicSubAffixValueAtStep(int groupId, int affixId, int step);
 
+        HSRSkillTreePointInfo? GetSkillTreePointInfo(string pointId);
+        string GetSkillTreePointDescription(string pointId);
+        string GetSkillTreePointName(string pointId);
     }
 }

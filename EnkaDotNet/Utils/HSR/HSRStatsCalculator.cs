@@ -41,10 +41,8 @@ namespace EnkaDotNet.Utils.HSR
         {
             var stats = new Dictionary<string, double>(DEFAULT_STATS);
 
-            // Add character base stats first
             AddCharacterBaseStats(stats, character);
 
-            // Add stats from light cone if equipped
             if (character.Equipment != null)
             {
                 AddLightConeBaseStats(stats, character.Equipment);
@@ -52,16 +50,12 @@ namespace EnkaDotNet.Utils.HSR
                 AddLightConeSkillEffects(stats, character.Equipment);
             }
 
-            // Add relic stats
             ProcessRelics(stats, character.RelicList);
 
-            // Apply trace/skill tree effects
             ApplyTraceEffects(stats, character.SkillTreeList);
 
-            // Apply set bonuses after all relics are processed
             ApplyRelicSetBonuses(stats, character.RelicList);
 
-            // Calculate and return final stats
             return CalculateFinalStats(stats);
         }
 
@@ -71,7 +65,6 @@ namespace EnkaDotNet.Utils.HSR
 
             if (avatarStats != null)
             {
-                // Use the exact formula from game data
                 stats["HPBase"] = avatarStats.HPBase + (avatarStats.HPAdd * (character.Level - 1));
                 stats["AttackBase"] = avatarStats.AttackBase + (avatarStats.AttackAdd * (character.Level - 1));
                 stats["DefenceBase"] = avatarStats.DefenceBase + (avatarStats.DefenceAdd * (character.Level - 1));
@@ -87,7 +80,6 @@ namespace EnkaDotNet.Utils.HSR
 
             if (equipmentStats != null)
             {
-                // Use the exact formula from game data
                 double lcHP = equipmentStats.BaseHP + (equipmentStats.HPAdd * (lightCone.Level - 1));
                 double lcAttack = equipmentStats.BaseAttack + (equipmentStats.AttackAdd * (lightCone.Level - 1));
                 double lcDefence = equipmentStats.BaseDefence + (equipmentStats.DefenceAdd * (lightCone.Level - 1));
@@ -96,7 +88,6 @@ namespace EnkaDotNet.Utils.HSR
                 stats["AttackBase"] += lcAttack;
                 stats["DefenceBase"] += lcDefence;
 
-                // Update the lightCone object with calculated values
                 lightCone.BaseHP = lcHP;
                 lightCone.BaseAttack = lcAttack;
                 lightCone.BaseDefense = lcDefence;
@@ -148,7 +139,6 @@ namespace EnkaDotNet.Utils.HSR
                     }
                 }
 
-                // Process sub stats
                 if (relic.SubStats != null)
                 {
                     foreach (var subStat in relic.SubStats)
@@ -184,7 +174,6 @@ namespace EnkaDotNet.Utils.HSR
                 int setId = setPair.Key;
                 int count = setPair.Value;
 
-                // Apply 2-piece bonus if at least 2 pieces equipped
                 if (count >= 2)
                 {
                     var twoPieceEffects = _assets.GetRelicSetEffects(setId, 2);
@@ -194,7 +183,6 @@ namespace EnkaDotNet.Utils.HSR
                     }
                 }
 
-                // Apply 4-piece bonus if at least 4 pieces equipped
                 if (count >= 4)
                 {
                     var fourPieceEffects = _assets.GetRelicSetEffects(setId, 4);

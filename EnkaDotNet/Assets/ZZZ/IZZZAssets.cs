@@ -1,4 +1,5 @@
-﻿using EnkaDotNet.Assets.ZZZ.Models;
+﻿// File: EnkaDotNet/Assets/ZZZ/IZZZAssets.cs
+using EnkaDotNet.Assets.ZZZ.Models;
 using EnkaDotNet.Enums.ZZZ;
 
 namespace EnkaDotNet.Assets.ZZZ
@@ -41,5 +42,9 @@ namespace EnkaDotNet.Assets.ZZZ
 
         ZZZEquipmentSuitInfo? GetDiscSetInfo(string suitId);
         Dictionary<string, ZZZEquipmentSuitInfo> GetAllDiscSets();
+
+        List<ZZZEquipmentLevelItem>? GetEquipmentLevelData();
+        List<ZZZWeaponLevelItem>? GetWeaponLevelData();
+        List<ZZZWeaponStarItem>? GetWeaponStarData();
     }
 }

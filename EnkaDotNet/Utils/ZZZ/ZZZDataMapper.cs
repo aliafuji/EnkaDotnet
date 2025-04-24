@@ -22,22 +22,49 @@ namespace EnkaDotNet.Utils.ZZZ
             if (response.PlayerInfo == null) throw new ArgumentException("PlayerInfo is null", nameof(response));
 
             var profileDetail = response.PlayerInfo.SocialDetail?.ProfileDetail;
+            var socialDetail = response.PlayerInfo.SocialDetail;
             if (profileDetail == null) throw new ArgumentException("ProfileDetail is null", nameof(response));
+            if (socialDetail == null) throw new ArgumentException("SocialDetail is null", nameof(response));
+
+            string nickname = profileDetail?.Nickname ?? "Unknown";
+            int level = profileDetail?.Level ?? 0;
+            int profileId = profileDetail?.ProfileId ?? 0;
+            int callingCardId = profileDetail?.CallingCardId ?? 0;
+            int avatarId = profileDetail?.AvatarId ?? 0;
+            long uidFromProfile = profileDetail?.Uid ?? 0;
+
+            int titleId = 0;
+            if (socialDetail?.TitleInfo != null)
+            {
+                titleId = socialDetail.TitleInfo.Title;
+            }
+            else if (profileDetail?.TitleInfo != null)
+            {
+                titleId = profileDetail.TitleInfo.Title;
+            }
+            else if (profileDetail != null)
+            {
+                titleId = profileDetail.Title;
+            }
+            else if (socialDetail != null)
+            {
+                titleId = socialDetail.Title;
+            }
 
             var playerInfo = new ZZZPlayerInfo
             {
-                Uid = response.Uid ?? profileDetail.Uid.ToString(),
+                Uid = response.Uid ?? uidFromProfile.ToString(),
                 TTL = response.Ttl.ToString(),
-                Nickname = profileDetail.Nickname ?? "Unknown",
-                Level = profileDetail.Level,
-                Signature = response.PlayerInfo.SocialDetail?.Desc ?? "",
-                ProfilePictureId = profileDetail.ProfileId,
-                ProfilePictureIcon = _assets.GetProfilePictureIconUrl(profileDetail.ProfileId),
-                TitleId = profileDetail.Title,
-                TitleText = _assets.GetTitleText(profileDetail.Title),
-                NameCardId = profileDetail.CallingCardId,
-                NameCardIcon = _assets.GetNameCardIconUrl(profileDetail.CallingCardId),
-                MainCharacterId = profileDetail.AvatarId
+                Nickname = nickname,
+                Level = level,
+                Signature = socialDetail?.Desc ?? "",
+                ProfilePictureId = profileId,
+                ProfilePictureIcon = _assets.GetProfilePictureIconUrl(profileId),
+                TitleId = titleId,
+                TitleText = _assets.GetTitleText(titleId),
+                NameCardId = callingCardId,
+                NameCardIcon = _assets.GetNameCardIconUrl(callingCardId),
+                MainCharacterId = avatarId
             };
 
             if (response.PlayerInfo.SocialDetail?.MedalList != null)

@@ -3,8 +3,8 @@ using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Utils.HSR;
 using EnkaDotNet.Enums.HSR;
-using System;
-using System.Collections.Generic;
+using EnkaDotNet.Components.HSR.EnkaDotNet.Enums.HSR;
+using EnkaDotNet.Enums;
 
 namespace EnkaDotNet.Utils.HSR
 {
@@ -81,21 +81,45 @@ namespace EnkaDotNet.Utils.HSR
                 SkillTreeList = new List<HSRSkillTree>(),
                 RelicList = new List<HSRRelic>(),
                 Stats = new Dictionary<string, HSRStatValue>(),
+                Eidolons = new List<Eidolon>(),
 
                 Id = avatarDetail.AvatarId,
-                Name = _assets.GetCharacterName(avatarDetail.AvatarId),
                 Level = avatarDetail.Level,
                 Promotion = avatarDetail.Promotion,
                 Rank = avatarDetail.Rank,
                 Position = avatarDetail.Position,
                 IsAssist = avatarDetail.IsAssist,
 
+                Name = _assets.GetCharacterName(avatarDetail.AvatarId),
                 Element = _assets.GetCharacterElement(avatarDetail.AvatarId),
                 Path = _assets.GetCharacterPath(avatarDetail.AvatarId),
                 Rarity = _assets.GetCharacterRarity(avatarDetail.AvatarId),
                 IconUrl = _assets.GetCharacterIconUrl(avatarDetail.AvatarId),
                 AvatarIconUrl = _assets.GetCharacterAvatarIconUrl(avatarDetail.AvatarId)
             };
+
+            character.SetAssets(_assets);
+
+            var characterInfo = _assets.GetCharacterInfo(character.Id.ToString());
+            var unlockedEidolonIds = new List<int>();
+            if (characterInfo?.RankIDList != null)
+            {
+                for (int i = 0; i < characterInfo.RankIDList.Count; i++)
+                {
+                    int eidolonId = characterInfo.RankIDList[i];
+                    bool unlocked = i + 1 <= character.Rank;
+                    character.Eidolons.Add(new Eidolon
+                    {
+                        Id = eidolonId,
+                        Icon = _assets.GetEidolonIconUrl(eidolonId),
+                        Unlocked = unlocked
+                    });
+                    if (unlocked)
+                    {
+                        unlockedEidolonIds.Add(eidolonId);
+                    }
+                }
+            }
 
             if (avatarDetail.Equipment != null)
             {
@@ -104,29 +128,54 @@ namespace EnkaDotNet.Utils.HSR
 
             if (avatarDetail.SkillTreeList != null)
             {
-                foreach (var skillTree in avatarDetail.SkillTreeList)
+                foreach (var skillTreeModel in avatarDetail.SkillTreeList)
                 {
-                    character.SkillTreeList.Add(new HSRSkillTree
+                    var skillTree = new HSRSkillTree
                     {
-                        PointId = skillTree.PointId,
-                        Level = skillTree.Level,
-                        Icon = _assets.GetSkillTreeIconUrl(skillTree.PointId),
-                    });
-                }
-            }
+                        PointId = skillTreeModel.PointId,
+                        Level = skillTreeModel.Level,
+                        BaseLevel = skillTreeModel.Level
+                    };
 
-            var characterInfo = _assets.GetCharacterInfo(character.Id.ToString());
-            if (characterInfo?.RankIDList != null)
-            {
-                for (int i = 0; i < characterInfo.RankIDList.Count; i++)
-                {
-                    int eidolonId = characterInfo.RankIDList[i];
-                    character.Eidolons.Add(new Eidolon
+                    var pointInfo = _assets.GetSkillTreePointInfo(skillTree.PointId.ToString());
+                    if (pointInfo != null)
                     {
-                        Id = eidolonId,
-                        Icon = _assets.GetEidolonIconUrl(eidolonId),
-                        Unlocked = i + 1 <= character.Rank
-                    });
+                        skillTree.Anchor = pointInfo.Anchor ?? string.Empty;
+                        skillTree.TraceType = (TraceType)(pointInfo.PointType);
+                        skillTree.MaxLevel = pointInfo.MaxLevel;
+                        skillTree.Icon = _assets.GetSkillTreeIconUrl(skillTree.PointId);
+                        skillTree.SkillIds = pointInfo.SkillIds ?? new List<int>();
+                        skillTree.Name = _assets.GetSkillTreePointName(skillTree.PointId.ToString());
+                        skillTree.Description = _assets.GetSkillTreePointDescription(skillTree.PointId.ToString());
+
+                        bool boostApplied = false;
+                        foreach (int eidolonId in unlockedEidolonIds)
+                        {
+                            var eidolonInfo = _assets.GetEidolonInfo(eidolonId.ToString());
+                            if (eidolonInfo?.SkillAddLevelList != null)
+                            {
+                                foreach (int skillId in skillTree.SkillIds)
+                                {
+                                    string skillIdStr = skillId.ToString();
+                                    if (eidolonInfo.SkillAddLevelList.TryGetValue(skillIdStr, out int levelBoost))
+                                    {
+                                        skillTree.Level += levelBoost;
+                                        skillTree.IsBoosted = true;
+                                        boostApplied = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (boostApplied) break;
+                        }
+                    }
+                    else
+                    {
+                        skillTree.Name = $"Trace_{skillTree.PointId}";
+                        skillTree.Icon = _assets.GetSkillTreeIconUrl(skillTree.PointId);
+                    }
+
+                    character.SkillTreeList.Add(skillTree);
                 }
             }
 
@@ -154,13 +203,11 @@ namespace EnkaDotNet.Utils.HSR
             var lightCone = new HSRLightCone
             {
                 Properties = new List<HSRStatProperty>(),
-
                 Id = equipment.Id,
                 Name = _assets.GetLightConeName(equipment.Id),
                 Level = equipment.Level,
                 Promotion = equipment.Promotion,
                 Rank = equipment.Rank,
-
                 Path = _assets.GetLightConePath(equipment.Id),
                 Rarity = _assets.GetLightConeRarity(equipment.Id),
                 IconUrl = _assets.GetLightConeIconUrl(equipment.Id)
@@ -171,16 +218,10 @@ namespace EnkaDotNet.Utils.HSR
                 foreach (var prop in equipment.Flat.Props)
                 {
                     if (string.IsNullOrEmpty(prop.Type)) continue;
-
                     bool isPercentage = HSRStatPropertyUtils.IsPercentageType(prop.Type);
-
-                    if (prop.Type == "BaseHP")
-                        lightCone.BaseHP = prop.Value;
-                    else if (prop.Type == "BaseAttack")
-                        lightCone.BaseAttack = prop.Value;
-                    else if (prop.Type == "BaseDefence")
-                        lightCone.BaseDefense = prop.Value;
-
+                    if (prop.Type == "BaseHP") lightCone.BaseHP = Math.Floor(prop.Value);
+                    else if (prop.Type == "BaseAttack") lightCone.BaseAttack = Math.Floor(prop.Value);
+                    else if (prop.Type == "BaseDefence") lightCone.BaseDefense = Math.Floor(prop.Value);
                     lightCone.Properties.Add(new HSRStatProperty
                     {
                         Type = prop.Type,
@@ -190,7 +231,6 @@ namespace EnkaDotNet.Utils.HSR
                     });
                 }
             }
-
             return lightCone;
         }
 
@@ -204,7 +244,8 @@ namespace EnkaDotNet.Utils.HSR
                     return localizedName;
                 }
             }
-            return _assets.GetRelicSetName(setId);
+            string nameFromAssets = _assets.GetRelicSetName(setId);
+            return !string.IsNullOrEmpty(nameFromAssets) ? nameFromAssets : $"Set_{setId}";
         }
 
         public HSRRelic MapRelicModelToRelic(HSRRelicModel relicModel)
@@ -215,12 +256,10 @@ namespace EnkaDotNet.Utils.HSR
             var relic = new HSRRelic
             {
                 SubStats = new List<HSRStatProperty>(),
-
                 Id = relicModel.Id,
                 Level = relicModel.Level,
                 Type = relicModel.Type,
                 RelicType = _assets.GetRelicType(relicModel.Id),
-
                 SetId = relicModel.Flat?.SetId ?? 0,
                 SetName = GetLocalizedRelicSetName(relicModel.Flat?.SetName, relicModel.Flat?.SetId ?? 0),
                 Rarity = _assets.GetRelicRarity(relicModel.Id),
@@ -233,14 +272,11 @@ namespace EnkaDotNet.Utils.HSR
                 if (!string.IsNullOrEmpty(mainProp.Type))
                 {
                     bool isPercentage = HSRStatPropertyUtils.IsPercentageType(mainProp.Type);
-                    double scaledValue = mainProp.Value * HSRStatPropertyUtils.GetPropertyScalingFactor(mainProp.Type);
-
-
                     relic.MainStat = new HSRStatProperty
                     {
                         Type = mainProp.Type,
                         PropertyType = HSRStatPropertyUtils.MapToStatPropertyType(mainProp.Type),
-                        Value = scaledValue,
+                        Value = mainProp.Value,
                         BaseValue = mainProp.Value,
                         IsPercentage = isPercentage
                     };
@@ -263,20 +299,17 @@ namespace EnkaDotNet.Utils.HSR
                     if (!string.IsNullOrEmpty(subProp.Type))
                     {
                         bool isPercentage = HSRStatPropertyUtils.IsPercentageType(subProp.Type);
-                        double scaledValue = subProp.Value * HSRStatPropertyUtils.GetPropertyScalingFactor(subProp.Type);
-
                         relic.SubStats.Add(new HSRStatProperty
                         {
                             Type = subProp.Type,
                             PropertyType = HSRStatPropertyUtils.MapToStatPropertyType(subProp.Type),
-                            Value = scaledValue,
+                            Value = subProp.Value,
                             BaseValue = subProp.Value,
                             IsPercentage = isPercentage
                         });
                     }
                 }
             }
-
             return relic;
         }
     }
