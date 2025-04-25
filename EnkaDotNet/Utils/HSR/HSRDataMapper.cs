@@ -12,6 +12,7 @@ using EnkaDotNet.Utils.HSR;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Components.HSR.EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Enums;
+using System.Globalization;
 
 namespace EnkaDotNet.Utils.HSR
 {
@@ -19,11 +20,13 @@ namespace EnkaDotNet.Utils.HSR
     {
         private readonly IHSRAssets _assets;
         private readonly HSRStatCalculator _statCalculator;
+        private readonly EnkaClientOptions _options;
 
-        public HSRDataMapper(IHSRAssets assets)
+        public HSRDataMapper(IHSRAssets assets, EnkaClientOptions options)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
-            _statCalculator = new HSRStatCalculator(_assets);
+            _options = options ?? throw new ArgumentNullException(nameof(options));
+            _statCalculator = new HSRStatCalculator(_assets, _options);
         }
 
         public HSRPlayerInfo MapPlayerInfo(HSRApiResponse response)
@@ -102,7 +105,8 @@ namespace EnkaDotNet.Utils.HSR
                 Path = _assets.GetCharacterPath(avatarDetail.AvatarId),
                 Rarity = _assets.GetCharacterRarity(avatarDetail.AvatarId),
                 IconUrl = _assets.GetCharacterIconUrl(avatarDetail.AvatarId),
-                AvatarIconUrl = _assets.GetCharacterAvatarIconUrl(avatarDetail.AvatarId)
+                AvatarIconUrl = _assets.GetCharacterAvatarIconUrl(avatarDetail.AvatarId),
+                Options = this._options
             };
 
             character.SetAssets(_assets);
@@ -141,7 +145,8 @@ namespace EnkaDotNet.Utils.HSR
                     {
                         PointId = skillTreeModel.PointId,
                         Level = skillTreeModel.Level,
-                        BaseLevel = skillTreeModel.Level
+                        BaseLevel = skillTreeModel.Level,
+                        Options = this._options
                     };
 
                     var pointInfo = _assets.GetSkillTreePointInfo(skillTree.PointId.ToString());
@@ -217,7 +222,8 @@ namespace EnkaDotNet.Utils.HSR
                 Rank = equipment.Rank,
                 Path = _assets.GetLightConePath(equipment.Id),
                 Rarity = _assets.GetLightConeRarity(equipment.Id),
-                IconUrl = _assets.GetLightConeIconUrl(equipment.Id)
+                IconUrl = _assets.GetLightConeIconUrl(equipment.Id),
+                Options = this._options
             };
 
             if (equipment.Flat?.Props != null)
@@ -234,7 +240,8 @@ namespace EnkaDotNet.Utils.HSR
                         Type = prop.Type,
                         PropertyType = HSRStatPropertyUtils.MapToStatPropertyType(prop.Type),
                         Value = prop.Value,
-                        IsPercentage = isPercentage
+                        IsPercentage = isPercentage,
+                        Options = this._options
                     });
                 }
             }
@@ -270,7 +277,8 @@ namespace EnkaDotNet.Utils.HSR
                 SetId = relicModel.Flat?.SetId ?? 0,
                 SetName = GetLocalizedRelicSetName(relicModel.Flat?.SetName, relicModel.Flat?.SetId ?? 0),
                 Rarity = _assets.GetRelicRarity(relicModel.Id),
-                IconUrl = _assets.GetRelicIconUrl(relicModel.Id)
+                IconUrl = _assets.GetRelicIconUrl(relicModel.Id),
+                Options = this._options
             };
 
             if (relicModel.Flat?.Props != null && relicModel.Flat.Props.Count > 0)
@@ -285,17 +293,18 @@ namespace EnkaDotNet.Utils.HSR
                         PropertyType = HSRStatPropertyUtils.MapToStatPropertyType(mainProp.Type),
                         Value = mainProp.Value,
                         BaseValue = mainProp.Value,
-                        IsPercentage = isPercentage
+                        IsPercentage = isPercentage,
+                        Options = this._options
                     };
                 }
                 else
                 {
-                    relic.MainStat = new HSRStatProperty { Type = "None", PropertyType = StatPropertyType.None };
+                    relic.MainStat = new HSRStatProperty { Type = "None", PropertyType = StatPropertyType.None, Options = this._options };
                 }
             }
             else
             {
-                relic.MainStat = new HSRStatProperty { Type = "None", PropertyType = StatPropertyType.None };
+                relic.MainStat = new HSRStatProperty { Type = "None", PropertyType = StatPropertyType.None, Options = this._options };
             }
 
             if (relicModel.Flat?.Props != null && relicModel.Flat.Props.Count > 1)
@@ -312,7 +321,8 @@ namespace EnkaDotNet.Utils.HSR
                             PropertyType = HSRStatPropertyUtils.MapToStatPropertyType(subProp.Type),
                             Value = subProp.Value,
                             BaseValue = subProp.Value,
-                            IsPercentage = isPercentage
+                            IsPercentage = isPercentage,
+                            Options = this._options
                         });
                     }
                 }

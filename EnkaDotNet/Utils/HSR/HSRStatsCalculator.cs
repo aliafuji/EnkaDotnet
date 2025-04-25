@@ -8,12 +8,14 @@ using System.Threading.Tasks;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Enums.HSR;
+using System.Globalization;
 
 namespace EnkaDotNet.Utils.HSR
 {
     public class HSRStatCalculator
     {
         private readonly IHSRAssets _assets;
+        private readonly EnkaClientOptions _options;
         private static readonly Dictionary<string, double> DEFAULT_STATS = new Dictionary<string, double>
         {
             { "HPBase", 0 }, { "HPDelta", 0 }, { "HPAddedRatio", 0 },
@@ -36,9 +38,10 @@ namespace EnkaDotNet.Utils.HSR
             { "ImaginaryAddedRatio", 0 }
         };
 
-        public HSRStatCalculator(IHSRAssets assets)
+        public HSRStatCalculator(IHSRAssets assets, EnkaClientOptions options)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
+            _options = options ?? throw new ArgumentNullException(nameof(options));
         }
 
         public Dictionary<string, HSRStatValue> CalculateCharacterStats(HSRCharacter character)
@@ -239,58 +242,58 @@ namespace EnkaDotNet.Utils.HSR
             double hpAddedRatio = stats.ContainsKey("HPAddedRatio") ? stats["HPAddedRatio"] : 0;
             double hpDelta = stats.ContainsKey("HPDelta") ? stats["HPDelta"] : 0;
             double finalHP = Math.Floor(baseHP * (1.0 + hpAddedRatio) + hpDelta);
-            finalStats["HP"] = new HSRStatValue(finalHP, false, 0);
+            finalStats["HP"] = new HSRStatValue(finalHP, _options, false, 0);
 
             double baseAtk = stats.ContainsKey("AttackBase") ? stats["AttackBase"] : 0;
             double atkAddedRatio = stats.ContainsKey("AttackAddedRatio") ? stats["AttackAddedRatio"] : 0;
             double atkDelta = stats.ContainsKey("AttackDelta") ? stats["AttackDelta"] : 0;
             double finalATK = Math.Floor(baseAtk * (1.0 + atkAddedRatio) + atkDelta);
-            finalStats["Attack"] = new HSRStatValue(finalATK, false, 0);
+            finalStats["Attack"] = new HSRStatValue(finalATK, _options, false, 0);
 
             double baseDef = stats.ContainsKey("DefenceBase") ? stats["DefenceBase"] : 0;
             double defAddedRatio = stats.ContainsKey("DefenceAddedRatio") ? stats["DefenceAddedRatio"] : 0;
             double defDelta = stats.ContainsKey("DefenceDelta") ? stats["DefenceDelta"] : 0;
             double finalDEF = Math.Floor(baseDef * (1.0 + defAddedRatio) + defDelta);
-            finalStats["Defense"] = new HSRStatValue(finalDEF, false, 0);
+            finalStats["Defense"] = new HSRStatValue(finalDEF, _options, false, 0);
 
             double baseSpd = stats.ContainsKey("SpeedBase") ? stats["SpeedBase"] : 0;
             double spdDelta = stats.ContainsKey("SpeedDelta") ? stats["SpeedDelta"] : 0;
             double spdAddedRatio = stats.ContainsKey("SpeedAddedRatio") ? stats["SpeedAddedRatio"] : 0;
             double finalSPD = Math.Round((baseSpd * (1.0 + spdAddedRatio) + spdDelta), 1);
-            finalStats["Speed"] = new HSRStatValue(finalSPD, false, 1);
+            finalStats["Speed"] = new HSRStatValue(finalSPD, _options, false, 1);
 
             double criticalChance = stats.ContainsKey("CriticalChance") ? stats["CriticalChance"] : 0;
             double criticalChanceBase = stats.ContainsKey("CriticalChanceBase") ? stats["CriticalChanceBase"] : 0;
             double finalCritRate = Math.Round((criticalChance + criticalChanceBase) * 100.0, 1);
-            finalStats["CritRate"] = new HSRStatValue(finalCritRate, true, 1);
+            finalStats["CritRate"] = new HSRStatValue(finalCritRate, _options, true, 1);
 
             double criticalDamage = stats.ContainsKey("CriticalDamage") ? stats["CriticalDamage"] : 0;
             double criticalDamageBase = stats.ContainsKey("CriticalDamageBase") ? stats["CriticalDamageBase"] : 0;
             double finalCritDMG = Math.Round((criticalDamage + criticalDamageBase) * 100.0, 1);
-            finalStats["CritDMG"] = new HSRStatValue(finalCritDMG, true, 1);
+            finalStats["CritDMG"] = new HSRStatValue(finalCritDMG, _options, true, 1);
 
             double breakDamage = stats.ContainsKey("BreakDamageAddedRatio") ? stats["BreakDamageAddedRatio"] : 0;
             double breakDamageBase = stats.ContainsKey("BreakDamageAddedRatioBase") ? stats["BreakDamageAddedRatioBase"] : 0;
             double finalBreakEffect = Math.Round((breakDamage + breakDamageBase) * 100.0, 1);
-            finalStats["BreakEffect"] = new HSRStatValue(finalBreakEffect, true, 1);
+            finalStats["BreakEffect"] = new HSRStatValue(finalBreakEffect, _options, true, 1);
 
             double healRatio = stats.ContainsKey("HealRatioBase") ? stats["HealRatioBase"] : 0;
             double finalHealingBoost = Math.Round(healRatio * 100.0, 1);
-            finalStats["HealingBoost"] = new HSRStatValue(finalHealingBoost, true, 1);
+            finalStats["HealingBoost"] = new HSRStatValue(finalHealingBoost, _options, true, 1);
 
             double spRatio = stats.ContainsKey("SPRatioBase") ? stats["SPRatioBase"] : 0;
             double finalEnergyRegenRate = Math.Round((1.0 + spRatio) * 100.0, 1);
-            finalStats["EnergyRegenRate"] = new HSRStatValue(finalEnergyRegenRate, true, 1);
+            finalStats["EnergyRegenRate"] = new HSRStatValue(finalEnergyRegenRate, _options, true, 1);
 
             double statusProbability = stats.ContainsKey("StatusProbability") ? stats["StatusProbability"] : 0;
             double statusProbabilityBase = stats.ContainsKey("StatusProbabilityBase") ? stats["StatusProbabilityBase"] : 0;
             double finalEffectHitRate = Math.Round((statusProbability + statusProbabilityBase) * 100.0, 1);
-            finalStats["EffectHitRate"] = new HSRStatValue(finalEffectHitRate, true, 1);
+            finalStats["EffectHitRate"] = new HSRStatValue(finalEffectHitRate, _options, true, 1);
 
             double statusResistance = stats.ContainsKey("StatusResistance") ? stats["StatusResistance"] : 0;
             double statusResistanceBase = stats.ContainsKey("StatusResistanceBase") ? stats["StatusResistanceBase"] : 0;
             double finalEffectResistance = Math.Round((statusResistance + statusResistanceBase) * 100.0, 1);
-            finalStats["EffectResistance"] = new HSRStatValue(finalEffectResistance, true, 1);
+            finalStats["EffectResistance"] = new HSRStatValue(finalEffectResistance, _options, true, 1);
 
             Dictionary<string, string> elementMapping = new Dictionary<string, string>
             {
@@ -308,7 +311,7 @@ namespace EnkaDotNet.Utils.HSR
                 string propName = $"{elem.Key}AddedRatio";
                 double valueDecimal = stats.ContainsKey(propName) ? stats[propName] : 0;
                 double valuePercent = Math.Round(valueDecimal * 100.0, 1);
-                finalStats[elem.Value] = new HSRStatValue(valuePercent, true, 1);
+                finalStats[elem.Value] = new HSRStatValue(valuePercent, _options, true, 1);
             }
 
             return finalStats;

@@ -10,17 +10,18 @@ using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
 
-
 namespace EnkaDotNet.Utils.ZZZ
 {
     public class ZZZDataMapper
     {
         private readonly IZZZAssets _assets;
         private readonly ZZZStatsCalculator _statsCalculator;
+        private readonly EnkaClientOptions _options;
 
-        public ZZZDataMapper(IZZZAssets assets)
+        public ZZZDataMapper(IZZZAssets assets, EnkaClientOptions options)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
+            _options = options ?? throw new ArgumentNullException(nameof(options));
             _statsCalculator = new ZZZStatsCalculator(assets);
         }
 
@@ -42,22 +43,10 @@ namespace EnkaDotNet.Utils.ZZZ
             long uidFromProfile = profileDetail?.Uid ?? 0;
 
             int titleId = 0;
-            if (socialDetail?.TitleInfo != null)
-            {
-                titleId = socialDetail.TitleInfo.Title;
-            }
-            else if (profileDetail?.TitleInfo != null)
-            {
-                titleId = profileDetail.TitleInfo.Title;
-            }
-            else if (profileDetail != null)
-            {
-                titleId = profileDetail.Title;
-            }
-            else if (socialDetail != null)
-            {
-                titleId = socialDetail.Title;
-            }
+            if (socialDetail?.TitleInfo != null) titleId = socialDetail.TitleInfo.Title;
+            else if (profileDetail?.TitleInfo != null) titleId = profileDetail.TitleInfo.Title;
+            else if (profileDetail != null) titleId = profileDetail.Title;
+            else if (socialDetail != null) titleId = socialDetail.Title;
 
             var playerInfo = new ZZZPlayerInfo
             {
@@ -121,72 +110,31 @@ namespace EnkaDotNet.Utils.ZZZ
                 CircleIconUrl = _assets.GetAgentCircleIconUrl(model.Id),
                 Rarity = (Rarity)_assets.GetAgentRarity(model.Id),
                 ProfessionType = _assets.GetAgentProfessionType(model.Id),
-                ElementTypes = FilterUnknownElements(_assets.GetAgentElements(model.Id))
+                ElementTypes = FilterUnknownElements(_assets.GetAgentElements(model.Id)),
+                Options = this._options,
+                Assets = this._assets
             };
 
             agent.Stats = _statsCalculator.CalculateAgentBaseStats(
-                model.Id,
-                model.Level,
-                model.PromotionLevel,
-                model.CoreSkillEnhancement
+                model.Id, model.Level, model.PromotionLevel, model.CoreSkillEnhancement
             );
 
             agent.CoreSkillEnhancements.Clear();
-            if (model.CoreSkillEnhancement > 0)
-            {
-                for (int i = 0; i < model.CoreSkillEnhancement; i++)
-                {
-                    agent.CoreSkillEnhancements.Add(i);
-                }
-            }
+            if (model.CoreSkillEnhancement > 0) for (int i = 0; i < model.CoreSkillEnhancement; i++) agent.CoreSkillEnhancements.Add(i);
 
             agent.TalentToggles.Clear();
-            if (model.TalentToggleList != null)
-            {
-                for (int i = 0; i < model.TalentToggleList.Count; i++)
-                {
-                    if (model.TalentToggleList[i])
-                    {
-                        agent.TalentToggles.Add(i);
-                    }
-                }
-            }
+            if (model.TalentToggleList != null) for (int i = 0; i < model.TalentToggleList.Count; i++) if (model.TalentToggleList[i]) agent.TalentToggles.Add(i);
 
             agent.ClaimedRewards.Clear();
-            if (model.ClaimedRewardList != null)
-            {
-                agent.ClaimedRewards.AddRange(model.ClaimedRewardList);
-            }
+            if (model.ClaimedRewardList != null) agent.ClaimedRewards.AddRange(model.ClaimedRewardList);
 
-            if (model.Weapon != null)
-            {
-                agent.Weapon = MapWeapon(model.Weapon);
-            }
+            if (model.Weapon != null) agent.Weapon = MapWeapon(model.Weapon);
 
             agent.SkillLevels.Clear();
-            if (model.SkillLevelList != null)
-            {
-                foreach (var skillLevel in model.SkillLevelList)
-                {
-                    if (Enum.IsDefined(typeof(SkillType), skillLevel.Index))
-                    {
-                        agent.SkillLevels[(SkillType)skillLevel.Index] = skillLevel.Level;
-                    }
-                }
-            }
+            if (model.SkillLevelList != null) foreach (var skillLevel in model.SkillLevelList) if (Enum.IsDefined(typeof(SkillType), skillLevel.Index)) agent.SkillLevels[(SkillType)skillLevel.Index] = skillLevel.Level;
 
             agent.EquippedDiscs.Clear();
-            if (model.EquippedList != null)
-            {
-                foreach (var equippedItem in model.EquippedList)
-                {
-                    if (equippedItem.Equipment != null)
-                    {
-                        var driveDisc = MapDriveDisc(equippedItem.Equipment, equippedItem.Slot);
-                        agent.EquippedDiscs.Add(driveDisc);
-                    }
-                }
-            }
+            if (model.EquippedList != null) foreach (var equippedItem in model.EquippedList) if (equippedItem.Equipment != null) agent.EquippedDiscs.Add(MapDriveDisc(equippedItem.Equipment, equippedItem.Slot));
 
             return agent;
         }
@@ -207,7 +155,8 @@ namespace EnkaDotNet.Utils.ZZZ
                 Name = _assets.GetWeaponName(model.Id),
                 Rarity = (Rarity)_assets.GetWeaponRarity(model.Id),
                 ProfessionType = _assets.GetWeaponType(model.Id),
-                ImageUrl = _assets.GetWeaponIconUrl(model.Id)
+                ImageUrl = _assets.GetWeaponIconUrl(model.Id),
+                Options = this._options
             };
 
             var (mainStat, secondaryStat) = _statsCalculator.CalculateWeaponStats(model.Id, model.Level, model.BreakLevel);
@@ -238,36 +187,28 @@ namespace EnkaDotNet.Utils.ZZZ
                 Rarity = rarity,
                 SuitId = suitId,
                 SuitName = _assets.GetDriveDiscSuitName(suitId),
-                IconUrl = _assets.GetDriveDiscSuitIconUrl(suitId)
+                IconUrl = _assets.GetDriveDiscSuitIconUrl(suitId),
+                Options = this._options
             };
 
             if (model.MainPropertyList != null && model.MainPropertyList.Count > 0)
             {
                 var mainProperty = model.MainPropertyList[0];
                 driveDisc.MainStat = _statsCalculator.CalculateDriveDiscMainStat(
-                    mainProperty.PropertyId,
-                    mainProperty.PropertyValue,
-                    model.Level,
-                    mainProperty.PropertyLevel,
-                    driveDisc.Rarity
+                    mainProperty.PropertyId, mainProperty.PropertyValue, model.Level, mainProperty.PropertyLevel, driveDisc.Rarity
                 );
             }
-            else
-            {
-                driveDisc.MainStat = new ZZZStat { Type = StatType.None };
-            }
+            else driveDisc.MainStat = new ZZZStat { Type = StatType.None };
 
             driveDisc.SubStats.Clear();
             if (model.RandomPropertyList != null)
             {
                 foreach (var property in model.RandomPropertyList)
                 {
-                    var subStat = _statsCalculator.CreateStatWithProperScaling(
-                        property.PropertyId,
-                        property.PropertyValue,
-                        property.PropertyLevel
+                    var SubStatsRaw = _statsCalculator.CreateStatWithProperScaling(
+                        property.PropertyId, property.PropertyValue, property.PropertyLevel
                     );
-                    driveDisc.SubStats.Add(subStat);
+                    driveDisc.SubStatsRaw.Add(SubStatsRaw);
                 }
             }
 
@@ -276,11 +217,8 @@ namespace EnkaDotNet.Utils.ZZZ
 
         private List<ElementType> FilterUnknownElements(List<ElementType> elements)
         {
-            if (elements == null || elements.Count == 0)
-                return new List<ElementType> { ElementType.Unknown };
-
+            if (elements == null || elements.Count == 0) return new List<ElementType> { ElementType.Unknown };
             var validElements = elements.Where(e => e != ElementType.Unknown).Distinct().ToList();
-
             return validElements.Count > 0 ? validElements : elements;
         }
     }

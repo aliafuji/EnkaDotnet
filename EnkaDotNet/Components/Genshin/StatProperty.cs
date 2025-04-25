@@ -1,4 +1,5 @@
 ﻿using EnkaDotNet.Enums.Genshin;
+using EnkaDotNet.Utils.Genshin;
 using System.Globalization;
 using System;
 using System.Collections.Generic;
@@ -12,33 +13,19 @@ namespace EnkaDotNet.Components.Genshin
 {
     public class StatProperty
     {
+        internal EnkaClientOptions Options { get; set; }
         public StatType Type { get; internal set; }
-
         public double Value { get; internal set; }
 
         public override string ToString()
         {
-            bool isPercent = Type.ToString().Contains("Percentage") ||
-                             Type.ToString().Contains("Bonus") ||
-                             Type == StatType.CriticalRate ||
-                             Type == StatType.CriticalDamage ||
-                             Type == StatType.EnergyRecharge;
-
-            string valueString;
-            if (isPercent)
-            {
-                valueString = (Value * 100).ToString("F1", CultureInfo.InvariantCulture) + "%";
-            }
-            else if (Value == (int)Value)
-            {
-                valueString = Value.ToString("N0", CultureInfo.InvariantCulture);
-            }
-            else
-            {
-                valueString = Value.ToString("F1", CultureInfo.InvariantCulture);
-            }
-
-            return $"{Type}: {valueString}";
+            bool raw = Options?.Raw ?? false;
+            string key = raw ? Type.ToString() : GenshinStatUtils.GetDisplayName(Type);
+            string value = GenshinStatUtils.FormatValueStats(Type, Value, raw);
+            return $"{key}: {value}";
         }
+
+        public string FormattedValue => GenshinStatUtils.FormatValueStats(Type, Value, Options?.Raw ?? false);
+        public string DisplayName => GenshinStatUtils.GetDisplayName(Type);
     }
 }

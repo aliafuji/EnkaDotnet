@@ -12,26 +12,17 @@ namespace EnkaDotNet
     public class EnkaClientOptions
     {
         public string UserAgent { get; set; }
-
         public string BaseUrl { get; set; }
-
         public string AssetBaseUrl { get; set; }
-
         public int TimeoutSeconds { get; set; } = 30;
-
         public bool EnableCaching { get; set; } = true;
-
         public int CacheDurationMinutes { get; set; } = 5;
-
         public int MaxRetries { get; set; } = 0;
-
         public int RetryDelayMs { get; set; } = 1000;
-
         public bool EnableVerboseLogging { get; set; } = false;
-
         public string Language { get; set; } = "en";
-
         public GameType GameType { get; set; } = GameType.Genshin;
+        public bool Raw { get; set; } = false;
 
         public EnkaClientOptions() { }
 
@@ -49,7 +40,8 @@ namespace EnkaDotNet
                 RetryDelayMs = this.RetryDelayMs,
                 EnableVerboseLogging = this.EnableVerboseLogging,
                 Language = this.Language,
-                GameType = this.GameType
+                GameType = this.GameType,
+                Raw = this.Raw
             };
         }
     }

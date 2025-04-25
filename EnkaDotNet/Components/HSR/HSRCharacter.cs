@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Utils.HSR;
+using System.Globalization;
 
 
 namespace EnkaDotNet.Components.HSR
@@ -23,6 +24,8 @@ namespace EnkaDotNet.Components.HSR
     public class HSRCharacter
     {
         private IHSRAssets _assets;
+        internal EnkaClientOptions Options { get; set; }
+
 
         internal void SetAssets(IHSRAssets assets)
         {
@@ -71,11 +74,26 @@ namespace EnkaDotNet.Components.HSR
         {
             return Stats.TryGetValue(statName, out var statValue)
                 ? statValue
-                : new HSRStatValue(0);
+                : new HSRStatValue(0, Options);
+        }
+
+        public Dictionary<string, string> GetAllStats()
+        {
+            bool raw = this.Options?.Raw ?? false;
+            var formattedStats = new Dictionary<string, string>();
+
+            foreach (var kvp in Stats)
+            {
+                string key = raw ? kvp.Key : HSRStatPropertyUtils.GetFinalStatDisplayName(kvp.Key);
+                string value = kvp.Value.Formatted;
+                formattedStats[key] = value;
+            }
+            return formattedStats;
         }
 
         public List<HSRRelicSetBonus> GetEquippedRelicSets()
         {
+            bool raw = this.Options?.Raw ?? false;
             if (_assets == null)
             {
                 Console.WriteLine($"Warning: IHSRAssets instance not available in HSRCharacter {Name} ({Id}) for GetEquippedRelicSets.");
@@ -123,8 +141,9 @@ namespace EnkaDotNet.Components.HSR
                         {
                             string propertyType = kvp.Key;
                             double rawValue = kvp.Value;
-                            string displayName = HSRStatPropertyUtils.GetDisplayName(propertyType);
-                            string formattedValue = HSRStatPropertyUtils.FormatPropertyValue(propertyType, rawValue);
+                            string displayName = raw ? propertyType : HSRStatPropertyUtils.GetDisplayName(propertyType);
+                            string formattedValue = raw ? rawValue.ToString(CultureInfo.InvariantCulture) : HSRStatPropertyUtils.FormatPropertyValue(propertyType, rawValue);
+
 
                             currentSetBonus.Effects.Add(new SetBonusEffectDetail
                             {

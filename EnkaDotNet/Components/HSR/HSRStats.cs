@@ -8,11 +8,14 @@ using System.Threading.Tasks;
 using EnkaDotNet.Components.HSR.EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Utils.HSR;
+using System.Globalization;
 
 namespace EnkaDotNet.Components.HSR
 {
     public class HSRStatProperty
     {
+        internal EnkaClientOptions Options { get; set; }
+
         public string Type { get; set; } = string.Empty;
         public StatPropertyType PropertyType { get; set; }
         public double Value { get; set; }
@@ -23,6 +26,9 @@ namespace EnkaDotNet.Components.HSR
         {
             get
             {
+                bool raw = Options?.Raw ?? false;
+                if (raw) return Value.ToString(CultureInfo.InvariantCulture);
+
                 if (IsPercentage)
                 {
                     return $"{Value * 100:F1}%";
@@ -48,37 +54,52 @@ namespace EnkaDotNet.Components.HSR
 
         public override string ToString()
         {
-            return $"{HSRStatPropertyUtils.GetDisplayName(Type)}: {DisplayValue}";
+            bool raw = Options?.Raw ?? false;
+            string key = raw ? Type : HSRStatPropertyUtils.GetDisplayName(Type);
+            return $"{key}: {DisplayValue}";
         }
     }
 
     public class HSRStatValue
     {
+        internal EnkaClientOptions Options { get; set; }
+
         public double Raw { get; set; }
-        public double FormattedValue { get; set; }
+
         public string Formatted { get; set; }
         public bool IsPercentage { get; set; }
 
-        public HSRStatValue(double raw, bool isPercentage = false, int decimalPlaces = 0)
+        public HSRStatValue(double raw, EnkaClientOptions options = null, bool isPercentage = false, int decimalPlaces = 0)
         {
+            Options = options;
             Raw = raw;
-            FormattedValue = raw;
-            IsPercentage = isPercentage;
 
-            if (isPercentage)
+            IsPercentage = isPercentage;
+            bool useRawFormatting = Options?.Raw ?? false;
+
+            if(useRawFormatting)
             {
+
+                 Formatted = raw.ToString(CultureInfo.InvariantCulture);
+            }
+            else if (isPercentage)
+            {
+
                 Formatted = $"{raw:F1}%";
             }
             else if (decimalPlaces > 0)
             {
+
                 string format = $"F{decimalPlaces}";
-                Formatted = $"{raw.ToString(format)}";
+                Formatted = $"{raw.ToString(format, CultureInfo.InvariantCulture)}";
             }
             else
             {
+
                 Formatted = $"{(int)raw}";
             }
         }
+
 
         public override string ToString() => Formatted;
     }
@@ -100,6 +121,8 @@ namespace EnkaDotNet.Components.HSR
 
     public class HSRSkillTree
     {
+        internal EnkaClientOptions Options { get; set; }
+
         public int PointId { get; set; }
         public int Level { get; set; }
         public int BaseLevel { get; set; }
@@ -114,6 +137,9 @@ namespace EnkaDotNet.Components.HSR
 
         public override string ToString()
         {
+            bool raw = Options?.Raw ?? false;
+            if(raw) return $"{PointId} - {Level}";
+
             string levelInfo = IsBoosted ? $"{BaseLevel}+{Level - BaseLevel}={Level}" : $"{Level}";
             return $"{Name} ({TraceType}) - Lv.{levelInfo}/{MaxLevel}";
         }

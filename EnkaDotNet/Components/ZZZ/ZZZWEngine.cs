@@ -6,6 +6,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using EnkaDotNet.Utils.ZZZ;
+using System.Globalization;
 
 namespace EnkaDotNet.Components.ZZZ
 {
@@ -26,5 +28,42 @@ namespace EnkaDotNet.Components.ZZZ
 
         public ZZZStat MainStat { get; internal set; } = new ZZZStat();
         public ZZZStat SecondaryStat { get; internal set; } = new ZZZStat();
+
+        internal EnkaClientOptions Options { get; set; }
+
+        public KeyValuePair<string, string> FormattedMainStat
+        {
+            get
+            {
+                bool raw = Options?.Raw ?? false;
+                string key = raw ? MainStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(MainStat.Type);
+                string value = Math.Floor(MainStat.Value).ToString();
+                return new KeyValuePair<string, string>(key, value);
+            }
+        }
+
+        public KeyValuePair<string, string> FormattedSecondaryStat
+        {
+            get
+            {
+                bool raw = Options?.Raw ?? false;
+                string key = raw ? SecondaryStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(SecondaryStat.Type);
+                string value;
+
+                if (raw)
+                {
+                    if (SecondaryStat.Type == StatType.EnergyRegenPercent) value = Math.Floor(SecondaryStat.Value).ToString();
+                    else if (SecondaryStat.IsPercentage) value = SecondaryStat.Value.ToString("F1", CultureInfo.InvariantCulture);
+                    else value = Math.Floor(SecondaryStat.Value).ToString();
+                }
+                else
+                {
+                    if (SecondaryStat.Type == StatType.EnergyRegenPercent) value = (SecondaryStat.Value / 100.0).ToString("F1", CultureInfo.InvariantCulture) + "%";
+                    else if (SecondaryStat.IsPercentage) value = SecondaryStat.Value.ToString("F1", CultureInfo.InvariantCulture) + "%";
+                    else value = Math.Floor(SecondaryStat.Value).ToString();
+                }
+                return new KeyValuePair<string, string>(key, value);
+            }
+        }
     }
 }
