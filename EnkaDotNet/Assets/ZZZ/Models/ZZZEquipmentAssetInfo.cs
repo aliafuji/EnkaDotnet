@@ -1,34 +1,41 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Assets.ZZZ.Models
 {
     public class ZZZEquipmentData
     {
-        [JsonPropertyName("Items")]
-        public Dictionary<string, ZZZEquipmentItemInfo>? Items { get; set; }
+        [JsonProperty("Items")]
+        public Dictionary<string, ZZZEquipmentItemInfo> Items { get; set; }
 
-        [JsonPropertyName("Suits")]
-        public Dictionary<string, ZZZEquipmentSuitInfo>? Suits { get; set; }
+        [JsonProperty("Suits")]
+        public Dictionary<string, ZZZEquipmentSuitInfo> Suits { get; set; }
     }
 
     public class ZZZEquipmentItemInfo
     {
-        [JsonPropertyName("Rarity")]
+        [JsonProperty("Rarity")]
         public int Rarity { get; set; }
 
-        [JsonPropertyName("SuitId")]
+        [JsonProperty("SuitId")]
         public int SuitId { get; set; }
     }
 
     public class ZZZEquipmentSuitInfo
     {
-        [JsonPropertyName("Icon")]
-        public string? Icon { get; set; }
+        [JsonProperty("Icon")]
+        public string Icon { get; set; }
 
-        [JsonPropertyName("Name")]
-        public string? Name { get; set; }
+        [JsonProperty("Name")]
+        public string Name { get; set; }
 
-        [JsonPropertyName("SetBonusProps")]
-        public Dictionary<string, int>? SetBonusProps { get; set; }
+        [JsonProperty("SetBonusProps")]
+        public Dictionary<string, int> SetBonusProps { get; set; }
     }
 }

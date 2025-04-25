@@ -1,4 +1,11 @@
-﻿using EnkaDotNet.Models.HSR;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Models.HSR;
 using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Utils.HSR;
@@ -234,7 +241,7 @@ namespace EnkaDotNet.Utils.HSR
             return lightCone;
         }
 
-        private string GetLocalizedRelicSetName(string? setNameHash, int setId)
+        private string GetLocalizedRelicSetName(string setNameHash, int setId)
         {
             if (!string.IsNullOrEmpty(setNameHash) && setNameHash != setId.ToString())
             {

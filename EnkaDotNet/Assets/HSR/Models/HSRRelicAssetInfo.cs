@@ -1,52 +1,59 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Assets.HSR.Models
 {
     public class HSRRelicData
     {
-        [JsonPropertyName("Items")]
-        public Dictionary<string, HSRRelicItemInfo>? Items { get; set; }
+        [JsonProperty("Items")]
+        public Dictionary<string, HSRRelicItemInfo> Items { get; set; }
 
-        [JsonPropertyName("Sets")]
-        public Dictionary<string, HSRRelicSetInfo>? Sets { get; set; }
+        [JsonProperty("Sets")]
+        public Dictionary<string, HSRRelicSetInfo> Sets { get; set; }
     }
 
     public class HSRRelicItemInfo
     {
-        [JsonPropertyName("Icon")]
-        public string? Icon { get; set; }
+        [JsonProperty("Icon")]
+        public string Icon { get; set; }
 
-        [JsonPropertyName("Rarity")]
+        [JsonProperty("Rarity")]
         public int Rarity { get; set; }
 
-        [JsonPropertyName("SetID")]
+        [JsonProperty("SetID")]
         public int SetID { get; set; }
 
-        [JsonPropertyName("Type")]
-        public string? Type { get; set; }
+        [JsonProperty("Type")]
+        public string Type { get; set; }
 
-        [JsonPropertyName("MainAffixGroup")]
+        [JsonProperty("MainAffixGroup")]
         public int MainAffixGroup { get; set; }
 
-        [JsonPropertyName("SubAffixGroup")]
+        [JsonProperty("SubAffixGroup")]
         public int SubAffixGroup { get; set; }
     }
 
     public class HSRRelicSetInfo
     {
-        [JsonPropertyName("SetName")]
-        public string? SetName { get; set; }
+        [JsonProperty("SetName")]
+        public string SetName { get; set; }
 
-        [JsonPropertyName("SetEffects")]
-        public Dictionary<string, HSRSetEffectInfo>? SetEffects { get; set; }
+        [JsonProperty("SetEffects")]
+        public Dictionary<string, HSRSetEffectInfo> SetEffects { get; set; }
     }
 
     public class HSRSetEffectInfo
     {
-        [JsonPropertyName("EffectDesc")]
-        public string? EffectDesc { get; set; }
+        [JsonProperty("EffectDesc")]
+        public string EffectDesc { get; set; }
 
-        [JsonPropertyName("Properties")]
-        public Dictionary<string, double>? Properties { get; set; }
+        [JsonProperty("Properties")]
+        public Dictionary<string, double> Properties { get; set; }
     }
 }

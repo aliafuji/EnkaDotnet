@@ -1,47 +1,53 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Models.Genshin
 {
     public class FlatDataModel
     {
-        [JsonPropertyName("nameTextMapHash")]
-        public string? NameTextMapHash { get; set; }
+        [JsonProperty("nameTextMapHash")]
+        public string NameTextMapHash { get; set; }
 
-        [JsonPropertyName("setNameTextMapHash")]
-        public string? SetNameTextMapHash { get; set; }
+        [JsonProperty("setNameTextMapHash")]
+        public string SetNameTextMapHash { get; set; }
 
-        [JsonPropertyName("rankLevel")]
+        [JsonProperty("rankLevel")]
         public int RankLevel { get; set; }
 
-        [JsonPropertyName("reliquaryMainstat")]
-        public StatPropertyModel? ReliquaryMainstat { get; set; }
+        [JsonProperty("reliquaryMainstat")]
+        public StatPropertyModel ReliquaryMainstat { get; set; }
 
-        [JsonPropertyName("reliquarySubstats")]
-        public List<StatPropertyModel>? ReliquarySubstats { get; set; }
+        [JsonProperty("reliquarySubstats")]
+        public List<StatPropertyModel> ReliquarySubstats { get; set; }
 
-        [JsonPropertyName("weaponStats")]
-        public List<StatPropertyModel>? WeaponStats { get; set; }
+        [JsonProperty("weaponStats")]
+        public List<StatPropertyModel> WeaponStats { get; set; }
 
-        [JsonPropertyName("itemType")]
-        public string? ItemType { get; set; }
+        [JsonProperty("itemType")]
+        public string ItemType { get; set; }
 
-        [JsonPropertyName("icon")]
-        public string? Icon { get; set; }
+        [JsonProperty("icon")]
+        public string Icon { get; set; }
 
-        [JsonPropertyName("equipType")]
-        public string? EquipType { get; set; }
+        [JsonProperty("equipType")]
+        public string EquipType { get; set; }
     }
 
     public class StatPropertyModel
     {
-        [JsonPropertyName("mainPropId")]
-        public string? MainPropId { get; set; }
+        [JsonProperty("mainPropId")]
+        public string MainPropId { get; set; }
 
-        [JsonPropertyName("appendPropId")]
-        public string? AppendPropId { get; set; }
+        [JsonProperty("appendPropId")]
+        public string AppendPropId { get; set; }
 
-        [JsonPropertyName("statValue")]
+        [JsonProperty("statValue")]
         public double StatValue { get; set; }
     }
-
 }

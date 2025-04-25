@@ -1,4 +1,11 @@
-﻿using EnkaDotNet.Assets.ZZZ;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
 
@@ -6,8 +13,8 @@ namespace EnkaDotNet.Utils.ZZZ
 {
     public static class ZZZStatsHelpers
     {
-        private const double BASE_CRIT_RATE = 0.05;  // 5%
-        private const double BASE_CRIT_DMG = 0.50;   // 50%
+        private const double BASE_CRIT_RATE = 0.05;
+        private const double BASE_CRIT_DMG = 0.50;
         private const double BASE_ENERGY_REGEN = 0;
         private static readonly IZZZAssets assets = new ZZZAssets();
 
@@ -72,39 +79,36 @@ namespace EnkaDotNet.Utils.ZZZ
 
         public static bool IsCalculationPercentageStat(StatType statType)
         {
-            return statType switch
+            switch (statType)
             {
-                StatType.HPPercent => true,
-                StatType.ATKPercent => true,
-                StatType.DefPercent => true,
-                StatType.ImpactPercent => true,
-                StatType.EnergyRegenPercent => true,
-                StatType.AnomalyMasteryPercent => true,
-
-                StatType.CritRateBase => true,
-                StatType.CritRateFlat => true,
-                StatType.CritDMGBase => true,
-                StatType.CritDMGFlat => true,
-
-                StatType.EnergyRegenBase => true,
-                StatType.EnergyRegenFlat => true,
-
-                StatType.PenRatioBase => true,
-                StatType.PenRatioFlat => true,
-
-                StatType.PhysicalDMGBonusBase => true,
-                StatType.PhysicalDMGBonusFlat => true,
-                StatType.FireDMGBonusBase => true,
-                StatType.FireDMGBonusFlat => true,
-                StatType.IceDMGBonusBase => true,
-                StatType.IceDMGBonusFlat => true,
-                StatType.ElectricDMGBonusBase => true,
-                StatType.ElectricDMGBonusFlat => true,
-                StatType.EtherDMGBonusBase => true,
-                StatType.EtherDMGBonusFlat => true,
-
-                _ => false
-            };
+                case StatType.HPPercent:
+                case StatType.ATKPercent:
+                case StatType.DefPercent:
+                case StatType.ImpactPercent:
+                case StatType.EnergyRegenPercent:
+                case StatType.AnomalyMasteryPercent:
+                case StatType.CritRateBase:
+                case StatType.CritRateFlat:
+                case StatType.CritDMGBase:
+                case StatType.CritDMGFlat:
+                case StatType.EnergyRegenBase:
+                case StatType.EnergyRegenFlat:
+                case StatType.PenRatioBase:
+                case StatType.PenRatioFlat:
+                case StatType.PhysicalDMGBonusBase:
+                case StatType.PhysicalDMGBonusFlat:
+                case StatType.FireDMGBonusBase:
+                case StatType.FireDMGBonusFlat:
+                case StatType.IceDMGBonusBase:
+                case StatType.IceDMGBonusFlat:
+                case StatType.ElectricDMGBonusBase:
+                case StatType.ElectricDMGBonusFlat:
+                case StatType.EtherDMGBonusBase:
+                case StatType.EtherDMGBonusFlat:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private static Dictionary<string, Dictionary<string, double>> CalculateTotalBreakdown(ZZZAgent agent, IZZZAssets assets)

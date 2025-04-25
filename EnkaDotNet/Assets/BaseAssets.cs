@@ -1,8 +1,14 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using EnkaDotNet.Enums;
-using EnkaDotNet.Utils.Common;
 using EnkaDotNet.Utils;
+using EnkaDotNet.Utils.Common;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Assets
 {
@@ -10,7 +16,7 @@ namespace EnkaDotNet.Assets
     {
         private static readonly HttpClient _httpClient = new HttpClient();
         protected readonly Dictionary<string, object> _assetCache = new Dictionary<string, object>();
-        protected Dictionary<string, string>? _textMap;
+        protected Dictionary<string, string> _textMap;
 
         public GameType GameType { get; }
         public string Language { get; }
@@ -27,7 +33,7 @@ namespace EnkaDotNet.Assets
         protected abstract Dictionary<string, string> GetAssetUrls();
         protected abstract Task LoadAssets();
 
-        public string GetText(string? hash) => hash != null && _textMap != null && _textMap.TryGetValue(hash, out var text) ? text ?? string.Empty : hash ?? string.Empty;
+        public string GetText(string hash) => hash != null && _textMap != null && _textMap.TryGetValue(hash, out var text) ? text ?? string.Empty : hash ?? string.Empty;
 
         protected async Task<string> FetchAssetAsync(string assetKey)
         {
@@ -39,19 +45,20 @@ namespace EnkaDotNet.Assets
 
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                request.Headers.UserAgent.ParseAdd(Constants.DefaultUserAgent);
-
-                HttpResponseMessage response = await _httpClient.SendAsync(request);
-
-                if (!response.IsSuccessStatusCode)
+                using (var request = new HttpRequestMessage(HttpMethod.Get, url))
                 {
-                    throw new HttpRequestException($"Failed to fetch '{assetKey}': HTTP {(int)response.StatusCode} ({response.ReasonPhrase})");
+                    request.Headers.UserAgent.ParseAdd(Constants.DefaultUserAgent);
+
+                    HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        throw new HttpRequestException($"Failed to fetch '{assetKey}': HTTP {(int)response.StatusCode} ({response.ReasonPhrase})");
+                    }
+
+                    string content = await response.Content.ReadAsStringAsync();
+                    return content;
                 }
-
-                string content = await response.Content.ReadAsStringAsync();
-
-                return content;
             }
             catch (HttpRequestException ex)
             {
@@ -80,8 +87,7 @@ namespace EnkaDotNet.Assets
 
             try
             {
-                var options = GetJsonOptions();
-                var result = JsonSerializer.Deserialize<T>(jsonContent, options);
+                var result = JsonConvert.DeserializeObject<T>(jsonContent);
 
                 if (result == null)
                 {
@@ -89,7 +95,6 @@ namespace EnkaDotNet.Assets
                 }
 
                 _assetCache[assetKey] = result;
-
                 return result;
             }
             catch (JsonException ex)
@@ -98,6 +103,7 @@ namespace EnkaDotNet.Assets
                 throw;
             }
         }
+
 
         protected async Task LoadTextMap(string language)
         {
@@ -133,7 +139,7 @@ namespace EnkaDotNet.Assets
                         }
                         else
                         {
-                            throw new InvalidOperationException($"No languages found in the TextMap data.");
+                            throw new InvalidOperationException("No languages found in the TextMap data.");
                         }
                     }
                 }
@@ -141,28 +147,18 @@ namespace EnkaDotNet.Assets
             catch (HttpRequestException ex)
             {
                 Console.WriteLine($"[Assets] Error fetching TextMap: {ex.Message}");
-                throw new InvalidOperationException($"Failed to fetch essential TextMap", ex);
+                throw new InvalidOperationException("Failed to fetch essential TextMap", ex);
             }
             catch (JsonException ex)
             {
                 Console.WriteLine($"[Assets] Error parsing TextMap JSON: {ex.Message}");
-                throw new InvalidOperationException($"Failed to parse essential TextMap JSON structure", ex);
+                throw new InvalidOperationException("Failed to parse essential TextMap JSON structure", ex);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Assets] Unexpected error loading TextMap: {ex.Message}");
-                throw new InvalidOperationException($"Failed to load essential TextMap", ex);
+                throw new InvalidOperationException("Failed to load essential TextMap", ex);
             }
-        }
-
-        protected JsonSerializerOptions GetJsonOptions()
-        {
-            return new JsonSerializerOptions
-            {
-                NumberHandling = JsonNumberHandling.AllowReadingFromString,
-                Converters = { new JsonStringOrNumberConverter() },
-                PropertyNameCaseInsensitive = true
-            };
         }
     }
 }

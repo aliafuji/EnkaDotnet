@@ -1,4 +1,11 @@
-﻿using EnkaDotNet.Enums;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Enums;
 
 namespace EnkaDotNet.Assets
 {
@@ -6,6 +13,6 @@ namespace EnkaDotNet.Assets
     {
         GameType GameType { get; }
         string Language { get; }
-        string GetText(string? hash);
+        string GetText(string hash);
     }
 }

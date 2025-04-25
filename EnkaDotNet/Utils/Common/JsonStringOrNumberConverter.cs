@@ -1,41 +1,48 @@
 ﻿using System;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Utils.Common
 {
-    public class JsonStringOrNumberConverter : JsonConverter<string>
+    public class NewtonsoftStringOrNumberConverter : JsonConverter
     {
-        public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override bool CanConvert(Type objectType)
         {
-            if (reader.TokenType == JsonTokenType.Number)
-            {
-                if (reader.TryGetInt64(out long longValue))
-                {
-                    return longValue.ToString();
-                }
-                else if (reader.TryGetDouble(out double doubleValue))
-                {
-                    return doubleValue.ToString();
-                }
-            }
+            return objectType == typeof(string);
+        }
 
-            if (reader.TokenType == JsonTokenType.String)
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            if (reader.TokenType == JsonToken.Integer)
             {
-                return reader.GetString() ?? string.Empty;
+                return reader.Value.ToString();
             }
-
-            if (reader.TokenType == JsonTokenType.Null)
+            if (reader.TokenType == JsonToken.Float)
+            {
+                return reader.Value.ToString();
+            }
+            if (reader.TokenType == JsonToken.String)
+            {
+                return reader.Value;
+            }
+            if (reader.TokenType == JsonToken.Null)
             {
                 return string.Empty;
             }
 
-            throw new JsonException($"Cannot convert {reader.TokenType} to {typeToConvert}");
+            throw new JsonSerializationException($"Unexpected token type: {reader.TokenType}");
         }
 
-        public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
-            writer.WriteStringValue(value);
+            writer.WriteValue((string)value);
         }
+
+        public override bool CanWrite => true;
     }
 }

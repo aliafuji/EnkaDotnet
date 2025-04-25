@@ -1,7 +1,15 @@
-﻿using EnkaDotNet.Models.ZZZ;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Models.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
+
 
 namespace EnkaDotNet.Utils.ZZZ
 {
@@ -132,7 +140,6 @@ namespace EnkaDotNet.Utils.ZZZ
                 }
             }
 
-
             agent.TalentToggles.Clear();
             if (model.TalentToggleList != null)
             {
@@ -180,7 +187,6 @@ namespace EnkaDotNet.Utils.ZZZ
                     }
                 }
             }
-
 
             return agent;
         }
@@ -250,7 +256,6 @@ namespace EnkaDotNet.Utils.ZZZ
             {
                 driveDisc.MainStat = new ZZZStat { Type = StatType.None };
             }
-
 
             driveDisc.SubStats.Clear();
             if (model.RandomPropertyList != null)

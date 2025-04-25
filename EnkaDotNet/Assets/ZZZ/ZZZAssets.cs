@@ -1,15 +1,22 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using EnkaDotNet.Assets.ZZZ.Models;
 using EnkaDotNet.Enums;
 using EnkaDotNet.Enums.ZZZ;
 using EnkaDotNet.Utils;
 using EnkaDotNet.Utils.ZZZ;
 
+
 namespace EnkaDotNet.Assets.ZZZ
 {
     public class ZZZAssets : BaseAssets, IZZZAssets
     {
-        private static readonly Dictionary<string, string> ZZZAssetUrls = new()
+        private static readonly Dictionary<string, string> ZZZAssetUrls = new Dictionary<string, string>()
         {
             { "text_map.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/locs.json" },
             { "avatars.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/avatars.json" },
@@ -25,20 +32,20 @@ namespace EnkaDotNet.Assets.ZZZ
             { "weapon_star.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/zzz/weapon_star.json" }
         };
 
-        private readonly Dictionary<string, ZZZAvatarAssetInfo> _avatars = new();
-        private readonly Dictionary<string, ZZZWeaponAssetInfo> _weapons = new();
-        private readonly Dictionary<string, ZZZPfpAssetInfo> _pfps = new();
-        private readonly Dictionary<string, ZZZNameCardAssetInfo> _namecards = new();
-        private readonly Dictionary<string, ZZZTitleAssetInfo> _titles = new();
-        private readonly Dictionary<string, ZZZMedalAssetInfo> _medals = new();
-        private readonly Dictionary<string, ZZZPropertyAssetInfo> _properties = new();
-        private readonly Dictionary<string, ZZZEquipmentItemInfo> _equipmentItems = new();
-        private readonly Dictionary<string, ZZZEquipmentSuitInfo> _equipmentSuits = new();
-        private Dictionary<string, string>? _localization;
+        private readonly Dictionary<string, ZZZAvatarAssetInfo> _avatars = new Dictionary<string, ZZZAvatarAssetInfo>();
+        private readonly Dictionary<string, ZZZWeaponAssetInfo> _weapons = new Dictionary<string, ZZZWeaponAssetInfo>();
+        private readonly Dictionary<string, ZZZPfpAssetInfo> _pfps = new Dictionary<string, ZZZPfpAssetInfo>();
+        private readonly Dictionary<string, ZZZNameCardAssetInfo> _namecards = new Dictionary<string, ZZZNameCardAssetInfo>();
+        private readonly Dictionary<string, ZZZTitleAssetInfo> _titles = new Dictionary<string, ZZZTitleAssetInfo>();
+        private readonly Dictionary<string, ZZZMedalAssetInfo> _medals = new Dictionary<string, ZZZMedalAssetInfo>();
+        private readonly Dictionary<string, ZZZPropertyAssetInfo> _properties = new Dictionary<string, ZZZPropertyAssetInfo>();
+        private readonly Dictionary<string, ZZZEquipmentItemInfo> _equipmentItems = new Dictionary<string, ZZZEquipmentItemInfo>();
+        private readonly Dictionary<string, ZZZEquipmentSuitInfo> _equipmentSuits = new Dictionary<string, ZZZEquipmentSuitInfo>();
+        private Dictionary<string, string> _localization;
 
-        private List<ZZZEquipmentLevelItem>? _equipmentLevelData;
-        private List<ZZZWeaponLevelItem>? _weaponLevelData;
-        private List<ZZZWeaponStarItem>? _weaponStarData;
+        private List<ZZZEquipmentLevelItem> _equipmentLevelData;
+        private List<ZZZWeaponLevelItem> _weaponLevelData;
+        private List<ZZZWeaponStarItem> _weaponStarData;
 
         public ZZZAssets(string language = "en")
             : base(language, GameType.ZZZ)
@@ -78,8 +85,8 @@ namespace EnkaDotNet.Assets.ZZZ
             catch (Exception ex)
             {
                 Console.WriteLine($"[Assets] Error loading equipment_level: {ex.Message}");
-                _equipmentLevelData = new List<ZZZEquipmentLevelItem>(); // Ensure it's initialized
-                throw new InvalidOperationException($"Failed to load essential equipment level data", ex);
+                _equipmentLevelData = new List<ZZZEquipmentLevelItem>();
+                throw new InvalidOperationException("Failed to load essential equipment level data", ex);
             }
         }
 
@@ -94,7 +101,7 @@ namespace EnkaDotNet.Assets.ZZZ
             {
                 Console.WriteLine($"[Assets] Error loading weapon_level: {ex.Message}");
                 _weaponLevelData = new List<ZZZWeaponLevelItem>();
-                throw new InvalidOperationException($"Failed to load essential weapon level data", ex);
+                throw new InvalidOperationException("Failed to load essential weapon level data", ex);
             }
         }
 
@@ -109,7 +116,7 @@ namespace EnkaDotNet.Assets.ZZZ
             {
                 Console.WriteLine($"[Assets] Error loading weapon_star: {ex.Message}");
                 _weaponStarData = new List<ZZZWeaponStarItem>();
-                throw new InvalidOperationException($"Failed to load essential weapon star data", ex);
+                throw new InvalidOperationException("Failed to load essential weapon star data", ex);
             }
         }
 
@@ -130,14 +137,15 @@ namespace EnkaDotNet.Assets.ZZZ
                 }
                 else
                 {
-                    _localization = localizationData.FirstOrDefault().Value;
-                    Console.WriteLine($"[Assets] English language not found, using first available language");
+                    _localization = localizationData.FirstOrDefault().Value ?? new Dictionary<string, string>();
+                    Console.WriteLine($"[Assets] English language not found, using first available language: {localizationData.Keys.FirstOrDefault()}");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Assets] Error loading localizations: {ex.Message}");
                 _localization = new Dictionary<string, string>();
+                throw new InvalidOperationException("Failed to load essential localization data", ex);
             }
         }
 
@@ -155,7 +163,7 @@ namespace EnkaDotNet.Assets.ZZZ
             catch (Exception ex)
             {
                 Console.WriteLine($"[Assets] Error loading avatars: {ex.Message}");
-                throw new InvalidOperationException($"Failed to load essential avatars data", ex);
+                throw new InvalidOperationException("Failed to load essential avatars data", ex);
             }
         }
 
@@ -173,7 +181,7 @@ namespace EnkaDotNet.Assets.ZZZ
             catch (Exception ex)
             {
                 Console.WriteLine($"[Assets] Error loading weapons: {ex.Message}");
-                throw new InvalidOperationException($"Failed to load essential weapons data", ex);
+                throw new InvalidOperationException("Failed to load essential weapons data", ex);
             }
         }
 
@@ -204,7 +212,7 @@ namespace EnkaDotNet.Assets.ZZZ
             catch (Exception ex)
             {
                 Console.WriteLine($"[Assets] Error loading equipments: {ex.Message}");
-                throw new InvalidOperationException($"Failed to load essential equipments data", ex);
+                throw new InvalidOperationException("Failed to load essential equipments data", ex);
             }
         }
 
@@ -222,7 +230,7 @@ namespace EnkaDotNet.Assets.ZZZ
             catch (Exception ex)
             {
                 Console.WriteLine($"[Assets] Error loading profile pictures: {ex.Message}");
-                throw new InvalidOperationException($"Failed to load essential profile pictures data", ex);
+                throw new InvalidOperationException("Failed to load essential profile pictures data", ex);
             }
         }
 
@@ -240,7 +248,7 @@ namespace EnkaDotNet.Assets.ZZZ
             catch (Exception ex)
             {
                 Console.WriteLine($"[Assets] Error loading namecards: {ex.Message}");
-                throw new InvalidOperationException($"Failed to load essential namecards data", ex);
+                throw new InvalidOperationException("Failed to load essential namecards data", ex);
             }
         }
 
@@ -258,7 +266,7 @@ namespace EnkaDotNet.Assets.ZZZ
             catch (Exception ex)
             {
                 Console.WriteLine($"[Assets] Error loading medals: {ex.Message}");
-                throw new InvalidOperationException($"Failed to load essential medals data", ex);
+                throw new InvalidOperationException("Failed to load essential medals data", ex);
             }
         }
 
@@ -276,7 +284,7 @@ namespace EnkaDotNet.Assets.ZZZ
             catch (Exception ex)
             {
                 Console.WriteLine($"[Assets] Error loading titles: {ex.Message}");
-                throw new InvalidOperationException($"Failed to load essential titles data", ex);
+                throw new InvalidOperationException("Failed to load essential titles data", ex);
             }
         }
 
@@ -294,7 +302,7 @@ namespace EnkaDotNet.Assets.ZZZ
             catch (Exception ex)
             {
                 Console.WriteLine($"[Assets] Error loading properties: {ex.Message}");
-                throw new InvalidOperationException($"Failed to load essential properties data", ex);
+                throw new InvalidOperationException("Failed to load essential properties data", ex);
             }
         }
 
@@ -307,22 +315,16 @@ namespace EnkaDotNet.Assets.ZZZ
             return key;
         }
 
-        public ZZZAvatarAssetInfo? GetAvatarInfo(string agentId)
+        public ZZZAvatarAssetInfo GetAvatarInfo(string agentId)
         {
-            if (_avatars.TryGetValue(agentId, out var avatarInfo))
-            {
-                return avatarInfo;
-            }
-            return null;
+            _avatars.TryGetValue(agentId, out var avatarInfo);
+            return avatarInfo; // Returns null if not found
         }
 
-        public ZZZWeaponAssetInfo? GetWeaponInfo(string weaponId)
+        public ZZZWeaponAssetInfo GetWeaponInfo(string weaponId)
         {
-            if (_weapons.TryGetValue(weaponId, out var weaponInfo))
-            {
-                return weaponInfo;
-            }
-            return null;
+            _weapons.TryGetValue(weaponId, out var weaponInfo);
+            return weaponInfo; // Returns null if not found
         }
 
         public string GetAgentName(int agentId)
@@ -346,7 +348,6 @@ namespace EnkaDotNet.Assets.ZZZ
                             return nameParts[nameParts.Length - 1];
                         }
                     }
-
                     return avatarInfo.Name;
                 }
             }
@@ -402,20 +403,14 @@ namespace EnkaDotNet.Assets.ZZZ
         public int GetAgentRarity(int agentId)
         {
             string agentIdStr = agentId.ToString();
-            if (_avatars.TryGetValue(agentIdStr, out var avatarInfo))
-            {
-                return avatarInfo.Rarity;
-            }
-            return 0;
+            _avatars.TryGetValue(agentIdStr, out var avatarInfo);
+            return avatarInfo?.Rarity ?? 0;
         }
 
-        public ZZZEquipmentSuitInfo? GetDiscSetInfo(string suitId)
+        public ZZZEquipmentSuitInfo GetDiscSetInfo(string suitId)
         {
-            if (_equipmentSuits.TryGetValue(suitId, out var suitInfo))
-            {
-                return suitInfo;
-            }
-            return null;
+            _equipmentSuits.TryGetValue(suitId, out var suitInfo);
+            return suitInfo;
         }
 
         public Dictionary<string, ZZZEquipmentSuitInfo> GetAllDiscSets()
@@ -456,11 +451,8 @@ namespace EnkaDotNet.Assets.ZZZ
         public int GetWeaponRarity(int weaponId)
         {
             string weaponIdStr = weaponId.ToString();
-            if (_weapons.TryGetValue(weaponIdStr, out var weaponInfo))
-            {
-                return weaponInfo.Rarity;
-            }
-            return 0;
+            _weapons.TryGetValue(weaponIdStr, out var weaponInfo);
+            return weaponInfo?.Rarity ?? 0;
         }
 
         public string GetDriveDiscSuitName(int suitId)
@@ -486,21 +478,15 @@ namespace EnkaDotNet.Assets.ZZZ
         public int GetDriveDiscRarity(int discId)
         {
             string discIdStr = discId.ToString();
-            if (_equipmentItems.TryGetValue(discIdStr, out var discInfo))
-            {
-                return discInfo.Rarity;
-            }
-            return 0;
+            _equipmentItems.TryGetValue(discIdStr, out var discInfo);
+            return discInfo?.Rarity ?? 0;
         }
 
         public int GetDriveDiscSuitId(int discId)
         {
             string discIdStr = discId.ToString();
-            if (_equipmentItems.TryGetValue(discIdStr, out var discInfo))
-            {
-                return discInfo.SuitId;
-            }
-            return 0;
+            _equipmentItems.TryGetValue(discIdStr, out var discInfo);
+            return discInfo?.SuitId ?? 0;
         }
 
         public string GetPropertyName(int propertyId)
@@ -596,35 +582,37 @@ namespace EnkaDotNet.Assets.ZZZ
             return string.Empty;
         }
 
-        public List<ZZZEquipmentLevelItem>? GetEquipmentLevelData() => _equipmentLevelData;
-        public List<ZZZWeaponLevelItem>? GetWeaponLevelData() => _weaponLevelData;
-        public List<ZZZWeaponStarItem>? GetWeaponStarData() => _weaponStarData;
+        public List<ZZZEquipmentLevelItem> GetEquipmentLevelData() => _equipmentLevelData;
+        public List<ZZZWeaponLevelItem> GetWeaponLevelData() => _weaponLevelData;
+        public List<ZZZWeaponStarItem> GetWeaponStarData() => _weaponStarData;
 
         private ElementType MapElementNameToEnum(string elementName)
         {
-            return elementName?.ToUpperInvariant() switch
+            switch (elementName?.ToUpperInvariant())
             {
-                "FIRE" => ElementType.Fire,
-                "ICE" => ElementType.Ice,
-                "FIREFROST" => ElementType.Ice,
-                "ELEC" => ElementType.Electric,
-                "ETHER" => ElementType.Ether,
-                "PHYSICS" => ElementType.Physical,
-                _ => ElementType.Unknown
-            };
+                case "FIRE": return ElementType.Fire;
+                case "ICE": return ElementType.Ice;
+                case "FIREFROST": return ElementType.Ice;
+                case "ELEC": return ElementType.Electric;
+                case "ETHER": return ElementType.Ether;
+                case "PHYSICS": return ElementType.Physical;
+                default: return ElementType.Unknown;
+            }
+            ;
         }
 
         private ProfessionType MapProfessionNameToEnum(string professionName)
         {
-            return professionName?.ToUpperInvariant() switch
+            switch (professionName?.ToUpperInvariant())
             {
-                "ATTACK" => ProfessionType.Attack,
-                "STUN" => ProfessionType.Stun,
-                "ANOMALY" => ProfessionType.Anomaly,
-                "DEFENSE" => ProfessionType.Defense,
-                "SUPPORT" => ProfessionType.Support,
-                _ => ProfessionType.Unknown
-            };
+                case "ATTACK": return ProfessionType.Attack;
+                case "STUN": return ProfessionType.Stun;
+                case "ANOMALY": return ProfessionType.Anomaly;
+                case "DEFENSE": return ProfessionType.Defense;
+                case "SUPPORT": return ProfessionType.Support;
+                default: return ProfessionType.Unknown;
+            }
+            ;
         }
     }
 }

@@ -1,4 +1,11 @@
-﻿using EnkaDotNet.Enums.Genshin;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Enums.Genshin;
 
 namespace EnkaDotNet.Components.Genshin
 {
@@ -10,15 +17,16 @@ namespace EnkaDotNet.Components.Genshin
         public int Ascension { get; internal set; }
         public int Friendship { get; internal set; }
         public ElementType Element { get; internal set; }
-        public Dictionary<StatType, double> Stats { get; internal set; } = new();
-        public List<int> UnlockedConstellationIds { get; internal set; } = new();
+        public Dictionary<StatType, double> Stats { get; internal set; } = new Dictionary<StatType, double>();
+        public List<int> UnlockedConstellationIds { get; internal set; } = new List<int>();
         public int ConstellationLevel { get; internal set; }
-        public List<Talent> Talents { get; internal set; } = new();
-        public List<Constellation> Constellations { get; internal set; } = new();
-        public Weapon? Weapon { get; internal set; }
-        public List<Artifact> Artifacts { get; internal set; } = new();
+        public List<Talent> Talents { get; internal set; } = new List<Talent>();
+        public List<Constellation> Constellations { get; internal set; } = new List<Constellation>();
+        public Weapon Weapon { get; internal set; }
+        public List<Artifact> Artifacts { get; internal set; } = new List<Artifact>();
         public int CostumeId { get; internal set; }
         public string IconUrl { get; internal set; } = string.Empty;
+
         public double GetStatValue(StatType statType, out string value)
         {
             if (Stats.TryGetValue(statType, out double RawValue))
@@ -26,24 +34,18 @@ namespace EnkaDotNet.Components.Genshin
                 bool isPercent = statType.ToString().Contains("Bonus") ||
                                  statType == StatType.CriticalRate ||
                                  statType == StatType.CriticalDamage ||
-                                 statType == StatType.EnergyRecharge;
+                                 statType == StatType.EnergyRecharge ||
+                                 statType.ToString().Contains("Percentage");
 
                 if (isPercent)
                 {
-                    double percentValue = RawValue;
-                    if (Math.Abs(percentValue - Math.Round(percentValue)) < 0.001)
-                        value = $"{Math.Round(percentValue)}";
-                    else
-                        value = $"{percentValue:F1}";
+                    double percentValue = statType.ToString().Contains("Percentage") ? RawValue : RawValue * 100;
+                    value = $"{percentValue:F1}";
                 }
                 else
                 {
-                    if (Math.Abs(RawValue - Math.Round(RawValue)) < 0.001)
-                        value = $"{Math.Round(RawValue)}";
-                    else
-                        value = $"{RawValue:F1}";
+                    value = $"{Math.Floor(RawValue)}";
                 }
-
                 return RawValue;
             }
             else
@@ -52,6 +54,7 @@ namespace EnkaDotNet.Components.Genshin
                 return 0.0;
             }
         }
+
         public Dictionary<string, Dictionary<StatType, (double Raw, string Formatted)>> GetStats()
         {
             var result = new Dictionary<string, Dictionary<StatType, (double Raw, string Formatted)>>();
@@ -70,8 +73,7 @@ namespace EnkaDotNet.Components.Genshin
             {
                 StatType type = statPair.Key;
                 double rawValue = statPair.Value;
-                string formattedValue = string.Empty;
-                GetStatValue(type, out formattedValue);
+                GetStatValue(type, out string formattedValue); // Use the updated GetStatValue
 
                 if (type == StatType.BaseHP || type == StatType.BaseAttack ||
                     type == StatType.BaseDefense || type == StatType.BaseSpeed)
@@ -123,5 +125,4 @@ namespace EnkaDotNet.Components.Genshin
             return result;
         }
     }
-
 }

@@ -1,4 +1,11 @@
-﻿using EnkaDotNet.Enums.Genshin;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Enums.Genshin;
 
 namespace EnkaDotNet.Assets.Genshin
 {
@@ -8,15 +15,15 @@ namespace EnkaDotNet.Assets.Genshin
         string GetCharacterIconUrl(int characterId);
         ElementType GetCharacterElement(int characterId);
         string GetWeaponName(int weaponId);
-        string GetWeaponNameFromHash(string? nameHash);
+        string GetWeaponNameFromHash(string nameHash);
         string GetWeaponIconUrl(int weaponId);
-        string GetWeaponIconUrlFromIconName(string? iconName);
+        string GetWeaponIconUrlFromIconName(string iconName);
         WeaponType GetWeaponType(int weaponId);
         string GetArtifactName(int artifactId);
-        string GetArtifactNameFromHash(string? nameHash);
-        string GetArtifactSetNameFromHash(string? setNameHash);
+        string GetArtifactNameFromHash(string nameHash);
+        string GetArtifactSetNameFromHash(string setNameHash);
         string GetArtifactIconUrl(int artifactId);
-        string GetArtifactIconUrlFromIconName(string? iconName);
+        string GetArtifactIconUrlFromIconName(string iconName);
         string GetTalentName(int talentId);
         string GetTalentIconUrl(int talentId);
         string GetConstellationName(int constellationId);

@@ -1,40 +1,47 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Assets.HSR.Models
 {
     public class HSRNameCardAssetInfo
     {
-        [JsonPropertyName("Icon")]
-        public string? Icon { get; set; }
+        [JsonProperty("Icon")]
+        public string Icon { get; set; }
     }
 
     public class HSRPfpAssetInfo
     {
-        [JsonPropertyName("Icon")]
-        public string? Icon { get; set; }
+        [JsonProperty("Icon")]
+        public string Icon { get; set; }
     }
 
     public class HSRPropertyAssetInfo
     {
-        [JsonPropertyName("Name")]
-        public string? Name { get; set; }
+        [JsonProperty("Name")]
+        public string Name { get; set; }
 
-        [JsonPropertyName("Format")]
-        public string? Format { get; set; }
+        [JsonProperty("Format")]
+        public string Format { get; set; }
     }
 
     public class HSRSkillAssetInfo
     {
-        [JsonPropertyName("IconPath")]
-        public string? IconPath { get; set; }
+        [JsonProperty("IconPath")]
+        public string IconPath { get; set; }
     }
 
     public class HSREidolonAssetInfo
     {
-        [JsonPropertyName("IconPath")]
-        public string? IconPath { get; set; }
+        [JsonProperty("IconPath")]
+        public string IconPath { get; set; }
 
-        [JsonPropertyName("SkillAddLevelList")]
-        public Dictionary<string, int>? SkillAddLevelList { get; set; }
+        [JsonProperty("SkillAddLevelList")]
+        public Dictionary<string, int> SkillAddLevelList { get; set; }
     }
 }

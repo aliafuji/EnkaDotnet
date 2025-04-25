@@ -1,4 +1,11 @@
-﻿using EnkaDotNet.Enums.HSR;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Enums.HSR;
 
 namespace EnkaDotNet.Components.HSR
 {
@@ -8,7 +15,7 @@ namespace EnkaDotNet.Components.HSR
         public string Name { get; internal set; } = string.Empty;
         public int Level { get; internal set; }
         public int Promotion { get; internal set; }
-        public int Rank { get; internal set; }  // Superimposition level
+        public int Rank { get; internal set; }
 
         public PathType Path { get; internal set; }
         public int Rarity { get; internal set; }

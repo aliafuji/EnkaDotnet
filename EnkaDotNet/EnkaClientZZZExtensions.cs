@@ -1,4 +1,11 @@
-﻿using EnkaDotNet.Components.ZZZ;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums;
 using EnkaDotNet.Exceptions;
 using EnkaDotNet.Models.ZZZ;
@@ -8,9 +15,9 @@ namespace EnkaDotNet
 {
     public partial class EnkaClient
     {
-        public async Task<ZZZApiResponse?> GetRawZZZUserResponse(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
+        public async Task<ZZZApiResponse> GetRawZZZUserResponse(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
             if (uid <= 0) throw new ArgumentException("UID must be a positive integer.", nameof(uid));
 
             EnsureZZZGameType();
@@ -22,13 +29,17 @@ namespace EnkaDotNet
             {
                 throw new ProfilePrivateException(uid, "Profile data retrieved but player info is missing, profile might be private or UID invalid.");
             }
+            else if (response == null)
+            {
+                throw new EnkaNetworkException($"Failed to retrieve ZZZ data for UID {uid}. Response was null.");
+            }
 
             return response;
         }
 
         public async Task<ZZZPlayerInfo> GetZZZPlayerInfo(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
             EnsureZZZGameType();
 
             var rawResponse = await GetRawZZZUserResponse(uid, bypassCache, cancellationToken);
@@ -37,13 +48,17 @@ namespace EnkaDotNet
             {
                 throw new EnkaNetworkException($"Failed to retrieve valid PlayerInfo for UID {uid}. Response was null.");
             }
+            if (_zzzDataMapper == null)
+            {
+                throw new InvalidOperationException("ZZZ DataMapper is not initialized.");
+            }
 
-            return _zzzDataMapper!.MapPlayerInfo(rawResponse);
+            return _zzzDataMapper.MapPlayerInfo(rawResponse);
         }
 
         public async Task<List<ZZZAgent>> GetZZZAgents(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
             EnsureZZZGameType();
 
             var rawResponse = await GetRawZZZUserResponse(uid, bypassCache, cancellationToken);
@@ -52,11 +67,15 @@ namespace EnkaDotNet
             {
                 throw new EnkaNetworkException($"Failed to retrieve agent list for UID {uid}. Response or AvatarList was null.");
             }
+            if (_zzzDataMapper == null)
+            {
+                throw new InvalidOperationException("ZZZ DataMapper is not initialized.");
+            }
 
             var agents = new List<ZZZAgent>();
             foreach (var avatarModel in rawResponse.PlayerInfo.ShowcaseDetail.AvatarList)
             {
-                agents.Add(_zzzDataMapper!.MapAgent(avatarModel));
+                agents.Add(_zzzDataMapper.MapAgent(avatarModel));
             }
 
             return agents;

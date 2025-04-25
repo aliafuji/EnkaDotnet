@@ -1,6 +1,12 @@
-﻿using EnkaDotNet.Enums.ZZZ;
-using EnkaDotNet.Utils.ZZZ;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Enums.ZZZ;
+using EnkaDotNet.Utils.ZZZ;
 
 namespace EnkaDotNet.Components.ZZZ
 {
@@ -20,7 +26,7 @@ namespace EnkaDotNet.Components.ZZZ
         public List<int> ClaimedRewards { get; internal set; } = new List<int>();
         public DateTimeOffset ObtainmentTimestamp { get; internal set; }
 
-        public ZZZWEngine? Weapon { get; internal set; }
+        public ZZZWEngine Weapon { get; internal set; }
         public Dictionary<SkillType, int> SkillLevels { get; internal set; } = new Dictionary<SkillType, int>();
         public List<ZZZDriveDisc> EquippedDiscs { get; internal set; } = new List<ZZZDriveDisc>();
 

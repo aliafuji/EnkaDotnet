@@ -1,46 +1,53 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Assets.HSR.Models
 {
     public class HSRRelicMetaInfo
     {
-        [JsonPropertyName("mainAffix")]
-        public Dictionary<string, Dictionary<string, HSRRelicMainAffixInfo>>? MainAffix { get; set; }
+        [JsonProperty("mainAffix")]
+        public Dictionary<string, Dictionary<string, HSRRelicMainAffixInfo>> MainAffix { get; set; }
 
-        [JsonPropertyName("subAffix")]
-        public Dictionary<string, Dictionary<string, HSRRelicSubAffixInfo>>? SubAffix { get; set; }
+        [JsonProperty("subAffix")]
+        public Dictionary<string, Dictionary<string, HSRRelicSubAffixInfo>> SubAffix { get; set; }
 
-        [JsonPropertyName("setSkill")]
-        public Dictionary<string, Dictionary<string, HSRSetSkillInfo>>? SetSkill { get; set; }
+        [JsonProperty("setSkill")]
+        public Dictionary<string, Dictionary<string, HSRSetSkillInfo>> SetSkill { get; set; }
     }
 
     public class HSRRelicMainAffixInfo
     {
-        [JsonPropertyName("BaseValue")]
+        [JsonProperty("BaseValue")]
         public double BaseValue { get; set; }
 
-        [JsonPropertyName("LevelAdd")]
+        [JsonProperty("LevelAdd")]
         public double LevelAdd { get; set; }
 
-        [JsonPropertyName("Property")]
-        public string? Property { get; set; }
+        [JsonProperty("Property")]
+        public string Property { get; set; }
     }
 
     public class HSRRelicSubAffixInfo
     {
-        [JsonPropertyName("BaseValue")]
+        [JsonProperty("BaseValue")]
         public double BaseValue { get; set; }
 
-        [JsonPropertyName("Property")]
-        public string? Property { get; set; }
+        [JsonProperty("Property")]
+        public string Property { get; set; }
 
-        [JsonPropertyName("StepValue")]
+        [JsonProperty("StepValue")]
         public double StepValue { get; set; }
     }
 
     public class HSRSetSkillInfo
     {
-        [JsonPropertyName("props")]
-        public Dictionary<string, double>? Props { get; set; }
+        [JsonProperty("props")]
+        public Dictionary<string, double> Props { get; set; }
     }
 }

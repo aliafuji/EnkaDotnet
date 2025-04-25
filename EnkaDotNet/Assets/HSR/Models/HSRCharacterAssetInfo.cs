@@ -1,43 +1,50 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Assets.HSR.Models
 {
     public class HSRCharacterAssetInfo
     {
-        [JsonPropertyName("AvatarName")]
-        public AvatarNameInfo? AvatarName { get; set; }
+        [JsonProperty("AvatarName")]
+        public AvatarNameInfo AvatarName { get; set; }
 
-        [JsonPropertyName("AvatarFullName")]
-        public AvatarNameInfo? AvatarFullName { get; set; }
+        [JsonProperty("AvatarFullName")]
+        public AvatarNameInfo AvatarFullName { get; set; }
 
-        [JsonPropertyName("AvatarSideIconPath")]
-        public string? AvatarSideIconPath { get; set; }
+        [JsonProperty("AvatarSideIconPath")]
+        public string AvatarSideIconPath { get; set; }
 
-        [JsonPropertyName("ActionAvatarHeadIconPath")]
-        public string? ActionAvatarHeadIconPath { get; set; }
+        [JsonProperty("ActionAvatarHeadIconPath")]
+        public string ActionAvatarHeadIconPath { get; set; }
 
-        [JsonPropertyName("AvatarCutinFrontImgPath")]
-        public string? AvatarCutinFrontImgPath { get; set; }
+        [JsonProperty("AvatarCutinFrontImgPath")]
+        public string AvatarCutinFrontImgPath { get; set; }
 
-        [JsonPropertyName("AvatarBaseType")]
-        public string? AvatarBaseType { get; set; }
+        [JsonProperty("AvatarBaseType")]
+        public string AvatarBaseType { get; set; }
 
-        [JsonPropertyName("Element")]
-        public string? Element { get; set; }
+        [JsonProperty("Element")]
+        public string Element { get; set; }
 
-        [JsonPropertyName("Rarity")]
+        [JsonProperty("Rarity")]
         public int Rarity { get; set; }
 
-        [JsonPropertyName("SkillList")]
-        public List<int>? SkillList { get; set; }
+        [JsonProperty("SkillList")]
+        public List<int> SkillList { get; set; }
 
-        [JsonPropertyName("RankIDList")]
-        public List<int>? RankIDList { get; set; }
+        [JsonProperty("RankIDList")]
+        public List<int> RankIDList { get; set; }
     }
 
     public class AvatarNameInfo
     {
-        [JsonPropertyName("Hash")]
-        public string? Hash { get; set; }
+        [JsonProperty("Hash")]
+        public string Hash { get; set; }
     }
 }

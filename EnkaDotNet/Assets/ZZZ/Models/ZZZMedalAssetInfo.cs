@@ -1,16 +1,23 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Assets.ZZZ.Models
 {
     public class ZZZMedalAssetInfo
     {
-        [JsonPropertyName("Name")]
-        public string? Name { get; set; }
+        [JsonProperty("Name")]
+        public string Name { get; set; }
 
-        [JsonPropertyName("Icon")]
-        public string? Icon { get; set; }
+        [JsonProperty("Icon")]
+        public string Icon { get; set; }
 
-        [JsonPropertyName("TipNum")]
-        public string? TipNum { get; set; }
+        [JsonProperty("TipNum")]
+        public string TipNum { get; set; }
     }
 }

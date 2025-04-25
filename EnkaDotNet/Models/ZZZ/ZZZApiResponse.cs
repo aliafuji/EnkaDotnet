@@ -1,71 +1,78 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Models.ZZZ
 {
     public class ZZZApiResponse
     {
-        [JsonPropertyName("PlayerInfo")]
-        public ZZZPlayerInfoModel? PlayerInfo { get; set; }
+        [JsonProperty("PlayerInfo")]
+        public ZZZPlayerInfoModel PlayerInfo { get; set; }
 
-        [JsonPropertyName("uid")]
-        public string? Uid { get; set; }
+        [JsonProperty("uid")]
+        public string Uid { get; set; }
 
-        [JsonPropertyName("ttl")]
+        [JsonProperty("ttl")]
         public int Ttl { get; set; }
     }
 
     public class ZZZPlayerInfoModel
     {
-        [JsonPropertyName("ShowcaseDetail")]
-        public ZZZShowcaseDetailModel? ShowcaseDetail { get; set; }
+        [JsonProperty("ShowcaseDetail")]
+        public ZZZShowcaseDetailModel ShowcaseDetail { get; set; }
 
-        [JsonPropertyName("SocialDetail")]
-        public ZZZSocialDetailModel? SocialDetail { get; set; }
+        [JsonProperty("SocialDetail")]
+        public ZZZSocialDetailModel SocialDetail { get; set; }
 
-        [JsonPropertyName("Desc")]
-        public string? Desc { get; set; }
+        [JsonProperty("Desc")]
+        public string Desc { get; set; }
     }
 
     public class ZZZShowcaseDetailModel
     {
-        [JsonPropertyName("AvatarList")]
-        public List<ZZZAvatarModel>? AvatarList { get; set; }
+        [JsonProperty("AvatarList")]
+        public List<ZZZAvatarModel> AvatarList { get; set; }
     }
 
     public class ZZZTitleInfoModel
     {
-        [JsonPropertyName("Title")]
+        [JsonProperty("Title")]
         public int Title { get; set; }
     }
 
     public class ZZZSocialDetailModel
     {
-        [JsonPropertyName("MedalList")]
-        public List<ZZZMedalModel>? MedalList { get; set; }
+        [JsonProperty("MedalList")]
+        public List<ZZZMedalModel> MedalList { get; set; }
 
-        [JsonPropertyName("ProfileDetail")]
-        public ZZZProfileDetailModel? ProfileDetail { get; set; }
+        [JsonProperty("ProfileDetail")]
+        public ZZZProfileDetailModel ProfileDetail { get; set; }
 
-        [JsonPropertyName("Desc")]
-        public string? Desc { get; set; }
+        [JsonProperty("Desc")]
+        public string Desc { get; set; }
 
-        [JsonPropertyName("TitleInfo")]
-        public ZZZTitleInfoModel? TitleInfo { get; set; }
+        [JsonProperty("TitleInfo")]
+        public ZZZTitleInfoModel TitleInfo { get; set; }
 
-        [JsonPropertyName("Title")] 
+        [JsonProperty("Title")]
         [Obsolete("Use SocialDetail.ProfileDetail.TitleInfo or SocialDetail.ProfileDetail.Title instead. This direct Title property might be removed.")]
         public int Title { get; set; }
     }
 
     public class ZZZMedalModel
     {
-        [JsonPropertyName("Value")]
+        [JsonProperty("Value")]
         public int Value { get; set; }
 
-        [JsonPropertyName("MedalType")]
+        [JsonProperty("MedalType")]
         public int MedalType { get; set; }
 
-        [JsonPropertyName("MedalIcon")]
+        [JsonProperty("MedalIcon")]
         public int MedalIcon { get; set; }
     }
 }
