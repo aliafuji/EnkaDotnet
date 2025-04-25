@@ -6,11 +6,15 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Enums.HSR;
+using EnkaDotNet.Utils.HSR;
+using System.Globalization;
 
 namespace EnkaDotNet.Components.HSR
 {
     public class HSRRelic
     {
+        internal EnkaClientOptions Options { get; set; }
+
         public int Id { get; internal set; }
         public int Level { get; internal set; }
         public int Type { get; internal set; }
@@ -27,6 +31,18 @@ namespace EnkaDotNet.Components.HSR
         public override string ToString()
         {
             return $"{SetName} {RelicType} (Lv.{Level})";
+        }
+
+        public KeyValuePair<string, string> FormattedMainStat => GetAllStats(MainStat);
+
+        public List<KeyValuePair<string, string>> FormattedSubStats => SubStats.Select(GetAllStats).ToList();
+
+        private KeyValuePair<string, string> GetAllStats(HSRStatProperty stat)
+        {
+            bool raw = Options?.Raw ?? false;
+            string key = raw ? stat.Type : HSRStatPropertyUtils.GetDisplayName(stat.Type);
+            string value = raw ? stat.Value.ToString(CultureInfo.InvariantCulture) : stat.DisplayValue;
+            return new KeyValuePair<string, string>(key, value);
         }
     }
 }

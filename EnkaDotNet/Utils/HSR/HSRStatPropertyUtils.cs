@@ -26,14 +26,8 @@ namespace EnkaDotNet.Utils.HSR
             { "Effect RES", "StatusResistance" },
             { "Break Effect", "BreakDamageAddedRatio" },
             { "Energy Regeneration Rate", "SPRatioBase" },
-            { "Outgoing Healing", "HealRatioBase" },
-            { "Physical DMG", "PhysicalAddedRatio" },
-            { "Fire DMG", "FireAddedRatio" },
-            { "Ice DMG", "IceAddedRatio" },
-            { "Lightning DMG", "ThunderAddedRatio" },
-            { "Wind DMG", "WindAddedRatio" },
-            { "Quantum DMG", "QuantumAddedRatio" },
-            { "Imaginary DMG", "ImaginaryAddedRatio" }
+            { "Outgoing Healing", "HealRatioBase" }
+
         };
 
         private static readonly Dictionary<string, string> PropertyTypeToDisplayName = new Dictionary<string, string>();
@@ -61,23 +55,90 @@ namespace EnkaDotNet.Utils.HSR
             { "WindAddedRatio", true },
             { "QuantumAddedRatio", true },
             { "ImaginaryAddedRatio", true },
+
             { "CriticalChanceBase", true },
             { "CriticalDamageBase", true },
             { "BreakDamageAddedRatioBase", true }
+
         };
+
+
+        private static readonly Dictionary<string, string> FinalStatKeyToDisplayName = new Dictionary<string, string>
+        {
+            { "HP", "HP" },
+            { "Attack", "ATK" },
+            { "Defense", "DEF" },
+            { "Speed", "SPD" },
+            { "CritRate", "CRIT Rate" },
+            { "CritDMG", "CRIT DMG" },
+            { "BreakEffect", "Break Effect" },
+            { "HealingBoost", "Outgoing Healing" },
+            { "EnergyRegenRate", "Energy Regeneration Rate" },
+            { "EffectHitRate", "Effect Hit Rate" },
+            { "EffectResistance", "Effect RES" },
+            { "PhysicalDamageBoost", "Physical DMG" },
+            { "FireDamageBoost", "Fire DMG" },
+            { "IceDamageBoost", "Ice DMG" },
+            { "LightningDamageBoost", "Lightning DMG" },
+            { "WindDamageBoost", "Wind DMG" },
+            { "QuantumDamageBoost", "Quantum DMG" },
+            { "ImaginaryDamageBoost", "Imaginary DMG" }
+        };
+
 
         static HSRStatPropertyUtils()
         {
+
             foreach (var kvp in DisplayNameToPropertyType)
             {
-                PropertyTypeToDisplayName[kvp.Value] = kvp.Key;
+
+                if (!PropertyTypeToDisplayName.ContainsKey(kvp.Value))
+                {
+                    PropertyTypeToDisplayName[kvp.Value] = kvp.Key;
+                }
             }
+
+
+            PropertyTypeToDisplayName["CriticalChanceBase"] = "CRIT Rate";
+            PropertyTypeToDisplayName["CriticalDamageBase"] = "CRIT DMG";
+            PropertyTypeToDisplayName["BreakDamageAddedRatioBase"] = "Break Effect";
+            PropertyTypeToDisplayName["SPRatioBase"] = "Energy Regeneration Rate";
+            PropertyTypeToDisplayName["HealRatioBase"] = "Outgoing Healing";
+            PropertyTypeToDisplayName["StatusProbability"] = "Effect Hit Rate";
+            PropertyTypeToDisplayName["StatusResistance"] = "Effect RES";
+
+
+            PropertyTypeToDisplayName["PhysicalAddedRatio"] = "Physical DMG";
+            PropertyTypeToDisplayName["FireAddedRatio"] = "Fire DMG";
+            PropertyTypeToDisplayName["IceAddedRatio"] = "Ice DMG";
+            PropertyTypeToDisplayName["ThunderAddedRatio"] = "Lightning DMG";
+            PropertyTypeToDisplayName["WindAddedRatio"] = "Wind DMG";
+            PropertyTypeToDisplayName["QuantumAddedRatio"] = "Quantum DMG";
+            PropertyTypeToDisplayName["ImaginaryAddedRatio"] = "Imaginary DMG";
+
+
+            PropertyTypeToDisplayName["HPDelta"] = "HP";
+            PropertyTypeToDisplayName["HPAddedRatio"] = "HP%";
+            PropertyTypeToDisplayName["AttackDelta"] = "ATK";
+            PropertyTypeToDisplayName["AttackAddedRatio"] = "ATK%";
+            PropertyTypeToDisplayName["DefenceDelta"] = "DEF";
+            PropertyTypeToDisplayName["DefenceAddedRatio"] = "DEF%";
+            PropertyTypeToDisplayName["SpeedDelta"] = "SPD";
+
+
+            PropertyTypeToDisplayName["BaseHP"] = "Base HP";
+            PropertyTypeToDisplayName["BaseAttack"] = "Base ATK";
+            PropertyTypeToDisplayName["BaseDefence"] = "Base DEF";
+            PropertyTypeToDisplayName["BaseSpeed"] = "Base SPD";
         }
 
         public static bool IsPercentageType(string propertyType)
         {
-            return IsPercentProperty.TryGetValue(propertyType, out bool isPercent) && isPercent;
+
+            return (IsPercentProperty.TryGetValue(propertyType, out bool isPercent) && isPercent)
+                   || (PropertyTypeToDisplayName.TryGetValue(propertyType, out var name) && name.EndsWith("%"));
         }
+
 
         public static string GetDisplayName(string propertyType)
         {
@@ -85,6 +146,15 @@ namespace EnkaDotNet.Utils.HSR
                 ? displayName
                 : propertyType;
         }
+
+
+        public static string GetFinalStatDisplayName(string finalStatKey)
+        {
+            return FinalStatKeyToDisplayName.TryGetValue(finalStatKey, out string displayName)
+               ? displayName
+               : finalStatKey;
+        }
+
 
         public static string GetPropertyType(string displayName)
         {
@@ -99,15 +169,20 @@ namespace EnkaDotNet.Utils.HSR
 
             if (isPercent)
             {
-                return $"{value * 100:F1}%";
+
+
+                double displayValue = value > 1.0 ? value : value * 100;
+                return $"{displayValue:F1}%";
             }
-            else if (propertyType == "SpeedDelta")
+            else if (propertyType == "SpeedDelta" || propertyType == "BaseSpeed")
             {
+
                 return $"{value:F1}";
             }
             else
             {
-                return $"{(int)value}";
+
+                return $"{(int)Math.Floor(value)}";
             }
         }
 
@@ -117,6 +192,7 @@ namespace EnkaDotNet.Utils.HSR
 
             if (isPercent)
             {
+
                 return displayValue / 100.0;
             }
 
@@ -152,6 +228,7 @@ namespace EnkaDotNet.Utils.HSR
                 case "ImaginaryAddedRatio": return StatPropertyType.ImaginaryAddedRatio;
                 case "HealRatioBase": return StatPropertyType.HealRatioBase;
                 case "SPRatioBase": return StatPropertyType.SPRatioBase;
+
                 case "CriticalChanceBase": return StatPropertyType.CriticalChanceBase;
                 case "CriticalDamageBase": return StatPropertyType.CriticalDamageBase;
                 case "BreakDamageAddedRatioBase": return StatPropertyType.BreakDamageAddedRatioBase;
@@ -159,19 +236,11 @@ namespace EnkaDotNet.Utils.HSR
             }
         }
 
+
+
         public static double GetPropertyScalingFactor(string propertyType)
         {
-            switch (propertyType)
-            {
-                case "HPAddedRatio": return 100.0;
-                case "AttackAddedRatio": return 100.0;
-                case "DefenceAddedRatio": return 100.0;
-                case "CriticalChance": return 100.0;
-                case "CriticalDamage": return 100.0;
-                case "StatusProbability": return 100.0;
-                case "StatusResistance": return 100.0;
-                default: return IsPercentageType(propertyType) ? 100.0 : 1.0;
-            }
+            return IsPercentageType(propertyType) ? 100.0 : 1.0;
         }
     }
 }

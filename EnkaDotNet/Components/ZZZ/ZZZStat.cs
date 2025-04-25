@@ -6,22 +6,16 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using EnkaDotNet.Utils.ZZZ;
+using System.Globalization;
 
 namespace EnkaDotNet.Components.ZZZ
 {
     public class ZZZStat
     {
-        public StatType Type { get; set; }
+        public StatType Type { get; set; } = StatType.None;
         public double Value { get; set; }
-        public double FormattedValue { get; set; }
         public int Level { get; set; }
         public bool IsPercentage { get; internal set; }
-
-        public string DisplayValue => IsPercentage ? $"{Value:F1}%" : $"{(int)Value}";
-
-        public override string ToString()
-        {
-            return $"{Type}: {DisplayValue}";
-        }
     }
 }

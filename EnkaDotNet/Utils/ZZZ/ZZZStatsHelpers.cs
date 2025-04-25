@@ -18,6 +18,7 @@ namespace EnkaDotNet.Utils.ZZZ
         private const double BASE_ENERGY_REGEN = 0;
         private static readonly IZZZAssets assets = new ZZZAssets();
 
+
         public static Dictionary<string, double> CalculateAllTotalStats(ZZZAgent agent)
         {
             var breakdown = CalculateTotalBreakdown(agent, assets);
@@ -28,12 +29,13 @@ namespace EnkaDotNet.Utils.ZZZ
             );
         }
 
+
         public static bool IsDisplayPercentageStatForGroup(string statGroup)
         {
             switch (statGroup)
             {
-                case "Crit Rate":
-                case "Crit DMG":
+                case "CRIT Rate":
+                case "CRIT DMG":
                 case "Pen Ratio":
                 case "Physical DMG":
                 case "Fire DMG":
@@ -46,13 +48,14 @@ namespace EnkaDotNet.Utils.ZZZ
             }
         }
 
+
         public static bool IsDisplayPercentageStat(StatType statType)
         {
             string category = GetStatCategoryDisplay(statType);
             switch (category)
             {
-                case "Crit Rate":
-                case "Crit DMG":
+                case "CRIT Rate":
+                case "CRIT DMG":
                 case "Pen Ratio":
                 case "Physical DMG":
                 case "Fire DMG":
@@ -61,13 +64,13 @@ namespace EnkaDotNet.Utils.ZZZ
                 case "Ether DMG":
                 case "HP%":
                 case "ATK%":
-                case "Def%":
+                case "DEF%":
                 case "Impact%":
                     return true;
                 case "Energy Regen":
                 case "HP":
                 case "ATK":
-                case "Def":
+                case "DEF":
                 case "Impact":
                 case "Anomaly Mastery":
                 case "Anomaly Proficiency":
@@ -76,6 +79,7 @@ namespace EnkaDotNet.Utils.ZZZ
                     return false;
             }
         }
+
 
         public static bool IsCalculationPercentageStat(StatType statType)
         {
@@ -111,6 +115,7 @@ namespace EnkaDotNet.Utils.ZZZ
             }
         }
 
+
         private static Dictionary<string, Dictionary<string, double>> CalculateTotalBreakdown(ZZZAgent agent, IZZZAssets assets)
         {
             var breakdown = InitializeTotalsDictionary();
@@ -132,14 +137,14 @@ namespace EnkaDotNet.Utils.ZZZ
                     double value = agent.Weapon.SecondaryStat.Value;
                     if (value > 1.0)
                         value /= 100.0;
-                    breakdown["Crit Rate"]["Weapon_Flat"] += value;
+                    breakdown["CRIT Rate"]["Weapon_Flat"] += value;
                 }
                 else if (agent.Weapon.SecondaryStat.Type == StatType.CritDMGFlat)
                 {
                     double value = agent.Weapon.SecondaryStat.Value;
                     if (value > 1.0)
                         value /= 100.0;
-                    breakdown["Crit DMG"]["Weapon_Flat"] += value;
+                    breakdown["CRIT DMG"]["Weapon_Flat"] += value;
                 }
                 else if (agent.Weapon.SecondaryStat.Type == StatType.EnergyRegenPercent)
                 {
@@ -160,7 +165,7 @@ namespace EnkaDotNet.Utils.ZZZ
                     if (value > 1.0)
                         value /= 100.0;
 
-                    breakdown["Crit Rate"]["Discs_Flat"] += value;
+                    breakdown["CRIT Rate"]["Discs_Flat"] += value;
                 }
                 else if (disc.MainStat.Type == StatType.CritDMGFlat)
                 {
@@ -168,14 +173,14 @@ namespace EnkaDotNet.Utils.ZZZ
                     if (value > 1.0)
                         value /= 100.0;
 
-                    breakdown["Crit DMG"]["Discs_Flat"] += value;
+                    breakdown["CRIT DMG"]["Discs_Flat"] += value;
                 }
                 else
                 {
                     AddContribution(breakdown, disc.MainStat.Type, disc.MainStat.Value, "Discs");
                 }
 
-                foreach (var subStat in disc.SubStats)
+                foreach (var subStat in disc.SubStatsRaw)
                 {
                     if (subStat.Type == StatType.CritRateFlat)
                     {
@@ -184,7 +189,7 @@ namespace EnkaDotNet.Utils.ZZZ
                             baseValue /= 100.0;
 
                         double scaledValue = baseValue * subStat.Level;
-                        breakdown["Crit Rate"]["Discs_Flat"] += scaledValue;
+                        breakdown["CRIT Rate"]["Discs_Flat"] += scaledValue;
                     }
                     else if (subStat.Type == StatType.CritDMGFlat)
                     {
@@ -193,7 +198,7 @@ namespace EnkaDotNet.Utils.ZZZ
                             baseValue /= 100.0;
 
                         double scaledValue = baseValue * subStat.Level;
-                        breakdown["Crit DMG"]["Discs_Flat"] += scaledValue;
+                        breakdown["CRIT DMG"]["Discs_Flat"] += scaledValue;
                     }
                     else
                     {
@@ -214,7 +219,7 @@ namespace EnkaDotNet.Utils.ZZZ
         {
             var breakdown = new Dictionary<string, Dictionary<string, double>>();
             var statGroups = new List<string> {
-                "HP", "ATK", "Def", "Impact", "Crit Rate", "Crit DMG", "Energy Regen",
+                "HP", "ATK", "DEF", "Impact", "CRIT Rate", "CRIT DMG", "Energy Regen",
                 "Anomaly Mastery", "Anomaly Proficiency", "Pen Ratio", "PEN",
                 "Physical DMG", "Fire DMG", "Ice DMG", "Electric DMG", "Ether DMG"
             };
@@ -231,12 +236,13 @@ namespace EnkaDotNet.Utils.ZZZ
                 };
             }
 
-            breakdown["Crit Rate"]["Agent_Base"] = BASE_CRIT_RATE;
-            breakdown["Crit DMG"]["Agent_Base"] = BASE_CRIT_DMG;
+            breakdown["CRIT Rate"]["Agent_Base"] = BASE_CRIT_RATE;
+            breakdown["CRIT DMG"]["Agent_Base"] = BASE_CRIT_DMG;
             breakdown["Energy Regen"]["Agent_Base"] = BASE_ENERGY_REGEN;
 
             return breakdown;
         }
+
 
         private static void AddContribution(Dictionary<string, Dictionary<string, double>> breakdown, StatType statType, double value, string sourcePrefix)
         {
@@ -246,12 +252,12 @@ namespace EnkaDotNet.Utils.ZZZ
             string targetBucketSuffix;
             double valueToAdd = value;
 
-            if (category == "Crit Rate" || category == "Crit DMG")
+            if (category == "CRIT Rate" || category == "CRIT DMG")
             {
                 if (sourcePrefix == "Agent" && statType.ToString().EndsWith("Base"))
                 {
                     targetBucketSuffix = "Base";
-                    valueToAdd = (category == "Crit Rate") ? BASE_CRIT_RATE : BASE_CRIT_DMG;
+                    valueToAdd = (category == "CRIT Rate") ? BASE_CRIT_RATE : BASE_CRIT_DMG;
                 }
                 else if (sourcePrefix != "Agent")
                 {
@@ -333,6 +339,7 @@ namespace EnkaDotNet.Utils.ZZZ
             breakdown[category][bucketKey] += valueToAdd;
         }
 
+
         private static void ApplySetBonuses(ZZZAgent agent, Dictionary<string, Dictionary<string, double>> breakdown, IZZZAssets assets)
         {
             var equippedSets = agent.EquippedDiscs
@@ -363,7 +370,7 @@ namespace EnkaDotNet.Utils.ZZZ
                             rawValue = rawValue / 1000.0;
                             breakdown["Energy Regen"]["SetBonus_Percent"] += rawValue;
                         }
-                        else if (category == "Crit Rate" || category == "Crit DMG")
+                        else if (category == "CRIT Rate" || category == "CRIT DMG")
                         {
                             rawValue = rawValue / 1000.0;
                             breakdown[category]["SetBonus_Flat"] += rawValue;
@@ -381,6 +388,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 }
             }
         }
+
 
         private static void CalculateFinalValues(Dictionary<string, Dictionary<string, double>> breakdown)
         {
@@ -404,7 +412,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 {
                     case "HP":
                         double percentBonus = agentBase * totalPercentBonus;
-                        finalValue = Math.Floor(agentBase + percentBonus + totalFlatBonus);
+                        finalValue = Math.Ceiling(agentBase + percentBonus + totalFlatBonus);
                         catBreakdown["BaseDisplay"] = agentBase;
                         catBreakdown["AddedDisplay"] = finalValue - agentBase;
                         break;
@@ -430,7 +438,7 @@ namespace EnkaDotNet.Utils.ZZZ
                         catBreakdown["AddedDisplay"] = finalValue - combinedBaseATK;
                         break;
 
-                    case "Def":
+                    case "DEF":
                         double defDiscPercentBonus = catBreakdown["Discs_Percent"] != 0 ? catBreakdown["Discs_Percent"] / 100.0 : 0;
                         double defWeaponPercentBonus = catBreakdown["Weapon_Percent"] != 0 ? catBreakdown["Weapon_Percent"] / 100.0 : 0;
                         double defAgentPercentBonus = catBreakdown["Agent_Percent"] != 0 ? catBreakdown["Agent_Percent"] / 100.0 : 0;
@@ -530,14 +538,14 @@ namespace EnkaDotNet.Utils.ZZZ
                         catBreakdown["AddedDisplay"] = finalValue - agentBase;
                         break;
 
-                    case "Crit Rate":
+                    case "CRIT Rate":
                         finalValue = (BASE_CRIT_RATE + totalFlatBonus + totalPercentBonus + bonusFlat) * 100;
                         catBreakdown["BaseDisplay"] = (BASE_CRIT_RATE * 100);
                         catBreakdown["AddedDisplay"] = finalValue - (BASE_CRIT_RATE * 100);
                         break;
 
-                    case "Crit DMG":
-                        finalValue = (BASE_CRIT_DMG + totalFlatBonus + totalPercentBonus + bonusFlat) * 100;        
+                    case "CRIT DMG":
+                        finalValue = (BASE_CRIT_DMG + totalFlatBonus + totalPercentBonus + bonusFlat) * 100;
                         catBreakdown["BaseDisplay"] = (BASE_CRIT_DMG * 100);
                         catBreakdown["AddedDisplay"] = finalValue - (BASE_CRIT_DMG * 100);
                         break;
@@ -588,17 +596,18 @@ namespace EnkaDotNet.Utils.ZZZ
             }
         }
 
+
         public static string GetStatCategory(StatType statType)
         {
             switch (statType)
             {
                 case StatType.HPBase: case StatType.HPPercent: case StatType.HPFlat: return "HP";
                 case StatType.ATKBase: case StatType.ATKPercent: case StatType.ATKFlat: return "ATK";
-                case StatType.DefBase: case StatType.DefPercent: case StatType.DefFlat: return "Def";
+                case StatType.DefBase: case StatType.DefPercent: case StatType.DefFlat: return "DEF";
                 case StatType.ImpactBase: case StatType.ImpactPercent: return "Impact";
 
-                case StatType.CritRateBase: case StatType.CritRateFlat: return "Crit Rate";
-                case StatType.CritDMGBase: case StatType.CritDMGFlat: return "Crit DMG";
+                case StatType.CritRateBase: case StatType.CritRateFlat: return "CRIT Rate";
+                case StatType.CritDMGBase: case StatType.CritDMGFlat: return "CRIT DMG";
 
                 case StatType.EnergyRegenBase: case StatType.EnergyRegenPercent: case StatType.EnergyRegenFlat: return "Energy Regen";
 
@@ -617,6 +626,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 default: return "";
             }
         }
+
 
         public static string GetStatCategoryDisplay(StatType statType)
         {
@@ -624,16 +634,16 @@ namespace EnkaDotNet.Utils.ZZZ
             {
                 case StatType.HPBase: case StatType.HPFlat: return "HP";
                 case StatType.ATKBase: case StatType.ATKFlat: return "ATK";
-                case StatType.DefBase: case StatType.DefFlat: return "Def";
+                case StatType.DefBase: case StatType.DefFlat: return "DEF";
                 case StatType.ImpactBase: return "Impact";
 
                 case StatType.HPPercent: return "HP%";
                 case StatType.ATKPercent: return "ATK%";
-                case StatType.DefPercent: return "Def%";
+                case StatType.DefPercent: return "DEF%";
                 case StatType.ImpactPercent: return "Impact%";
 
-                case StatType.CritRateBase: case StatType.CritRateFlat: return "Crit Rate";
-                case StatType.CritDMGBase: case StatType.CritDMGFlat: return "Crit DMG";
+                case StatType.CritRateBase: case StatType.CritRateFlat: return "CRIT Rate";
+                case StatType.CritDMGBase: case StatType.CritDMGFlat: return "CRIT DMG";
 
                 case StatType.EnergyRegenBase: case StatType.EnergyRegenPercent: case StatType.EnergyRegenFlat: return "Energy Regen";
 
@@ -652,6 +662,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 default: return "";
             }
         }
+
 
         public static StatBreakdown GetStatSourceBreakdown(ZZZAgent agent, string statGroup)
         {
@@ -669,11 +680,11 @@ namespace EnkaDotNet.Utils.ZZZ
 
             result.TotalValue = catBreakdown["Final"];
 
-            if (statGroup == "Crit Rate")
+            if (statGroup == "CRIT Rate")
             {
                 result.BaseValue = (BASE_CRIT_RATE * 100);
             }
-            else if (statGroup == "Crit DMG")
+            else if (statGroup == "CRIT DMG")
             {
                 result.BaseValue = (BASE_CRIT_DMG * 100);
             }
@@ -702,6 +713,31 @@ namespace EnkaDotNet.Utils.ZZZ
             }
 
             return result;
+        }
+
+        public static StatType GetStatTypeFromFriendlyName(string friendlyName, bool isPercentage, bool isEnergyRegen = false)
+        {
+            if (isEnergyRegen) return StatType.EnergyRegenPercent;
+
+            switch (friendlyName)
+            {
+                case "HP": return isPercentage ? StatType.HPPercent : StatType.HPFlat;
+                case "ATK": return isPercentage ? StatType.ATKPercent : StatType.ATKFlat;
+                case "DEF": return isPercentage ? StatType.DefPercent : StatType.DefFlat;
+                case "Impact": return isPercentage ? StatType.ImpactPercent : StatType.ImpactBase;
+                case "CRIT Rate": return StatType.CritRateFlat;
+                case "CRIT DMG": return StatType.CritDMGFlat;
+                case "Anomaly Mastery": return StatType.AnomalyMasteryFlat;
+                case "Anomaly Proficiency": return StatType.AnomalyProficiencyFlat;
+                case "Pen Ratio": return StatType.PenRatioFlat;
+                case "PEN": return StatType.PENFlat;
+                case "Physical DMG": return StatType.PhysicalDMGBonusFlat;
+                case "Fire DMG": return StatType.FireDMGBonusFlat;
+                case "Ice DMG": return StatType.IceDMGBonusFlat;
+                case "Electric DMG": return StatType.ElectricDMGBonusFlat;
+                case "Ether DMG": return StatType.EtherDMGBonusFlat;
+                default: return StatType.None;
+            }
         }
     }
 

@@ -181,23 +181,16 @@ namespace EnkaDotNet.Utils.ZZZ
             if (ZZZStatsHelpers.IsCalculationPercentageStat(statType) &&
                 statType != StatType.CritRateBase &&
                 statType != StatType.CritDMGBase &&
-                statType != StatType.EnergyRegenBase)
+                statType != StatType.EnergyRegenBase &&
+                 statType != StatType.EnergyRegenPercent)
             {
                 calculationValue = rawValue / 100.0;
             }
-
-            double formattedValue = calculationValue;
-            if (level > 0)
-            {
-                formattedValue *= level;
-            }
-
 
             return new ZZZStat
             {
                 Type = statType,
                 Value = calculationValue,
-                FormattedValue = formattedValue,
                 Level = level,
                 IsPercentage = isPercentage
             };

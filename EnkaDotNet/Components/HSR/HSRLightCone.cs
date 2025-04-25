@@ -6,11 +6,15 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Enums.HSR;
+using System.Globalization;
+using EnkaDotNet.Utils.HSR;
 
 namespace EnkaDotNet.Components.HSR
 {
     public class HSRLightCone
     {
+        internal EnkaClientOptions Options { get; set; }
+
         public int Id { get; internal set; }
         public string Name { get; internal set; } = string.Empty;
         public int Level { get; internal set; }
@@ -29,6 +33,19 @@ namespace EnkaDotNet.Components.HSR
         public override string ToString()
         {
             return $"{Name} (Lv.{Level}/{Promotion}, Rank {Rank})";
+        }
+
+        public KeyValuePair<string, string> FormattedBaseHP => GetFormattedStat("BaseHP", BaseHP);
+        public KeyValuePair<string, string> FormattedBaseAttack => GetFormattedStat("BaseAttack", BaseAttack);
+        public KeyValuePair<string, string> FormattedBaseDefense => GetFormattedStat("BaseDefence", BaseDefense);
+
+
+        private KeyValuePair<string, string> GetFormattedStat(string propertyType, double value)
+        {
+            bool raw = Options?.Raw ?? false;
+            string key = raw ? propertyType : HSRStatPropertyUtils.GetDisplayName(propertyType);
+            string formattedValue = raw ? value.ToString(CultureInfo.InvariantCulture) : Math.Floor(value).ToString();
+            return new KeyValuePair<string, string>(key, formattedValue);
         }
     }
 }
