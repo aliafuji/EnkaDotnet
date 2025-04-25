@@ -54,7 +54,7 @@ namespace GenshinStatsViewer
                     GameType = EnkaDotNet.Enums.GameType.Genshin,
                     EnableCaching = true,
                     UserAgent = "EnkaDotNet/5.0",
-                    Raw = false
+                    Raw = true
                 };
 
                 Console.OutputEncoding = System.Text.Encoding.UTF8;
