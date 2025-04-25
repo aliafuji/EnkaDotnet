@@ -1,4 +1,11 @@
-﻿using EnkaDotNet.Assets;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Assets;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Assets.ZZZ;
@@ -18,12 +25,12 @@ namespace EnkaDotNet
     public partial class EnkaClient : IDisposable
     {
         private readonly HttpHelper _httpHelper;
-        private readonly DataMapper? _dataMapper;
-        private readonly ZZZDataMapper? _zzzDataMapper;
-        private readonly HSRDataMapper? _hsrDataMapper;
-        private readonly IGenshinAssets? _genshinAssets;
-        private readonly IZZZAssets? _zzzAssets;
-        private readonly IHSRAssets? _hsrAssets;
+        private readonly DataMapper _dataMapper;
+        private readonly ZZZDataMapper _zzzDataMapper;
+        private readonly HSRDataMapper _hsrDataMapper;
+        private readonly IGenshinAssets _genshinAssets;
+        private readonly IZZZAssets _zzzAssets;
+        private readonly IHSRAssets _hsrAssets;
         private readonly EnkaClientOptions _options;
         private bool _disposed = false;
 
@@ -35,7 +42,7 @@ namespace EnkaDotNet
         {
         }
 
-        public EnkaClient(EnkaClientOptions? options = null)
+        public EnkaClient(EnkaClientOptions options = null)
         {
             _options = options ?? new EnkaClientOptions();
 
@@ -60,25 +67,27 @@ namespace EnkaDotNet
                     _hsrAssets = AssetsFactory.CreateHSR(_options.Language);
                     _hsrDataMapper = new HSRDataMapper(_hsrAssets);
                     break;
+                default:
+                    // Should not happen due to check above, but good practice
+                    throw new UnsupportedGameTypeException(_options.GameType);
             }
         }
 
-        public EnkaClient(HttpHelper httpHelper, IGenshinAssets assets, EnkaClientOptions? options = null)
+        public EnkaClient(HttpHelper httpHelper, IGenshinAssets assets, EnkaClientOptions options = null)
         {
             _options = options ?? new EnkaClientOptions { GameType = GameType.Genshin };
-            _options.GameType = GameType.Genshin; // Force Genshin game type for this constructor
+            _options.GameType = GameType.Genshin;
 
             _httpHelper = httpHelper ?? throw new ArgumentNullException(nameof(httpHelper));
             _genshinAssets = assets ?? throw new ArgumentNullException(nameof(assets));
             _dataMapper = new DataMapper(_genshinAssets);
         }
 
-        public async Task<ApiResponse?> GetRawUserResponse(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
+        public async Task<ApiResponse> GetRawUserResponse(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
             if (uid <= 0) throw new ArgumentException("UID must be a positive integer.", nameof(uid));
 
-            // Ensure the game type is supported
             if (!Constants.IsGameTypeSupported(_options.GameType))
             {
                 throw new NotSupportedException($"Game type {_options.GameType} is not currently supported.");
@@ -91,13 +100,18 @@ namespace EnkaDotNet
             {
                 throw new ProfilePrivateException(uid, "Profile data retrieved but character details and player info are missing, profile might be private or UID invalid.");
             }
+            else if (response == null)
+            {
+                 throw new EnkaNetworkException($"Failed to retrieve data for UID {uid}. Response was null.");
+            }
+
 
             return response;
         }
 
         public async Task<PlayerInfo> GetPlayerInfo(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
             EnsureGenshinGameType();
 
             var rawResponse = await GetRawUserResponse(uid, bypassCache, cancellationToken);
@@ -107,12 +121,17 @@ namespace EnkaDotNet
                 throw new EnkaNetworkException($"Failed to retrieve valid PlayerInfo for UID {uid}. Response or PlayerInfo was null.");
             }
 
-            return _dataMapper!.MapPlayerInfo(rawResponse.PlayerInfo);
+            if (_dataMapper == null)
+            {
+                throw new InvalidOperationException("Genshin DataMapper is not initialized.");
+            }
+
+            return _dataMapper.MapPlayerInfo(rawResponse.PlayerInfo);
         }
 
         public async Task<List<Character>> GetCharacters(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
             EnsureGenshinGameType();
 
             var rawResponse = await GetRawUserResponse(uid, bypassCache, cancellationToken);
@@ -126,12 +145,17 @@ namespace EnkaDotNet
                 throw new EnkaNetworkException($"Failed to retrieve valid AvatarInfoList for UID {uid}. Response or AvatarInfoList was null.");
             }
 
-            return _dataMapper!.MapCharacters(rawResponse.AvatarInfoList);
+            if (_dataMapper == null)
+            {
+                 throw new InvalidOperationException("Genshin DataMapper is not initialized.");
+            }
+
+            return _dataMapper.MapCharacters(rawResponse.AvatarInfoList);
         }
 
         public async Task<(PlayerInfo PlayerInfo, List<Character> Characters)> GetUserProfile(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
             EnsureGenshinGameType();
 
             var rawResponse = await GetRawUserResponse(uid, bypassCache, cancellationToken);
@@ -140,8 +164,12 @@ namespace EnkaDotNet
             {
                 throw new EnkaNetworkException($"Failed to retrieve player info for UID {uid}.");
             }
+             if (_dataMapper == null)
+            {
+                 throw new InvalidOperationException("Genshin DataMapper is not initialized.");
+            }
 
-            var playerInfo = _dataMapper!.MapPlayerInfo(rawResponse.PlayerInfo);
+            var playerInfo = _dataMapper.MapPlayerInfo(rawResponse.PlayerInfo);
 
             List<Character> characters = new List<Character>();
             if (rawResponse.AvatarInfoList != null)
@@ -154,7 +182,7 @@ namespace EnkaDotNet
 
         public (int Count, int ExpiredCount) GetCacheStats()
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
             try
             {
                 return _httpHelper.GetCacheStats();
@@ -167,7 +195,7 @@ namespace EnkaDotNet
 
         public void ClearCache()
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
             try
             {
                 _httpHelper.ClearCache();

@@ -1,4 +1,11 @@
-﻿using EnkaDotNet.Assets.Genshin;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Enums;
@@ -10,13 +17,14 @@ namespace EnkaDotNet.Assets
     {
         public static IAssets Create(string language = "en", GameType gameType = GameType.Genshin)
         {
-            return gameType switch
+            switch (gameType)
             {
-                GameType.Genshin => new GenshinAssets(language),
-                GameType.ZZZ => new ZZZAssets(language),
-                GameType.HSR => new HSRAssets(language),
-                _ => throw new UnsupportedGameTypeException(gameType, $"Game type {gameType} is not supported.")
-            };
+                case GameType.Genshin: return new GenshinAssets(language);
+                case GameType.ZZZ: return new ZZZAssets(language);
+                case GameType.HSR: return new HSRAssets(language);
+                default: throw new UnsupportedGameTypeException(gameType, $"Game type {gameType} is not supported.");
+            }
+            ;
         }
 
         public static IGenshinAssets CreateGenshin(string language = "en")

@@ -1,5 +1,11 @@
 ﻿using EnkaDotNet.Enums;
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace EnkaDotNet.Utils
 {
@@ -18,35 +24,38 @@ namespace EnkaDotNet.Utils
 
         public static string GetBaseUrl(GameType gameType)
         {
-            return gameType switch
-            {
-                GameType.Genshin => DEFAULT_GENSHIN_API_URL,
-                GameType.ZZZ => DEFAULT_ZZZ_API_URL,
-                GameType.HSR => DEFAULT_HSR_API_URL,
-                _ => throw new NotSupportedException($"Game type {gameType} is not supported.")
-            };
+            if (gameType == GameType.Genshin)
+                return DEFAULT_GENSHIN_API_URL;
+            if (gameType == GameType.ZZZ)
+                return DEFAULT_ZZZ_API_URL;
+            if (gameType == GameType.HSR)
+                return DEFAULT_HSR_API_URL;
+
+            throw new NotSupportedException($"Game type {gameType} is not supported.");
         }
 
         public static string GetUserInfoEndpointFormat(GameType gameType)
         {
-            return gameType switch
-            {
-                GameType.Genshin => "uid/{0}",
-                GameType.ZZZ => "uid/{0}",
-                GameType.HSR => "uid/{0}",
-                _ => throw new NotSupportedException($"Game type {gameType} is not supported.")
-            };
+            if (gameType == GameType.Genshin)
+                return "uid/{0}";
+            if (gameType == GameType.ZZZ)
+                return "uid/{0}";
+            if (gameType == GameType.HSR)
+                return "uid/{0}";
+
+            throw new NotSupportedException($"Game type {gameType} is not supported.");
         }
 
         public static string GetAssetBaseUrl(GameType gameType)
         {
-            return gameType switch
-            {
-                GameType.Genshin => DEFAULT_GENSHIN_ASSET_URL,
-                GameType.ZZZ => DEFAULT_ZZZ_ASSET_URL,
-                GameType.HSR => DEFAULT_HSR_ASSET_URL,
-                _ => throw new NotSupportedException($"Game type {gameType} is not supported.")
-            };
+            if (gameType == GameType.Genshin)
+                return DEFAULT_GENSHIN_ASSET_URL;
+            if (gameType == GameType.ZZZ)
+                return DEFAULT_ZZZ_ASSET_URL;
+            if (gameType == GameType.HSR)
+                return DEFAULT_HSR_ASSET_URL;
+
+            throw new NotSupportedException($"Game type {gameType} is not supported.");
         }
 
         public static bool IsGameTypeSupported(GameType gameType)

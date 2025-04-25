@@ -1,25 +1,32 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Assets.Genshin.Models
 {
     public class CharacterAssetInfo
     {
-        [JsonPropertyName("NameTextMapHash")]
-        public string? NameTextMapHash { get; set; }
+        [JsonProperty("NameTextMapHash")]
+        public string NameTextMapHash { get; set; }
 
-        [JsonPropertyName("Element")]
-        public string? Element { get; set; }
+        [JsonProperty("Element")]
+        public string Element { get; set; }
 
-        [JsonPropertyName("WeaponType")]
-        public string? WeaponType { get; set; }
+        [JsonProperty("WeaponType")]
+        public string WeaponType { get; set; }
 
-        [JsonPropertyName("SideIconName")]
-        public string? SideIconName { get; set; }
+        [JsonProperty("SideIconName")]
+        public string SideIconName { get; set; }
 
-        [JsonPropertyName("NamecardIcon")]
-        public string? NamecardIcon { get; set; }
+        [JsonProperty("NamecardIcon")]
+        public string NamecardIcon { get; set; }
 
-        [JsonPropertyName("Consts")]
-        public List<string>? Constellations { get; set; }
+        [JsonProperty("Consts")]
+        public List<string> Constellations { get; set; }
     }
 }

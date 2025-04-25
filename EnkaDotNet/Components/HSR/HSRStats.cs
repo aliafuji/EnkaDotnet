@@ -1,4 +1,11 @@
-﻿using EnkaDotNet.Components.HSR.EnkaDotNet.Enums.HSR;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Components.HSR.EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Utils.HSR;
 
@@ -22,7 +29,7 @@ namespace EnkaDotNet.Components.HSR
                 }
                 else if (Type == "SpeedDelta")
                 {
-                    return $"{Value:F2}";
+                    return $"{Value:F1}";
                 }
                 else
                 {
@@ -35,7 +42,7 @@ namespace EnkaDotNet.Components.HSR
         {
             get
             {
-                return IsPercentage ? Value / 100.0 : Value;
+                return IsPercentage ? Value : Value;
             }
         }
 

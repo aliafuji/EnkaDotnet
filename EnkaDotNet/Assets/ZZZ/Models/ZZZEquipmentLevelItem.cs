@@ -1,28 +1,35 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Assets.ZZZ.Models
 {
     public class ZZZEquipmentLevelData
     {
-        [JsonPropertyName("Items")]
-        public List<ZZZEquipmentLevelItem>? Items { get; set; }
+        [JsonProperty("Items")]
+        public List<ZZZEquipmentLevelItem> Items { get; set; }
     }
 
     public class ZZZEquipmentLevelItem
     {
-        [JsonPropertyName("Rarity")]
+        [JsonProperty("Rarity")]
         public int Rarity { get; set; }
 
-        [JsonPropertyName("Level")]
+        [JsonProperty("Level")]
         public int Level { get; set; }
 
-        [JsonPropertyName("EnhanceRate")]
+        [JsonProperty("EnhanceRate")]
         public double EnhanceRate { get; set; }
 
-        [JsonPropertyName("Exp")]
+        [JsonProperty("Exp")]
         public int Exp { get; set; }
 
-        [JsonPropertyName("ExpRecycleRate")]
+        [JsonProperty("ExpRecycleRate")]
         public int ExpRecycleRate { get; set; }
     }
 }

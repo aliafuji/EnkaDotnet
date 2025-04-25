@@ -1,4 +1,11 @@
-﻿using EnkaDotNet.Assets.ZZZ;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
 
@@ -41,7 +48,7 @@ namespace EnkaDotNet.Utils.ZZZ
 
                     foreach (var prop in suitInfo.SetBonusProps)
                     {
-                        string formattedValue = string.Empty; 
+                        string formattedValue = string.Empty;
                         if (int.TryParse(prop.Key, out int propId) && Enum.IsDefined(typeof(StatType), propId))
                         {
                             string propName = assets.GetPropertyName(propId);
@@ -55,14 +62,6 @@ namespace EnkaDotNet.Utils.ZZZ
                             else
                             {
                                 formattedValue = $"{Math.Round(rawValue):F0}";
-                                if (ZZZStatsHelpers.IsDisplayPercentageStat(statType))
-                                {
-                                    formattedValue = $"{rawValue:F1}%";
-                                }
-                                else
-                                {
-                                    formattedValue = $"{rawValue:F0}";
-                                }
                             }
                             bonusDescriptions.Add($"{propName} +{formattedValue}");
                         }
@@ -73,13 +72,23 @@ namespace EnkaDotNet.Utils.ZZZ
                         .Select(prop =>
                         {
                             var statType = (StatType)int.Parse(prop.Key);
+                            string valueDisplay;
+                            if (ZZZStatsHelpers.IsDisplayPercentageStat(statType))
+                            {
+                                valueDisplay = $"{(prop.Value / 100.0):F1}%"; // Show decimal for percentages
+                            }
+                            else
+                            {
+                                valueDisplay = $"{Math.Floor((double)prop.Value)}"; // Floor for non-percentages
+                            }
+
                             return new BonusStats
                             {
                                 StatType = statType,
-                                Value = ZZZStatsHelpers.IsDisplayPercentageStat(statType) ? $"{(prop.Value / 100):F0}%" : $"{Math.Round((double)prop.Value, MidpointRounding.AwayFromZero):F0}",
+                                Value = valueDisplay,
                                 Description = setInfo.BonusDescription
                             };
-                            
+
                         }).ToList();
                 }
                 else
@@ -107,7 +116,7 @@ namespace EnkaDotNet.Utils.ZZZ
     public class BonusStats
     {
         public StatType StatType { get; set; }
-        public string? Value { get; set; }
+        public string Value { get; set; }
         public string Description { get; set; } = string.Empty;
     }
-    }
+}

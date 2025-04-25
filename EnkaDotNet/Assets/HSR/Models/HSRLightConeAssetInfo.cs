@@ -1,25 +1,32 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Assets.HSR.Models
 {
     public class HSRLightConeAssetInfo
     {
-        [JsonPropertyName("EquipmentName")]
-        public EquipmentNameInfo? EquipmentName { get; set; }
+        [JsonProperty("EquipmentName")]
+        public EquipmentNameInfo EquipmentName { get; set; }
 
-        [JsonPropertyName("ImagePath")]
-        public string? ImagePath { get; set; }
+        [JsonProperty("ImagePath")]
+        public string ImagePath { get; set; }
 
-        [JsonPropertyName("Rarity")]
+        [JsonProperty("Rarity")]
         public int Rarity { get; set; }
 
-        [JsonPropertyName("AvatarBaseType")]
-        public string? AvatarBaseType { get; set; }
+        [JsonProperty("AvatarBaseType")]
+        public string AvatarBaseType { get; set; }
     }
 
     public class EquipmentNameInfo
     {
-        [JsonPropertyName("Hash")]
-        public string? Hash { get; set; }
+        [JsonProperty("Hash")]
+        public string Hash { get; set; }
     }
 }

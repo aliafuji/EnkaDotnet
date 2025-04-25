@@ -1,9 +1,14 @@
-﻿using EnkaDotNet.Models.Genshin;
-using EnkaDotNet.Components.Genshin;
-using EnkaDotNet.Assets.Genshin;
-using EnkaDotNet.Enums.Genshin;
+﻿using System;
 using System.Collections.Generic;
-using System;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Assets.Genshin;
+using EnkaDotNet.Components.Genshin;
+using EnkaDotNet.Enums.Genshin;
+using EnkaDotNet.Models.Genshin;
 
 namespace EnkaDotNet.Utils.Genshin
 {
@@ -23,36 +28,36 @@ namespace EnkaDotNet.Utils.Genshin
             var playerInfo = new PlayerInfo
             {
                 Nickname = model.Nickname ?? "Unknown",
-                Level = model.Level ?? 0,
+                Level = model.Level,
                 Signature = model.Signature ?? "",
                 IconUrl = _assets.GetProfilePictureIconUrl(model.ProfilePicture?.Id ?? 0),
-                WorldLevel = model.WorldLevel ?? 0,
-                NameCardId = model.NameCardId ?? 0,
-                FinishedAchievements = model.FinishAchievementNum ?? 0,
+                WorldLevel = model.WorldLevel,
+                NameCardId = model.NameCardId,
+                FinishedAchievements = model.FinishAchievementNum,
                 ShowcaseCharacterIds = model.ShowAvatarInfoList?.Select(a => a.AvatarId).ToList() ?? new List<int>(),
                 ShowcaseNameCardIds = model.ShowNameCardIdList ?? new List<int>(),
                 ProfilePictureCharacterId = model.ProfilePicture?.Id ?? 0,
                 ShowcaseNameCardIcons = model.ShowNameCardIdList?.Select(id => _assets.GetNameCardIconUrl(id)).ToList() ?? new List<string>(),
-                NameCardIcon = _assets.GetNameCardIconUrl(model.NameCardId ?? 0),
-                Challenge = new ChallengeData
-                {
-                    SpiralAbyss = new ChallengeData.SpiralAbyssData
-                    {
-                        Floor = model.TowerFloorIndex ?? 0,
-                        Chamber = model.TowerLevelIndex ?? 0,
-                        Star = model.TowerStarIndex ?? 0
-                    },
-                    Theater = new ChallengeData.TheatreData
-                    {
-                        Act = model.TheaterActIndex ?? 0,
-                        Star = model.TheaterStarIndex ?? 0
-                    }
-                }
+                NameCardIcon = _assets.GetNameCardIconUrl(model.NameCardId)
             };
+
+            playerInfo.Challenge = new ChallengeData();
+            playerInfo.Challenge.SpiralAbyss = new ChallengeData.SpiralAbyssData
+            {
+                Floor = model.TowerFloorIndex,
+                Chamber = model.TowerLevelIndex,
+                Star = model.TowerStarIndex
+            };
+            playerInfo.Challenge.Theater = new ChallengeData.TheatreData
+            {
+                Act = model.TheaterActIndex,
+                Star = model.TheaterStarIndex
+            };
+
             return playerInfo;
         }
 
-        public List<Character> MapCharacters(List<AvatarInfoModel>? modelList)
+        public List<Character> MapCharacters(List<AvatarInfoModel> modelList)
         {
             if (modelList == null) return new List<Character>();
             return modelList.Select(model => MapCharacter(model)).ToList();
@@ -74,7 +79,7 @@ namespace EnkaDotNet.Utils.Genshin
                 Level = ParsePropValue(model.PropMap, "4001"),
                 Ascension = ParsePropValue(model.PropMap, "1002"),
                 Friendship = model.FetterInfo?.ExpLevel ?? 0,
-                CostumeId = model.CostumeId ?? 0,
+                CostumeId = model.CostumeId,
                 Element = element,
                 Stats = MapStats(model.FightPropMap),
                 UnlockedConstellationIds = model.TalentIdList ?? new List<int>(),
@@ -87,18 +92,19 @@ namespace EnkaDotNet.Utils.Genshin
 
             character.ConstellationLevel = character.UnlockedConstellationIds.Count;
             character.Constellations = character.UnlockedConstellationIds
-                .Select(id => new Constellation
-                {
-                    Id = id,
-                    Name = _assets.GetConstellationName(id),
-                    IconUrl = _assets.GetConstellationIconUrl(id),
-                    Position = character.UnlockedConstellationIds.IndexOf(id) + 1,
-                })
-                .ToList();
+               .Select((id, index) => new Constellation
+               {
+                   Id = id,
+                   Name = _assets.GetConstellationName(id),
+                   IconUrl = _assets.GetConstellationIconUrl(id),
+                   Position = index + 1
+               })
+               .ToList();
+
             return character;
         }
 
-        public EquipmentBase? MapEquipment(EquipModel model)
+        public EquipmentBase MapEquipment(EquipModel model)
         {
             if (model?.Flat == null) return null;
             ItemType itemType = MapItemType(model.Flat.ItemType);
@@ -118,7 +124,8 @@ namespace EnkaDotNet.Utils.Genshin
         {
             var baseAtkProp = flat.WeaponStats?.FirstOrDefault(s => s.AppendPropId == "FIGHT_PROP_BASE_ATTACK");
             var secondaryStatPropModel = flat.WeaponStats?.FirstOrDefault(s => s.AppendPropId != "FIGHT_PROP_BASE_ATTACK");
-            var secondaryStat = MapStatProperty(secondaryStatPropModel);
+            var secondaryStat = secondaryStatPropModel != null ? MapStatProperty(secondaryStatPropModel) : null;
+
             int refinementRank = (weapon.AffixMap?.Values.FirstOrDefault() ?? -1) + 1;
 
             WeaponType weaponType = _assets.GetWeaponType(equip.ItemId);
@@ -144,17 +151,16 @@ namespace EnkaDotNet.Utils.Genshin
 
         private Artifact MapArtifact(EquipModel equip, ReliquaryModel reliquary, FlatDataModel flat)
         {
-            var mainStat = MapStatProperty(flat.ReliquaryMainstat);
+            var mainStat = MapStatProperty(flat.ReliquaryMainstat) ?? new StatProperty { Type = StatType.None, Value = 0 };
             var subStats = flat.ReliquarySubstats?
-                              .Select(substatModel => MapStatProperty(substatModel))
-                              .Where(s => s != null)
-                              .Select(s => s!)
-                              .ToList() ?? new List<StatProperty>();
+                             .Select(substatModel => MapStatProperty(substatModel))
+                             .Where(s => s != null)
+                             .ToList() ?? new List<StatProperty>();
 
             return new Artifact
             {
                 Id = equip.ItemId,
-                Level = reliquary.Level - 1,
+                Level = reliquary.Level > 0 ? reliquary.Level - 1 : 0,
                 Rarity = flat.RankLevel,
                 Slot = MapArtifactSlot(flat.EquipType),
                 MainStat = mainStat,
@@ -167,14 +173,14 @@ namespace EnkaDotNet.Utils.Genshin
 
         private ElementType MapElementFallback(int skillDepotId, int avatarId)
         {
-            if (avatarId == 10000005 || avatarId == 10000007) // Lumine or Aether
+            if (avatarId == 10000005 || avatarId == 10000007)
             {
                 switch (skillDepotId)
                 {
                     case 504: return ElementType.Anemo;
-                    case 507: return ElementType.Dendro;
                     case 704: return ElementType.Geo;
-                    case 201: case 506: return ElementType.Electro;
+                    case 506: return ElementType.Electro;
+                    case 507: return ElementType.Dendro;
                     case 508: return ElementType.Hydro;
                     default: return ElementType.Unknown;
                 }
@@ -182,19 +188,11 @@ namespace EnkaDotNet.Utils.Genshin
             switch (avatarId)
             {
                 case 10000016: return ElementType.Geo;
-                case 10000002: return ElementType.Cryo;
-                case 10000046: return ElementType.Hydro;
-                case 10000052: return ElementType.Electro;
-                case 10000030: return ElementType.Electro;
-                case 10000041: return ElementType.Cryo;
-                case 10000043: return ElementType.Anemo;
-                case 10000058: return ElementType.Anemo;
-                case 10000069: return ElementType.Dendro;
                 default: return ElementType.Unknown;
             }
         }
 
-        private WeaponType MapWeaponTypeFromIcon(string? iconName)
+        private WeaponType MapWeaponTypeFromIcon(string iconName)
         {
             if (string.IsNullOrWhiteSpace(iconName)) return WeaponType.Unknown;
             if (iconName.Contains("Sword")) return WeaponType.Sword;
@@ -205,35 +203,45 @@ namespace EnkaDotNet.Utils.Genshin
             return WeaponType.Unknown;
         }
 
-        private ArtifactSlot MapArtifactSlot(string? equipType)
+        private ArtifactSlot MapArtifactSlot(string equipType)
         {
-            return equipType switch
+            switch (equipType)
             {
-                "EQUIP_BRACER" => ArtifactSlot.Flower,
-                "EQUIP_NECKLACE" => ArtifactSlot.Plume,
-                "EQUIP_SHOES" => ArtifactSlot.Sands,
-                "EQUIP_RING" => ArtifactSlot.Goblet,
-                "EQUIP_DRESS" => ArtifactSlot.Circlet,
-                _ => ArtifactSlot.Unknown
-            };
+                case "EQUIP_BRACER":
+                    return ArtifactSlot.Flower;
+                case "EQUIP_NECKLACE":
+                    return ArtifactSlot.Plume;
+                case "EQUIP_SHOES":
+                    return ArtifactSlot.Sands;
+                case "EQUIP_RING":
+                    return ArtifactSlot.Goblet;
+                case "EQUIP_DRESS":
+                    return ArtifactSlot.Circlet;
+                default:
+                    return ArtifactSlot.Unknown;
+            }
         }
 
-        private Dictionary<StatType, double> MapStats(Dictionary<string, double>? fightPropMap)
+        private Dictionary<StatType, double> MapStats(Dictionary<string, double> fightPropMap)
         {
             var stats = new Dictionary<StatType, double>();
             if (fightPropMap == null) return stats;
+
             foreach (var kvp in fightPropMap)
             {
                 StatType statType = MapStatTypeKey(kvp.Key);
-                if (statType != StatType.None && (!stats.ContainsKey(statType) || IsFinalStatKey(kvp.Key)))
+                if (statType != StatType.None)
                 {
-                    stats[statType] = kvp.Value;
+                    if (!stats.ContainsKey(statType) || IsFinalStatKey(kvp.Key))
+                    {
+                        stats[statType] = kvp.Value;
+                    }
                 }
             }
             return stats;
         }
 
-        private List<Talent> MapTalents(Dictionary<string, int>? skillLevelMap, Dictionary<string, int>? proudSkillExtraLevelMap, int skillDepotId, int avatarId)
+        private List<Talent> MapTalents(Dictionary<string, int> skillLevelMap, Dictionary<string, int> proudSkillExtraLevelMap, int skillDepotId, int avatarId)
         {
             var talents = new List<Talent>();
             if (skillLevelMap == null) return talents;
@@ -259,15 +267,15 @@ namespace EnkaDotNet.Utils.Genshin
             return talents;
         }
 
-        private StatProperty? MapStatProperty(StatPropertyModel? model)
+        private StatProperty MapStatProperty(StatPropertyModel model)
         {
             if (model == null) return null;
 
-            string? propId = model.MainPropId ?? model.AppendPropId;
+            string propIdString = model.MainPropId ?? model.AppendPropId;
 
-            if (string.IsNullOrEmpty(propId)) return null;
+            if (string.IsNullOrEmpty(propIdString)) return null;
 
-            StatType type = MapStatTypeValue(propId);
+            StatType type = MapStatTypeValue(propIdString);
             if (type == StatType.None) return null;
 
             return new StatProperty { Type = type, Value = model.StatValue };
@@ -275,187 +283,125 @@ namespace EnkaDotNet.Utils.Genshin
 
         private StatType MapStatTypeKey(string key)
         {
-            return key switch
+            switch (key)
             {
-                "1" => StatType.BaseHP,
-                "4" => StatType.BaseAttack,
-                "7" => StatType.BaseDefense,
-                "10" => StatType.BaseSpeed,
-                "2" => StatType.HPPercentage,
-                "5" => StatType.AttackPercentage,
-                "8" => StatType.DefensePercentage,
-                "11" => StatType.SpeedPercentage,
-                "20" => StatType.CriticalRate,
-                "22" => StatType.CriticalDamage,
-                "23" => StatType.EnergyRecharge,
-                "28" => StatType.ElementalMastery,
-                "26" => StatType.HealingBonus,
-                "27" => StatType.IncomingHealingBonus,
-                "29" => StatType.PhysicalResistance,
-                "50" => StatType.PyroResistance,
-                "51" => StatType.ElectroResistance,
-                "52" => StatType.HydroResistance,
-                "53" => StatType.DendroResistance,
-                "54" => StatType.AnemoResistance,
-                "55" => StatType.GeoResistance,
-                "56" => StatType.CryoResistance,
-                "30" => StatType.PhysicalDamageBonus,
-                "40" => StatType.PyroDamageBonus,
-                "41" => StatType.ElectroDamageBonus,
-                "42" => StatType.HydroDamageBonus,
-                "43" => StatType.DendroDamageBonus,
-                "44" => StatType.AnemoDamageBonus,
-                "45" => StatType.GeoDamageBonus,
-                "46" => StatType.CryoDamageBonus,
-                "70" => StatType.PyroEnergyCost,
-                "71" => StatType.ElectroEnergyCost,
-                "72" => StatType.HydroEnergyCost,
-                "73" => StatType.DendroEnergyCost,
-                "74" => StatType.AnemoEnergyCost,
-                "75" => StatType.CryoEnergyCost,
-                "76" => StatType.GeoEnergyCost,
-                "77" => StatType.MaxSpecialEnergy,
-                "78" => StatType.SpecialEnergyCost,
-                "1000" => StatType.CurrentPyroEnergy,
-                "1001" => StatType.CurrentElectroEnergy,
-                "1002" => StatType.CurrentHydroEnergy,
-                "1003" => StatType.CurrentDendroEnergy,
-                "1004" => StatType.CurrentAnemoEnergy,
-                "1005" => StatType.CurrentCryoEnergy,
-                "1006" => StatType.CurrentGeoEnergy,
-                "1007" => StatType.CurrentSpecialEnergy,
-                "1010" => StatType.CurrentHP,
-                "2000" => StatType.HP,
-                "2001" => StatType.Attack,
-                "2002" => StatType.Defense,
-                "2003" => StatType.Speed,
-                "80" => StatType.CooldownReduction,
-                "81" => StatType.ShieldStrength,
-                "3025" => StatType.ElementalReactionCritRate,
-                "3026" => StatType.ElementalReactionCritDamage,
-                "3027" => StatType.OverloadedCritRate,
-                "3028" => StatType.OverloadedCritDamage,
-                "3029" => StatType.SwirlCritRate,
-                "3030" => StatType.SwirlCritDamage,
-                "3031" => StatType.ElectroChargedCritRate,
-                "3032" => StatType.ElectroChargedCritDamage,
-                "3033" => StatType.SuperconductCritRate,
-                "3034" => StatType.SuperconductCritDamage,
-                "3035" => StatType.BurnCritRate,
-                "3036" => StatType.BurnCritDamage,
-                "3037" => StatType.ShatteredCritRate,
-                "3038" => StatType.ShatteredCritDamage,
-                "3039" => StatType.BloomCritRate,
-                "3040" => StatType.BloomCritDamage,
-                "3041" => StatType.BurgeonCritRate,
-                "3042" => StatType.BurgeonCritDamage,
-                "3043" => StatType.HyperbloomCritRate,
-                "3044" => StatType.HyperbloomCritDamage,
-                "3045" => StatType.BaseElementalReactionCritRate,
-                "3046" => StatType.BaseElementalReactionCritDamage,
-                _ => StatType.None
-            };
+                case "1": return StatType.BaseHP;
+                case "4": return StatType.BaseAttack;
+                case "7": return StatType.BaseDefense;
+                case "10": return StatType.BaseSpeed;
+                case "2": return StatType.HPPercentage;
+                case "5": return StatType.AttackPercentage;
+                case "8": return StatType.DefensePercentage;
+                case "11": return StatType.SpeedPercentage;
+                case "20": return StatType.CriticalRate;
+                case "22": return StatType.CriticalDamage;
+                case "23": return StatType.EnergyRecharge;
+                case "28": return StatType.ElementalMastery;
+                case "26": return StatType.HealingBonus;
+                case "27": return StatType.IncomingHealingBonus;
+                case "29": return StatType.PhysicalResistance;
+                case "50": return StatType.PyroResistance;
+                case "51": return StatType.ElectroResistance;
+                case "52": return StatType.HydroResistance;
+                case "53": return StatType.DendroResistance;
+                case "54": return StatType.AnemoResistance;
+                case "55": return StatType.GeoResistance;
+                case "56": return StatType.CryoResistance;
+                case "30": return StatType.PhysicalDamageBonus;
+                case "40": return StatType.PyroDamageBonus;
+                case "41": return StatType.ElectroDamageBonus;
+                case "42": return StatType.HydroDamageBonus;
+                case "43": return StatType.DendroDamageBonus;
+                case "44": return StatType.AnemoDamageBonus;
+                case "45": return StatType.GeoDamageBonus;
+                case "46": return StatType.CryoDamageBonus;
+                case "70": return StatType.PyroEnergyCost;
+                case "71": return StatType.ElectroEnergyCost;
+                case "72": return StatType.HydroEnergyCost;
+                case "73": return StatType.DendroEnergyCost;
+                case "74": return StatType.AnemoEnergyCost;
+                case "75": return StatType.CryoEnergyCost;
+                case "76": return StatType.GeoEnergyCost;
+                case "77": return StatType.MaxSpecialEnergy;
+                case "78": return StatType.SpecialEnergyCost;
+                case "1000": return StatType.CurrentPyroEnergy;
+                case "1001": return StatType.CurrentElectroEnergy;
+                case "1002": return StatType.CurrentHydroEnergy;
+                case "1003": return StatType.CurrentDendroEnergy;
+                case "1004": return StatType.CurrentAnemoEnergy;
+                case "1005": return StatType.CurrentCryoEnergy;
+                case "1006": return StatType.CurrentGeoEnergy;
+                case "1007": return StatType.CurrentSpecialEnergy;
+                case "1010": return StatType.CurrentHP;
+                case "2000": return StatType.HP;
+                case "2001": return StatType.Attack;
+                case "2002": return StatType.Defense;
+                case "2003": return StatType.Speed;
+                case "80": return StatType.CooldownReduction;
+                case "81": return StatType.ShieldStrength;
+                case "3025": return StatType.ElementalReactionCritRate;
+                case "3026": return StatType.ElementalReactionCritDamage;
+                case "3045": return StatType.BaseElementalReactionCritRate;
+                case "3046": return StatType.BaseElementalReactionCritDamage;
+                default: return StatType.None;
+            }
         }
 
         private StatType MapStatTypeValue(string propIdString)
         {
-            return propIdString switch
+            switch (propIdString)
             {
-                "FIGHT_PROP_HP" => StatType.BaseHP,
-                "FIGHT_PROP_ATTACK" => StatType.BaseAttack,
-                "FIGHT_PROP_DEFENSE" => StatType.BaseDefense,
-                "FIGHT_PROP_SPEED" => StatType.BaseSpeed,
-                "FIGHT_PROP_BASE_HP" => StatType.BaseHP,
-                "FIGHT_PROP_BASE_ATTACK" => StatType.BaseAttack,
-                "FIGHT_PROP_BASE_DEFENSE" => StatType.BaseDefense,
-                "FIGHT_PROP_BASE_SPEED" => StatType.BaseSpeed,
-                "FIGHT_PROP_HP_PERCENT" => StatType.HPPercentage,
-                "FIGHT_PROP_ATTACK_PERCENT" => StatType.AttackPercentage,
-                "FIGHT_PROP_DEFENSE_PERCENT" => StatType.DefensePercentage,
-                "FIGHT_PROP_SPEED_PERCENT" => StatType.SpeedPercentage,
-                "FIGHT_PROP_CRITICAL" => StatType.CriticalRate,
-                "FIGHT_PROP_CRITICAL_HURT" => StatType.CriticalDamage,
-                "FIGHT_PROP_CHARGE_EFFICIENCY" => StatType.EnergyRecharge,
-                "FIGHT_PROP_ELEMENT_MASTERY" => StatType.ElementalMastery,
-                "FIGHT_PROP_HEAL_ADD" => StatType.HealingBonus,
-                "FIGHT_PROP_HEALED_ADD" => StatType.IncomingHealingBonus,
-                "FIGHT_PROP_PHYSICAL_SUB_HURT" => StatType.PhysicalResistance,
-                "FIGHT_PROP_FIRE_SUB_HURT" => StatType.PyroResistance,
-                "FIGHT_PROP_ELEC_SUB_HURT" => StatType.ElectroResistance,
-                "FIGHT_PROP_WATER_SUB_HURT" => StatType.HydroResistance,
-                "FIGHT_PROP_GRASS_SUB_HURT" => StatType.DendroResistance,
-                "FIGHT_PROP_WIND_SUB_HURT" => StatType.AnemoResistance,
-                "FIGHT_PROP_ROCK_SUB_HURT" => StatType.GeoResistance,
-                "FIGHT_PROP_ICE_SUB_HURT" => StatType.CryoResistance,
-                "FIGHT_PROP_PHYSICAL_ADD_HURT" => StatType.PhysicalDamageBonus,
-                "FIGHT_PROP_FIRE_ADD_HURT" => StatType.PyroDamageBonus,
-                "FIGHT_PROP_ELEC_ADD_HURT" => StatType.ElectroDamageBonus,
-                "FIGHT_PROP_WATER_ADD_HURT" => StatType.HydroDamageBonus,
-                "FIGHT_PROP_GRASS_ADD_HURT" => StatType.DendroDamageBonus,
-                "FIGHT_PROP_WIND_ADD_HURT" => StatType.AnemoDamageBonus,
-                "FIGHT_PROP_ROCK_ADD_HURT" => StatType.GeoDamageBonus,
-                "FIGHT_PROP_ICE_ADD_HURT" => StatType.CryoDamageBonus,
-                "FIGHT_PROP_FIRE_ENERGY_COST" => StatType.PyroEnergyCost,
-                "FIGHT_PROP_ELEC_ENERGY_COST" => StatType.ElectroEnergyCost,
-                "FIGHT_PROP_WATER_ENERGY_COST" => StatType.HydroEnergyCost,
-                "FIGHT_PROP_GRASS_ENERGY_COST" => StatType.DendroEnergyCost,
-                "FIGHT_PROP_WIND_ENERGY_COST" => StatType.AnemoEnergyCost,
-                "FIGHT_PROP_ICE_ENERGY_COST" => StatType.CryoEnergyCost,
-                "FIGHT_PROP_ROCK_ENERGY_COST" => StatType.GeoEnergyCost,
-                "FIGHT_PROP_MAX_SP" => StatType.MaxSpecialEnergy,
-                "FIGHT_PROP_SP_COST" => StatType.SpecialEnergyCost,
-                "FIGHT_PROP_CUR_FIRE_ENERGY" => StatType.CurrentPyroEnergy,
-                "FIGHT_PROP_CUR_ELEC_ENERGY" => StatType.CurrentElectroEnergy,
-                "FIGHT_PROP_CUR_WATER_ENERGY" => StatType.CurrentHydroEnergy,
-                "FIGHT_PROP_CUR_GRASS_ENERGY" => StatType.CurrentDendroEnergy,
-                "FIGHT_PROP_CUR_WIND_ENERGY" => StatType.CurrentAnemoEnergy,
-                "FIGHT_PROP_CUR_ICE_ENERGY" => StatType.CurrentCryoEnergy,
-                "FIGHT_PROP_CUR_ROCK_ENERGY" => StatType.CurrentGeoEnergy,
-                "FIGHT_PROP_CUR_SP" => StatType.CurrentSpecialEnergy,
-                "FIGHT_PROP_CUR_HP" => StatType.CurrentHP,
-                "FIGHT_PROP_MAX_HP" => StatType.HP,
-                "FIGHT_PROP_CUR_ATTACK" => StatType.Attack,
-                "FIGHT_PROP_CUR_DEFENSE" => StatType.Defense,
-                "FIGHT_PROP_CUR_SPEED" => StatType.Speed,
-                "FIGHT_PROP_SKILL_CD_MINUS_RATIO" => StatType.CooldownReduction,
-                "FIGHT_PROP_SHIELD_COST_MINUS_RATIO" => StatType.ShieldStrength,
-                "FIGHT_PROP_ELEMENT_REACTION_CRIT_RATE" => StatType.ElementalReactionCritRate,
-                "FIGHT_PROP_ELEMENT_REACTION_CRIT_DMG" => StatType.ElementalReactionCritDamage,
-                "FIGHT_PROP_ELEMENT_REACTION_OVERLOADED_CRIT_RATE" => StatType.OverloadedCritRate,
-                "FIGHT_PROP_ELEMENT_REACTION_OVERLOADED_CRIT_DMG" => StatType.OverloadedCritDamage,
-                "FIGHT_PROP_ELEMENT_REACTION_SWIRL_CRIT_RATE" => StatType.SwirlCritRate,
-                "FIGHT_PROP_ELEMENT_REACTION_SWIRL_CRIT_DMG" => StatType.SwirlCritDamage,
-                "FIGHT_PROP_ELEMENT_REACTION_ELECTRIC_CRIT_RATE" => StatType.ElectroChargedCritRate,
-                "FIGHT_PROP_ELEMENT_REACTION_ELECTRIC_CRIT_DMG" => StatType.ElectroChargedCritDamage,
-                "FIGHT_PROP_ELEMENT_REACTION_SUPERCONDUCT_CRIT_RATE" => StatType.SuperconductCritRate,
-                "FIGHT_PROP_ELEMENT_REACTION_SUPERCONDUCT_CRIT_DMG" => StatType.SuperconductCritDamage,
-                "FIGHT_PROP_ELEMENT_REACTION_BURN_CRIT_RATE" => StatType.BurnCritRate,
-                "FIGHT_PROP_ELEMENT_REACTION_BURN_CRIT_DMG" => StatType.BurnCritDamage,
-                "FIGHT_PROP_ELEMENT_REACTION_FROZEN_CRIT_RATE" => StatType.ShatteredCritRate,
-                "FIGHT_PROP_ELEMENT_REACTION_FROZEN_CRIT_DMG" => StatType.ShatteredCritDamage,
-                "FIGHT_PROP_ELEMENT_REACTION_BLOOM_CRIT_RATE" => StatType.BloomCritRate,
-                "FIGHT_PROP_ELEMENT_REACTION_BLOOM_CRIT_DMG" => StatType.BloomCritDamage,
-                "FIGHT_PROP_ELEMENT_REACTION_BURGEON_CRIT_RATE" => StatType.BurgeonCritRate,
-                "FIGHT_PROP_ELEMENT_REACTION_BURGEON_CRIT_DMG" => StatType.BurgeonCritDamage,
-                "FIGHT_PROP_ELEMENT_REACTION_HYPERBLOOM_CRIT_RATE" => StatType.HyperbloomCritRate,
-                "FIGHT_PROP_ELEMENT_REACTION_HYPERBLOOM_CRIT_DMG" => StatType.HyperbloomCritDamage,
-                "FIGHT_PROP_BASE_ELEMENT_REACTION_CRIT_RATE" => StatType.BaseElementalReactionCritRate,
-                "FIGHT_PROP_BASE_ELEMENT_REACTION_CRIT_DMG" => StatType.BaseElementalReactionCritDamage,
-                _ => StatType.None
-            };
+                case "FIGHT_PROP_HP": return StatType.BaseHP;
+                case "FIGHT_PROP_ATTACK": return StatType.BaseAttack;
+                case "FIGHT_PROP_DEFENSE": return StatType.BaseDefense;
+                case "FIGHT_PROP_BASE_HP": return StatType.BaseHP;
+                case "FIGHT_PROP_BASE_ATTACK": return StatType.BaseAttack;
+                case "FIGHT_PROP_BASE_DEFENSE": return StatType.BaseDefense;
+                case "FIGHT_PROP_HP_PERCENT": return StatType.HPPercentage;
+                case "FIGHT_PROP_ATTACK_PERCENT": return StatType.AttackPercentage;
+                case "FIGHT_PROP_DEFENSE_PERCENT": return StatType.DefensePercentage;
+                case "FIGHT_PROP_CRITICAL": return StatType.CriticalRate;
+                case "FIGHT_PROP_CRITICAL_HURT": return StatType.CriticalDamage;
+                case "FIGHT_PROP_CHARGE_EFFICIENCY": return StatType.EnergyRecharge;
+                case "FIGHT_PROP_ELEMENT_MASTERY": return StatType.ElementalMastery;
+                case "FIGHT_PROP_HEAL_ADD": return StatType.HealingBonus;
+                case "FIGHT_PROP_PHYSICAL_SUB_HURT": return StatType.PhysicalResistance;
+                case "FIGHT_PROP_FIRE_SUB_HURT": return StatType.PyroResistance;
+                case "FIGHT_PROP_ELEC_SUB_HURT": return StatType.ElectroResistance;
+                case "FIGHT_PROP_WATER_SUB_HURT": return StatType.HydroResistance;
+                case "FIGHT_PROP_GRASS_SUB_HURT": return StatType.DendroResistance;
+                case "FIGHT_PROP_WIND_SUB_HURT": return StatType.AnemoResistance;
+                case "FIGHT_PROP_ROCK_SUB_HURT": return StatType.GeoResistance;
+                case "FIGHT_PROP_ICE_SUB_HURT": return StatType.CryoResistance;
+                case "FIGHT_PROP_PHYSICAL_ADD_HURT": return StatType.PhysicalDamageBonus;
+                case "FIGHT_PROP_FIRE_ADD_HURT": return StatType.PyroDamageBonus;
+                case "FIGHT_PROP_ELEC_ADD_HURT": return StatType.ElectroDamageBonus;
+                case "FIGHT_PROP_WATER_ADD_HURT": return StatType.HydroDamageBonus;
+                case "FIGHT_PROP_GRASS_ADD_HURT": return StatType.DendroDamageBonus;
+                case "FIGHT_PROP_WIND_ADD_HURT": return StatType.AnemoDamageBonus;
+                case "FIGHT_PROP_ROCK_ADD_HURT": return StatType.GeoDamageBonus;
+                case "FIGHT_PROP_ICE_ADD_HURT": return StatType.CryoDamageBonus;
+                case "FIGHT_PROP_MAX_HP": return StatType.HP;
+                case "FIGHT_PROP_CUR_ATTACK": return StatType.Attack;
+                case "FIGHT_PROP_CUR_DEFENSE": return StatType.Defense;
+                default: return StatType.None;
+            }
         }
 
-        private ItemType MapItemType(string? itemTypeString)
+        private ItemType MapItemType(string itemTypeString)
         {
-            return itemTypeString switch
+            switch (itemTypeString)
             {
-                "ITEM_WEAPON" => ItemType.Weapon,
-                "ITEM_RELIQUARY" => ItemType.Artifact,
-                _ => ItemType.Unknown
-            };
+                case "ITEM_WEAPON":
+                    return ItemType.Weapon;
+                case "ITEM_RELIQUARY":
+                    return ItemType.Artifact;
+                default:
+                    return ItemType.Unknown;
+            }
         }
 
-        private int ParsePropValue(Dictionary<string, PropValueModel>? propMap, string key)
+        private int ParsePropValue(Dictionary<string, PropValueModel> propMap, string key)
         {
             if (propMap != null && propMap.TryGetValue(key, out var propValue) && int.TryParse(propValue?.Val, out int result))
             {

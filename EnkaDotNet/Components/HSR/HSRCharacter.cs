@@ -1,24 +1,28 @@
-﻿using EnkaDotNet.Enums.HSR;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Utils.HSR;
-using System.Collections.Generic;
-using System.Linq;
-using System;
+
 
 namespace EnkaDotNet.Components.HSR
 {
-    // Define a simple class to hold structured set bonus effect details
     public class SetBonusEffectDetail
     {
         public string PropertyName { get; set; } = string.Empty;
         public string FormattedValue { get; set; } = string.Empty;
-        public string PropertyType { get; set; } = string.Empty; // Original property type string
+        public string PropertyType { get; set; } = string.Empty;
         public double RawValue { get; set; }
     }
 
     public class HSRCharacter
     {
-        private IHSRAssets? _assets;
+        private IHSRAssets _assets;
 
         internal void SetAssets(IHSRAssets assets)
         {
@@ -38,7 +42,7 @@ namespace EnkaDotNet.Components.HSR
         public int Rarity { get; internal set; }
         public string IconUrl { get; internal set; } = string.Empty;
         public string AvatarIconUrl { get; internal set; } = string.Empty;
-        public HSRLightCone? Equipment { get; internal set; }
+        public HSRLightCone Equipment { get; internal set; }
         public List<HSRRelic> RelicList { get; internal set; } = new List<HSRRelic>();
         public List<Eidolon> Eidolons { get; internal set; } = new List<Eidolon>();
         public Dictionary<string, HSRStatValue> Stats { get; internal set; } = new Dictionary<string, HSRStatValue>();
@@ -107,7 +111,7 @@ namespace EnkaDotNet.Components.HSR
                     SetId = setId,
                     SetName = setName,
                     PieceCount = count,
-                    Effects = new List<SetBonusEffectDetail>() // Use new list type
+                    Effects = new List<SetBonusEffectDetail>()
                 };
 
                 Action<int> addEffects = (pieceReq) =>
@@ -132,7 +136,6 @@ namespace EnkaDotNet.Components.HSR
                         }
                     }
                 };
-
 
                 if (count >= 2)
                 {

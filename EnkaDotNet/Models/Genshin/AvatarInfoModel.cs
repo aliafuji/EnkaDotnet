@@ -1,58 +1,65 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace EnkaDotNet.Models.Genshin
 {
     public class AvatarInfoModel
     {
-        [JsonPropertyName("avatarId")]
+        [JsonProperty("avatarId")]
         public int AvatarId { get; set; }
 
-        [JsonPropertyName("propMap")]
-        public Dictionary<string, PropValueModel>? PropMap { get; set; }
+        [JsonProperty("propMap")]
+        public Dictionary<string, PropValueModel> PropMap { get; set; }
 
-        [JsonPropertyName("inherentProudSkillId")]
+        [JsonProperty("inherentProudSkillId")]
         public int InherentProudSkillId { get; set; }
 
-        [JsonPropertyName("skillLevelMap")]
-        public Dictionary<string, int>? SkillLevelMap { get; set; }
+        [JsonProperty("skillLevelMap")]
+        public Dictionary<string, int> SkillLevelMap { get; set; }
 
-        [JsonPropertyName("equipList")]
-        public List<EquipModel>? EquipList { get; set; }
+        [JsonProperty("equipList")]
+        public List<EquipModel> EquipList { get; set; }
 
-        [JsonPropertyName("fightPropMap")]
-        public Dictionary<string, double>? FightPropMap { get; set; }
+        [JsonProperty("fightPropMap")]
+        public Dictionary<string, double> FightPropMap { get; set; }
 
-        [JsonPropertyName("fetterInfo")]
-        public FetterInfoModel? FetterInfo { get; set; }
+        [JsonProperty("fetterInfo")]
+        public FetterInfoModel FetterInfo { get; set; }
 
-        [JsonPropertyName("costumeId")]
-        public int? CostumeId { get; set; }
+        [JsonProperty("costumeId")]
+        public int CostumeId { get; set; }
 
-        [JsonPropertyName("talentIdList")]
-        public List<int>? TalentIdList { get; set; }
+        [JsonProperty("talentIdList")]
+        public List<int> TalentIdList { get; set; }
 
-        [JsonPropertyName("skillDepotId")]
+        [JsonProperty("skillDepotId")]
         public int SkillDepotId { get; set; }
 
-        [JsonPropertyName("proudSkillExtraLevelMap")]
-        public Dictionary<string, int>? ProudSkillExtraLevelMap { get; set; }
+        [JsonProperty("proudSkillExtraLevelMap")]
+        public Dictionary<string, int> ProudSkillExtraLevelMap { get; set; }
     }
 
     public class PropValueModel
     {
-        [JsonPropertyName("type")]
+        [JsonProperty("type")]
         public int Type { get; set; }
 
-        [JsonPropertyName("ival")]
-        public string? Ival { get; set; }
+        [JsonProperty("ival")]
+        public string Ival { get; set; }
 
-        [JsonPropertyName("val")]
-        public string? Val { get; set; }
+        [JsonProperty("val")]
+        public string Val { get; set; }
     }
 
     public class FetterInfoModel
     {
-        [JsonPropertyName("expLevel")]
+        [JsonProperty("expLevel")]
         public int ExpLevel { get; set; }
     }
 }

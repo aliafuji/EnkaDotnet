@@ -1,4 +1,11 @@
-﻿using EnkaDotNet.Enums.HSR;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Enums.HSR;
 
 namespace EnkaDotNet.Utils.HSR
 {
@@ -74,26 +81,25 @@ namespace EnkaDotNet.Utils.HSR
 
         public static string GetDisplayName(string propertyType)
         {
-            return PropertyTypeToDisplayName.TryGetValue(propertyType, out string displayName) 
-                ? displayName 
+            return PropertyTypeToDisplayName.TryGetValue(propertyType, out string displayName)
+                ? displayName
                 : propertyType;
         }
 
         public static string GetPropertyType(string displayName)
         {
-            return DisplayNameToPropertyType.TryGetValue(displayName, out string propertyType) 
-                ? propertyType 
+            return DisplayNameToPropertyType.TryGetValue(displayName, out string propertyType)
+                ? propertyType
                 : displayName;
         }
 
         public static string FormatPropertyValue(string propertyType, double value)
         {
             bool isPercent = IsPercentageType(propertyType);
-            
+
             if (isPercent)
             {
-                value *= 100;
-                return $"{value:F1}%";
+                return $"{value * 100:F1}%";
             }
             else if (propertyType == "SpeedDelta")
             {
@@ -108,12 +114,12 @@ namespace EnkaDotNet.Utils.HSR
         public static double ConvertToCalculationValue(string propertyType, double displayValue)
         {
             bool isPercent = IsPercentageType(propertyType);
-            
+
             if (isPercent)
             {
                 return displayValue / 100.0;
             }
-            
+
             return displayValue;
         }
 

@@ -1,5 +1,12 @@
 ﻿using EnkaDotNet.Enums.Genshin;
 using System.Globalization;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace EnkaDotNet.Components.Genshin
 {
@@ -20,7 +27,7 @@ namespace EnkaDotNet.Components.Genshin
             string valueString;
             if (isPercent)
             {
-                valueString = Value.ToString("P1", CultureInfo.InvariantCulture);
+                valueString = (Value * 100).ToString("F1", CultureInfo.InvariantCulture) + "%";
             }
             else if (Value == (int)Value)
             {
@@ -28,11 +35,10 @@ namespace EnkaDotNet.Components.Genshin
             }
             else
             {
-                valueString = Value.ToString("N1", CultureInfo.InvariantCulture);
+                valueString = Value.ToString("F1", CultureInfo.InvariantCulture);
             }
 
             return $"{Type}: {valueString}";
         }
     }
-
 }

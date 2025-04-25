@@ -1,6 +1,6 @@
-﻿# Enka.DotNet
+﻿# Enka.DotNet  
 
-Enka.DotNet is a wrapper for accessing and processing character data from the Enka.Network API. It provides a simple interface to retrieve detailed information about Genshin Impact characters, artifacts, weapons, and player profiles.
+Enka.DotNet is a wrapper for accessing and processing character data from the Enka.Network API. It provides a simple interface to retrieve detailed information about characters, artifacts, weapons, and player profiles for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero.
 
 [![NuGet](https://img.shields.io/nuget/v/EnkaDotNet.svg)](https://www.nuget.org/packages/EnkaDotNet/)
 
@@ -8,7 +8,7 @@ Enka.DotNet is a wrapper for accessing and processing character data from the En
 
 - Fetch detailed character builds including artifacts, weapons, stats, and constellations  
 - Access player profile information, including namecards and achievements  
-- Strong typing for all Genshin Impact game entities  
+- Strong typing for all Genshin Impact game entities
 - Support for multiple games: Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero
 
 ## Supported Games  
@@ -32,6 +32,15 @@ Or via the .NET CLI:
 ```
 dotnet add package EnkaDotNet
 ```
+
+## Important Notice  
+
+If you encounter the following error: Please ensure you have the correct version of Newtonsoft.Json installed or Could not load file or assembly 'Newtonsoft.Json'... 
+You can resolve this by running:
+```
+Install-Package Newtonsoft.Json -Version 13.0.3
+```
+Alternatively, update the package to the latest version if it is already installed.
 
 ## Example Code for Genshin Impact
 
@@ -498,9 +507,9 @@ namespace HSRStatsViewer
 }
 ```
 
-## Requirements
+## Requirements  
 
-- .NET 8.0 or higher
+- .NET Standard 2.0
 
 ## Support
 

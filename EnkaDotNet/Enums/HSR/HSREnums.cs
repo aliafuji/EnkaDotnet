@@ -1,4 +1,12 @@
-﻿namespace EnkaDotNet.Enums.HSR
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace EnkaDotNet.Enums.HSR
 {
     public enum ElementType
     {
@@ -103,47 +111,47 @@
     {
         public static string GetPathName(this PathType pathType)
         {
-            return pathType switch
+            switch (pathType)
             {
-                PathType.Warrior => "Destruction",
-                PathType.Rogue => "Hunt",
-                PathType.Mage => "Erudition",
-                PathType.Shaman => "Harmony",
-                PathType.Warlock => "Nihility",
-                PathType.Knight => "Preservation",
-                PathType.Priest => "Abundance",
-                PathType.Memory => "Remembrance",
-                _ => "Unknown Path"
-            };
+                case PathType.Warrior: return "Destruction";
+                case PathType.Rogue: return "Hunt";
+                case PathType.Mage: return "Erudition";
+                case PathType.Shaman: return "Harmony";
+                case PathType.Warlock: return "Nihility";
+                case PathType.Knight: return "Preservation";
+                case PathType.Priest: return "Abundance";
+                case PathType.Memory: return "Remembrance";
+                default: return "Unknown Path";
+            }
         }
 
         public static string GetElementName(this ElementType elementType)
         {
-            return elementType switch
+            switch (elementType)
             {
-                ElementType.Physical => "Physical",
-                ElementType.Fire => "Fire",
-                ElementType.Ice => "Ice",
-                ElementType.Lightning => "Lightning",
-                ElementType.Wind => "Wind",
-                ElementType.Quantum => "Quantum",
-                ElementType.Imaginary => "Imaginary",
-                _ => "Unknown Element"
-            };
+                case ElementType.Physical: return "Physical";
+                case ElementType.Fire: return "Fire";
+                case ElementType.Ice: return "Ice";
+                case ElementType.Lightning: return "Lightning";
+                case ElementType.Wind: return "Wind";
+                case ElementType.Quantum: return "Quantum";
+                case ElementType.Imaginary: return "Imaginary";
+                default: return "Unknown Element";
+            }
         }
 
         public static string GetRelicName(this RelicType relicType)
         {
-            return relicType switch
+            switch (relicType)
             {
-                RelicType.HEAD => "Head",
-                RelicType.HAND => "Hands",
-                RelicType.BODY => "Body",
-                RelicType.FOOT => "Feet",
-                RelicType.NECK => "Planar Sphere",
-                RelicType.OBJECT => "Link Rope",
-                _ => "Unknown Relic Type"
-            };
+                case RelicType.HEAD: return "Head";
+                case RelicType.HAND: return "Hands";
+                case RelicType.BODY: return "Body";
+                case RelicType.FOOT: return "Feet";
+                case RelicType.NECK: return "Planar Sphere";
+                case RelicType.OBJECT: return "Link Rope";
+                default: return "Unknown Relic Type";
+            }
         }
     }
 }

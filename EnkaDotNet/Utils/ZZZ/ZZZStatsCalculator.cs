@@ -1,9 +1,14 @@
-﻿using EnkaDotNet.Assets.ZZZ;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Assets.ZZZ.Models;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
-using System;
-using System.Linq;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
@@ -17,74 +22,11 @@ namespace EnkaDotNet.Utils.ZZZ
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
         }
 
-        //public Dictionary<StatType, double> CalculateAgentBaseStats(int agentId, int level, int promotionLevel, int coreSkillEnhancement)
-        //{
-        //    string cacheKey = $"agent_{agentId}_{level}_{promotionLevel}_{coreSkillEnhancement}";
-
-        //    var stats = new Dictionary<StatType, double>();
-        //    var avatarInfo = _assets.GetAvatarInfo(agentId.ToString());
-
-        //    if (avatarInfo == null || avatarInfo.BaseProps == null)
-        //        return stats;
-
-        //    foreach (var prop in avatarInfo.BaseProps)
-        //    {
-        //        if (int.TryParse(prop.Key, out int propertyId) && Enum.IsDefined(typeof(StatType), propertyId))
-        //        {
-        //            StatType statType = (StatType)propertyId;
-
-        //            string propCacheKey = $"{cacheKey}_{propertyId}";
-
-        //            if (_calculationCache.TryGetValue(propCacheKey, out double cachedValue))
-        //            {
-        //                stats[statType] = cachedValue;
-        //                continue;
-        //            }
-
-        //            double baseValueRaw = prop.Value;
-        //            double growthValueRaw = 0;
-        //            double promotionValueRaw = 0;
-        //            double coreEnhancementValueRaw = 0;
-
-        //            if (avatarInfo.GrowthProps != null && avatarInfo.GrowthProps.TryGetValue(prop.Key, out int growthValueInt))
-        //            {
-        //                growthValueRaw = (growthValueInt * (level - 1)) / 10000.0;
-        //            }
-
-        //            if (avatarInfo.PromotionProps != null && promotionLevel > 0 && promotionLevel <= avatarInfo.PromotionProps.Count)
-        //            {
-        //                var promotionProps = avatarInfo.PromotionProps[promotionLevel - 1];
-        //                if (promotionProps.TryGetValue(prop.Key, out int promoValueInt))
-        //                {
-        //                    promotionValueRaw = promoValueInt;
-        //                }
-        //            }
-
-        //            if (avatarInfo.CoreEnhancementProps != null && coreSkillEnhancement >= 0 &&
-        //                coreSkillEnhancement < avatarInfo.CoreEnhancementProps.Count)
-        //            {
-        //                var coreProps = avatarInfo.CoreEnhancementProps[coreSkillEnhancement];
-        //                if (coreProps.TryGetValue(prop.Key, out int coreValueInt))
-        //                {
-        //                    coreEnhancementValueRaw = coreValueInt;
-        //                }
-        //            }
-
-        //            double totalRawContribution = baseValueRaw + growthValueRaw + promotionValueRaw + coreEnhancementValueRaw;
-
-        //            _calculationCache[propCacheKey] = totalRawContribution;
-
-        //            stats[statType] = totalRawContribution;
-        //        }
-        //    }
-        //    return stats;
-        //}
-
         public Dictionary<StatType, double> CalculateAgentBaseStats(int agentId, int level, int promotionLevel, int coreSkillEnhancement)
         {
             string cacheKey = $"agent_{agentId}_{level}_{promotionLevel}_{coreSkillEnhancement}";
 
-            if (_calculationCache.TryGetValue(cacheKey, out object? cachedStats) && cachedStats is Dictionary<StatType, double> dictStats)
+            if (_calculationCache.TryGetValue(cacheKey, out object cachedStats) && cachedStats is Dictionary<StatType, double> dictStats)
             {
                 return dictStats;
             }
@@ -142,7 +84,7 @@ namespace EnkaDotNet.Utils.ZZZ
         {
             string cacheKey = $"weapon_{weaponId}_{level}_{breakLevel}";
 
-            if (_calculationCache.TryGetValue(cacheKey, out object? cachedResult) && cachedResult is ValueTuple<ZZZStat, ZZZStat> cachedTuple)
+            if (_calculationCache.TryGetValue(cacheKey, out object cachedResult) && cachedResult is ValueTuple<ZZZStat, ZZZStat> cachedTuple)
             {
                 return cachedTuple;
             }
@@ -163,7 +105,7 @@ namespace EnkaDotNet.Utils.ZZZ
             if (levelData == null)
             {
                 Console.WriteLine($"Warning: W-Engine level data not found for level={level} and rarity={rarity}");
-                return (new ZZZStat { Type = StatType.None }, new ZZZStat { Type = StatType.None }); // Handle missing data
+                return (new ZZZStat { Type = StatType.None }, new ZZZStat { Type = StatType.None });
             }
             double enhanceRate = levelData.EnhanceRate;
 
@@ -171,7 +113,7 @@ namespace EnkaDotNet.Utils.ZZZ
             if (starData == null)
             {
                 Console.WriteLine($"Warning: W-Engine star data not found for rarity={rarity} and breakLevel={breakLevel}");
-                starData = new ZZZWeaponStarItem { StarRate = 0, RandRate = 0 }; // Example fallback
+                starData = new ZZZWeaponStarItem { StarRate = 0, RandRate = 0 };
             }
             double starRate = starData.StarRate;
             double randRate = starData.RandRate;
@@ -196,7 +138,7 @@ namespace EnkaDotNet.Utils.ZZZ
         {
             string cacheKey = $"disc_main_{propertyId}_{baseValue}_{discLevel}_{propertyLevel}_{rarity}";
 
-            if (_calculationCache.TryGetValue(cacheKey, out object? cachedStat) && cachedStat is ZZZStat stat)
+            if (_calculationCache.TryGetValue(cacheKey, out object cachedStat) && cachedStat is ZZZStat stat)
             {
                 return stat;
             }
@@ -241,14 +183,21 @@ namespace EnkaDotNet.Utils.ZZZ
                 statType != StatType.CritDMGBase &&
                 statType != StatType.EnergyRegenBase)
             {
-                calculationValue = rawValue / 100;
+                calculationValue = rawValue / 100.0;
             }
+
+            double formattedValue = calculationValue;
+            if (level > 0)
+            {
+                formattedValue *= level;
+            }
+
 
             return new ZZZStat
             {
                 Type = statType,
                 Value = calculationValue,
-                FormattedValue = (calculationValue * level),
+                FormattedValue = formattedValue,
                 Level = level,
                 IsPercentage = isPercentage
             };

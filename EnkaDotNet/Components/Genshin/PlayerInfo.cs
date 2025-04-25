@@ -1,4 +1,11 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.ObjectModel;
 
 namespace EnkaDotNet.Components.Genshin
 {
@@ -23,13 +30,13 @@ namespace EnkaDotNet.Components.Genshin
 
         public int FinishedAchievements { get; internal set; }
 
-        public ChallengeData? Challenge { get; internal set; }
+        public ChallengeData Challenge { get; internal set; }
 
-        public List<int> ShowcaseCharacterIds { get; internal set; } = new();
+        public List<int> ShowcaseCharacterIds { get; internal set; } = new List<int>();
 
-        public List<int> ShowcaseNameCardIds { get; internal set; } = new();
+        public List<int> ShowcaseNameCardIds { get; internal set; } = new List<int>();
 
-        public List<string> ShowcaseNameCardIcons { get; internal set; } = new();
+        public List<string> ShowcaseNameCardIcons { get; internal set; } = new List<string>();
 
         public int ProfilePictureCharacterId { get; internal set; }
 
@@ -64,19 +71,19 @@ namespace EnkaDotNet.Components.Genshin
 
     public class ChallengeData
     {
-        public SpiralAbyssData? SpiralAbyss { get; set; }
-        public TheatreData? Theater { get; set; }
+        public SpiralAbyssData SpiralAbyss { get; set; }
+        public TheatreData Theater { get; set; }
         public class SpiralAbyssData
         {
-            public int? Floor { get; internal set; }
-            public int? Chamber { get; internal set; }
-            public int? Star { get; internal set; }
+            public int Floor { get; internal set; }
+            public int Chamber { get; internal set; }
+            public int Star { get; internal set; }
         }
 
         public class TheatreData
         {
-            public int? Act { get; internal set; }
-            public int? Star { get; internal set; }
+            public int Act { get; internal set; }
+            public int Star { get; internal set; }
         }
     }
 }
