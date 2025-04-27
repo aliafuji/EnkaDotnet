@@ -42,5 +42,7 @@ namespace EnkaDotNet.Assets.ZZZ
         List<ZZZEquipmentLevelItem> GetEquipmentLevelData();
         List<ZZZWeaponLevelItem> GetWeaponLevelData();
         List<ZZZWeaponStarItem> GetWeaponStarData();
+
+        List<ZZZAvatarColors> GetAvatarColors(int agentId);
     }
 }

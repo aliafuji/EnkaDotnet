@@ -39,6 +39,8 @@ namespace EnkaDotNet.Components.ZZZ
         public string ImageUrl { get; internal set; } = string.Empty;
         public string CircleIconUrl { get; internal set; } = string.Empty;
 
+        public List<ZZZAvatarColors> Colors { get; internal set; } = new List<ZZZAvatarColors>();
+
         public Dictionary<StatType, double> Stats { get; internal set; } = new Dictionary<StatType, double>();
 
         internal EnkaClientOptions Options { get; set; }

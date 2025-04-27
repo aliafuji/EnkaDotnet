@@ -9,6 +9,7 @@ using EnkaDotNet.Models.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
+using EnkaDotNet.Assets.ZZZ.Models;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
@@ -111,6 +112,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 Rarity = (Rarity)_assets.GetAgentRarity(model.Id),
                 ProfessionType = _assets.GetAgentProfessionType(model.Id),
                 ElementTypes = FilterUnknownElements(_assets.GetAgentElements(model.Id)),
+                Colors = _assets.GetAvatarColors(model.Id),
                 Options = this._options,
                 Assets = this._assets
             };
@@ -220,6 +222,12 @@ namespace EnkaDotNet.Utils.ZZZ
             if (elements == null || elements.Count == 0) return new List<ElementType> { ElementType.Unknown };
             var validElements = elements.Where(e => e != ElementType.Unknown).Distinct().ToList();
             return validElements.Count > 0 ? validElements : elements;
+        }
+
+        private List<ZZZAvatarColors> GetAgentColor(int agentId)
+        {
+            var colors = _assets.GetAvatarColors(agentId);
+            return colors ?? new List<ZZZAvatarColors>();
         }
     }
 }
