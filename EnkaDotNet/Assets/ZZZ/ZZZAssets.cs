@@ -318,13 +318,23 @@ namespace EnkaDotNet.Assets.ZZZ
         public ZZZAvatarAssetInfo GetAvatarInfo(string agentId)
         {
             _avatars.TryGetValue(agentId, out var avatarInfo);
-            return avatarInfo; // Returns null if not found
+            return avatarInfo; 
         }
 
         public ZZZWeaponAssetInfo GetWeaponInfo(string weaponId)
         {
             _weapons.TryGetValue(weaponId, out var weaponInfo);
-            return weaponInfo; // Returns null if not found
+            return weaponInfo;
+        }
+
+        public List<ZZZAvatarColors> GetAvatarColors(int agentId)
+        {
+            string agentIdStr = agentId.ToString();
+            if (_avatars.TryGetValue(agentIdStr, out var avatarInfo) && avatarInfo.Colors != null)
+            {
+                return new List<ZZZAvatarColors> { avatarInfo.Colors };
+            }
+            return new List<ZZZAvatarColors>();
         }
 
         public string GetAgentName(int agentId)
