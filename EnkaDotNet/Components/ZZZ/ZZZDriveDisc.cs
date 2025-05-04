@@ -40,6 +40,8 @@ namespace EnkaDotNet.Components.ZZZ
                 string key = raw ? MainStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(MainStat.Type);
                 string value;
                 if (MainStat.IsPercentage && !raw) value = (MainStat.Value).ToString("F1", CultureInfo.InvariantCulture) + "%";
+                else if (MainStat.IsEnergyRegen && !raw) value = (MainStat.Value / 100).ToString("F1", CultureInfo.InvariantCulture) + "%";
+                else if (MainStat.IsEnergyRegen && raw) value = (MainStat.Value / 100).ToString("F1", CultureInfo.InvariantCulture);
                 else value = Math.Floor(MainStat.Value).ToString();
                 return new KeyValuePair<string, string>(key, value);
             }
@@ -57,6 +59,8 @@ namespace EnkaDotNet.Components.ZZZ
                     double totalValue = stat.Value * stat.Level;
                     string value;
                     if (stat.IsPercentage && !raw) value = (totalValue).ToString("F1", CultureInfo.InvariantCulture) + "%";
+                    else if (stat.IsEnergyRegen && !raw) value = (totalValue / 100).ToString("F1", CultureInfo.InvariantCulture) + "%";
+                    else if (stat.IsEnergyRegen && raw) value = (totalValue / 100).ToString("F1", CultureInfo.InvariantCulture);
                     else value = Math.Floor(totalValue).ToString();
                     formattedList.Add(new KeyValuePair<string, string>(key, $"{value} +{stat.Level}"));
                 }

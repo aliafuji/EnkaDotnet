@@ -551,11 +551,20 @@ namespace EnkaDotNet.Utils.ZZZ
                         break;
 
                     case "Energy Regen":
-                        double weaponRegenBonus = catBreakdown["Weapon_Percent"];
-                        double discRegenBonus = catBreakdown["Discs_Percent"];
-                        double setBonusRegenBonus = catBreakdown["SetBonus_Percent"] != 0 ? (catBreakdown["SetBonus_Percent"] - 0.91) : 0;
+                        double weaponRegenBonus = catBreakdown["Weapon_Percent"] != 0 ? catBreakdown["Weapon_Percent"] / 100.0 : 0;
+                        double discRegenBonus = catBreakdown["Discs_Percent"] != 0 ? catBreakdown["Discs_Percent"] / 100.0 : 0;
+                        double setBonusRegenBonus = catBreakdown["SetBonus_Percent"] != 0 ? catBreakdown["SetBonus_Percent"] * 10 : 0;
+                        double combinedPercentBonus = weaponRegenBonus + discRegenBonus + setBonusRegenBonus;
+                        double totalPercentBonusEnergy = 0;
+                        if (combinedPercentBonus != 0)
+                        {
+                            totalPercentBonusEnergy = Math.Max(0, (agentBase * combinedPercentBonus / 100));
+                        }
 
-                        finalValue = agentBase + totalFlatBonus + discRegenBonus + setBonusRegenBonus;
+                        double rawFinalValue = agentBase + totalFlatBonus + totalPercentBonusEnergy;
+
+                        finalValue = Math.Floor(rawFinalValue * 100) / 100;
+
                         catBreakdown["BaseDisplay"] = agentBase;
                         catBreakdown["AddedDisplay"] = finalValue - agentBase;
                         break;

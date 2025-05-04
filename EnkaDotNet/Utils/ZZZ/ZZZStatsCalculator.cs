@@ -192,7 +192,8 @@ namespace EnkaDotNet.Utils.ZZZ
                 Type = statType,
                 Value = calculationValue,
                 Level = level,
-                IsPercentage = isPercentage
+                IsPercentage = isPercentage,
+                IsEnergyRegen = statType == StatType.EnergyRegenBase || statType == StatType.EnergyRegenPercent
             };
         }
 
