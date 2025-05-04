@@ -66,14 +66,22 @@ namespace EnkaDotNet.Components.ZZZ
                 if (raw)
                 {
                     displayKey = statType.ToString();
-                    if (isEnergyRegen) displayValue = numericValue.ToString("F2", CultureInfo.InvariantCulture);
+                    if (isEnergyRegen)
+                    {
+                        string formatted = numericValue.ToString("F2", CultureInfo.InvariantCulture);
+                        displayValue = formatted.EndsWith("0") ? formatted.TrimEnd('0') : formatted;
+                    }
                     else if (isPercentage) displayValue = numericValue.ToString("F1", CultureInfo.InvariantCulture);
                     else displayValue = Math.Floor(numericValue).ToString();
                 }
                 else
                 {
                     displayKey = friendlyKey;
-                    if (isEnergyRegen) displayValue = numericValue.ToString("F2", CultureInfo.InvariantCulture);
+                    if (isEnergyRegen)
+                    {
+                        string formatted = numericValue.ToString("F2", CultureInfo.InvariantCulture);
+                        displayValue = formatted.EndsWith("0") ? formatted.TrimEnd('0') : formatted;
+                    }
                     else if (isPercentage) displayValue = numericValue.ToString("F1", CultureInfo.InvariantCulture) + "%";
                     else displayValue = Math.Floor(numericValue).ToString();
                 }

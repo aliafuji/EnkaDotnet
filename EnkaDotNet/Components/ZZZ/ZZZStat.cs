@@ -17,5 +17,6 @@ namespace EnkaDotNet.Components.ZZZ
         public double Value { get; set; }
         public int Level { get; set; }
         public bool IsPercentage { get; internal set; }
+        public bool IsEnergyRegen { get; internal set; }
     }
 }
