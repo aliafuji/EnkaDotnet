@@ -260,7 +260,7 @@ namespace ZZZStatsViewer
 
                     Console.WriteLine("\nAGENT STATS DETAILED:");
                     var agentStatsDetailed = agent.GetAllStats();
-                    foreach (var statPair in agentStats)
+                    foreach (var statPair in agentStatsDetailed)
                     {
                         Console.WriteLine($"{statPair.Key}: {statPair.Value.Final}");
                         Console.WriteLine($"{statPair.Value.Base} + {statPair.Value.Added}");
