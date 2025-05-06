@@ -13,19 +13,24 @@ namespace EnkaDotNet.Utils.ZZZ
 {
     public static class ZZZStatsHelpers
     {
-        private const double BASE_CRIT_RATE = 0.05;
-        private const double BASE_CRIT_DMG = 0.50;
+        private const double BASE_CRIT_RATE = 0;
+        private const double BASE_CRIT_DMG = 0;
         private const double BASE_ENERGY_REGEN = 0;
         private static readonly IZZZAssets assets = new ZZZAssets();
 
 
-        public static Dictionary<string, double> CalculateAllTotalStats(ZZZAgent agent)
+        public static Dictionary<string, StatSummary> CalculateAllTotalStats(ZZZAgent agent)
         {
             var breakdown = CalculateTotalBreakdown(agent, assets);
 
             return breakdown.ToDictionary(
-                kv => kv.Key,
-                kv => kv.Value.TryGetValue("Final", out var total) ? total : 0
+                kvp => kvp.Key,
+                kvp => new StatSummary
+                {
+                    FinalValue = kvp.Value.TryGetValue("Final", out var final) ? final : 0,
+                    BaseValue = kvp.Value.TryGetValue("BaseDisplay", out var baseVal) ? baseVal : 0,
+                    AddedValue = kvp.Value.TryGetValue("AddedDisplay", out var addedVal) ? addedVal : 0
+                }
             );
         }
 
@@ -257,7 +262,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 if (sourcePrefix == "Agent" && statType.ToString().EndsWith("Base"))
                 {
                     targetBucketSuffix = "Base";
-                    valueToAdd = (category == "CRIT Rate") ? BASE_CRIT_RATE : BASE_CRIT_DMG;
+                    valueToAdd = value / 100.0;
                 }
                 else if (sourcePrefix != "Agent")
                 {
@@ -539,15 +544,11 @@ namespace EnkaDotNet.Utils.ZZZ
                         break;
 
                     case "CRIT Rate":
-                        finalValue = (BASE_CRIT_RATE + totalFlatBonus + totalPercentBonus + bonusFlat) * 100;
-                        catBreakdown["BaseDisplay"] = (BASE_CRIT_RATE * 100);
-                        catBreakdown["AddedDisplay"] = finalValue - (BASE_CRIT_RATE * 100);
-                        break;
-
                     case "CRIT DMG":
-                        finalValue = (BASE_CRIT_DMG + totalFlatBonus + totalPercentBonus + bonusFlat) * 100;
-                        catBreakdown["BaseDisplay"] = (BASE_CRIT_DMG * 100);
-                        catBreakdown["AddedDisplay"] = finalValue - (BASE_CRIT_DMG * 100);
+                        double calculatedCrit = (totalFlatBonus + totalPercentBonus + bonusFlat) * 100;
+                        finalValue = agentBase + calculatedCrit;
+                        catBreakdown["BaseDisplay"] = agentBase;
+                        catBreakdown["AddedDisplay"] = finalValue - agentBase;
                         break;
 
                     case "Energy Regen":

@@ -46,47 +46,132 @@ namespace EnkaDotNet.Components.ZZZ
         internal EnkaClientOptions Options { get; set; }
         internal IZZZAssets Assets { get; set; }
 
-        public Dictionary<string, string> GetAllStats()
+        public Dictionary<string, FormattedStatValues> GetAllStats()
         {
             bool raw = this.Options?.Raw ?? false;
-            var resultStats = new Dictionary<string, string>();
+            var resultStats = new Dictionary<string, FormattedStatValues>();
             var calculatedStats = ZZZStatsHelpers.CalculateAllTotalStats(this);
 
             foreach (var statPair in calculatedStats)
             {
                 string friendlyKey = statPair.Key;
-                double numericValue = statPair.Value;
+                double numericValue = statPair.Value.FinalValue;
+                double baseValue = statPair.Value.BaseValue;
+                double addedValue = statPair.Value.AddedValue;
                 bool isPercentage = ZZZStatsHelpers.IsDisplayPercentageStatForGroup(friendlyKey);
                 bool isEnergyRegen = friendlyKey == "Energy Regen";
                 StatType statType = ZZZStatsHelpers.GetStatTypeFromFriendlyName(friendlyKey, isPercentage, isEnergyRegen);
 
                 string displayKey;
                 string displayValue;
+                string displayBase;
+                string displayAdded;
 
                 if (raw)
                 {
                     displayKey = statType.ToString();
                     if (isEnergyRegen)
                     {
-                        string formatted = numericValue.ToString("F2", CultureInfo.InvariantCulture);
-                        displayValue = formatted.EndsWith("0") ? formatted.TrimEnd('0') : formatted;
+                        if (Math.Abs(numericValue) < 0.01)
+                        {
+                            displayValue = "0";
+                        }
+                        else
+                        {
+                            string formatted = numericValue.ToString("F2", CultureInfo.InvariantCulture);
+                            displayValue = formatted.EndsWith("0") ? formatted.TrimEnd('0') : formatted;
+                        }
+
+                        if (Math.Abs(baseValue) < 0.01)
+                        {
+                            displayBase = "0";
+                        }
+                        else
+                        {
+                            string formattedBase = baseValue.ToString("F2", CultureInfo.InvariantCulture);
+                            displayBase = formattedBase.EndsWith("0") ? formattedBase.TrimEnd('0') : formattedBase;
+                        }
+
+                        if (Math.Abs(addedValue) < 0.01)
+                        {
+                            displayAdded = "0";
+                        }
+                        else
+                        {
+                            string formattedAdded = addedValue.ToString("F2", CultureInfo.InvariantCulture);
+                            displayAdded = formattedAdded.EndsWith("0") ? formattedAdded.TrimEnd('0') : formattedAdded;
+                        }
                     }
-                    else if (isPercentage) displayValue = numericValue.ToString("F1", CultureInfo.InvariantCulture);
-                    else displayValue = Math.Floor(numericValue).ToString();
+                    else if (isPercentage)
+                    {
+                        displayValue = numericValue.ToString("F1", CultureInfo.InvariantCulture);
+                        displayBase = baseValue.ToString("F2", CultureInfo.InvariantCulture);
+                        displayAdded = addedValue.ToString("F2", CultureInfo.InvariantCulture);
+                    }
+                    else
+                    {
+                        displayValue = Math.Floor(numericValue).ToString();
+                        displayBase = Math.Floor(baseValue).ToString();
+                        displayAdded = Math.Floor(addedValue).ToString();
+                    }
                 }
                 else
                 {
                     displayKey = friendlyKey;
                     if (isEnergyRegen)
                     {
-                        string formatted = numericValue.ToString("F2", CultureInfo.InvariantCulture);
-                        displayValue = formatted.EndsWith("0") ? formatted.TrimEnd('0') : formatted;
+                        if (Math.Abs(numericValue) < 0.01)
+                        {
+                            displayValue = "0";
+                        }
+                        else
+                        {
+                            string formatted = numericValue.ToString("F2", CultureInfo.InvariantCulture);
+                            displayValue = formatted.EndsWith("0") ? formatted.TrimEnd('0') : formatted;
+                        }
+
+                        if (Math.Abs(baseValue) < 0.01)
+                        {
+                            displayBase = "0";
+                        }
+                        else
+                        {
+                            string formattedBase = baseValue.ToString("F2", CultureInfo.InvariantCulture);
+                            displayBase = formattedBase.EndsWith("0") ? formattedBase.TrimEnd('0') : formattedBase;
+                        }
+
+                        if (Math.Abs(addedValue) < 0.01)
+                        {
+                            displayAdded = "0";
+                        }
+                        else
+                        {
+                            string formattedAdded = addedValue.ToString("F2", CultureInfo.InvariantCulture);
+                            displayAdded = formattedAdded.EndsWith("0") ? formattedAdded.TrimEnd('0') : formattedAdded;
+                        }
                     }
-                    else if (isPercentage) displayValue = numericValue.ToString("F1", CultureInfo.InvariantCulture) + "%";
-                    else displayValue = Math.Floor(numericValue).ToString();
+                    else if (isPercentage)
+                    {
+                        displayValue = numericValue.ToString("F1", CultureInfo.InvariantCulture) + "%";
+                        displayBase = baseValue.ToString("F1", CultureInfo.InvariantCulture) + "%";
+                        displayAdded = addedValue.ToString("F1", CultureInfo.InvariantCulture) + "%";
+                    }
+                    else
+                    {
+                        displayValue = Math.Floor(numericValue).ToString();
+                        displayBase = Math.Floor(baseValue).ToString();
+                        displayAdded = Math.Floor(addedValue).ToString();
+                    }
                 }
-                resultStats[displayKey] = displayValue;
+
+                resultStats[displayKey] = new FormattedStatValues
+                {
+                    Final = displayValue,
+                    Base = displayBase,
+                    Added = displayAdded
+                };
             }
+
             return resultStats;
         }
 

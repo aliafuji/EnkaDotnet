@@ -9,15 +9,6 @@ using Newtonsoft.Json;
 
 namespace EnkaDotNet.Assets.HSR.Models
 {
-    public class HSRRelicData
-    {
-        [JsonProperty("Items")]
-        public Dictionary<string, HSRRelicItemInfo> Items { get; set; }
-
-        [JsonProperty("Sets")]
-        public Dictionary<string, HSRRelicSetInfo> Sets { get; set; }
-    }
-
     public class HSRRelicItemInfo
     {
         [JsonProperty("Icon")]

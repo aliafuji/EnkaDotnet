@@ -259,40 +259,48 @@ namespace EnkaDotNet.Utils.HSR
             double baseSpd = stats.ContainsKey("SpeedBase") ? stats["SpeedBase"] : 0;
             double spdDelta = stats.ContainsKey("SpeedDelta") ? stats["SpeedDelta"] : 0;
             double spdAddedRatio = stats.ContainsKey("SpeedAddedRatio") ? stats["SpeedAddedRatio"] : 0;
-            double finalSPD = Math.Round((baseSpd * (1.0 + spdAddedRatio) + spdDelta), 1);
+            double rawSpeed = (baseSpd * (1.0 + spdAddedRatio) + spdDelta);
+            double finalSPD = Math.Floor(rawSpeed * 10) / 10;
             finalStats["Speed"] = new HSRStatValue(finalSPD, _options, false, 1);
 
             double criticalChance = stats.ContainsKey("CriticalChance") ? stats["CriticalChance"] : 0;
             double criticalChanceBase = stats.ContainsKey("CriticalChanceBase") ? stats["CriticalChanceBase"] : 0;
-            double finalCritRate = Math.Round((criticalChance + criticalChanceBase) * 100.0, 1);
+            double rawCritRate = (criticalChance + criticalChanceBase) * 100.0;
+            double finalCritRate = Math.Floor(rawCritRate * 10) / 10;
             finalStats["CritRate"] = new HSRStatValue(finalCritRate, _options, true, 1);
 
             double criticalDamage = stats.ContainsKey("CriticalDamage") ? stats["CriticalDamage"] : 0;
             double criticalDamageBase = stats.ContainsKey("CriticalDamageBase") ? stats["CriticalDamageBase"] : 0;
-            double finalCritDMG = Math.Round((criticalDamage + criticalDamageBase) * 100.0, 1);
+            double rawCritDMG = (criticalDamage + criticalDamageBase) * 100.0;
+            double finalCritDMG = Math.Floor(rawCritDMG * 10) / 10;
             finalStats["CritDMG"] = new HSRStatValue(finalCritDMG, _options, true, 1);
 
             double breakDamage = stats.ContainsKey("BreakDamageAddedRatio") ? stats["BreakDamageAddedRatio"] : 0;
             double breakDamageBase = stats.ContainsKey("BreakDamageAddedRatioBase") ? stats["BreakDamageAddedRatioBase"] : 0;
-            double finalBreakEffect = Math.Round((breakDamage + breakDamageBase) * 100.0, 1);
+            double rawValue = (breakDamage + breakDamageBase) * 100.0;
+            double finalBreakEffect = Math.Floor(rawValue * 10) / 10;
             finalStats["BreakEffect"] = new HSRStatValue(finalBreakEffect, _options, true, 1);
 
             double healRatio = stats.ContainsKey("HealRatioBase") ? stats["HealRatioBase"] : 0;
-            double finalHealingBoost = Math.Round(healRatio * 100.0, 1);
+            double rawHealingBoost = healRatio * 100.0;
+            double finalHealingBoost = Math.Floor(rawHealingBoost * 10) / 10;
             finalStats["HealingBoost"] = new HSRStatValue(finalHealingBoost, _options, true, 1);
 
             double spRatio = stats.ContainsKey("SPRatioBase") ? stats["SPRatioBase"] : 0;
-            double finalEnergyRegenRate = Math.Round((1.0 + spRatio) * 100.0, 1);
+            double rawEnergyRegenRate = (1.0 + spRatio) * 100.0;
+            double finalEnergyRegenRate = Math.Floor(rawEnergyRegenRate * 10) / 10;
             finalStats["EnergyRegenRate"] = new HSRStatValue(finalEnergyRegenRate, _options, true, 1);
 
             double statusProbability = stats.ContainsKey("StatusProbability") ? stats["StatusProbability"] : 0;
             double statusProbabilityBase = stats.ContainsKey("StatusProbabilityBase") ? stats["StatusProbabilityBase"] : 0;
-            double finalEffectHitRate = Math.Round((statusProbability + statusProbabilityBase) * 100.0, 1);
+            double rawEffectHitRate = (statusProbability + statusProbabilityBase) * 100.0;
+            double finalEffectHitRate = Math.Floor(rawEffectHitRate * 10) / 10;
             finalStats["EffectHitRate"] = new HSRStatValue(finalEffectHitRate, _options, true, 1);
 
             double statusResistance = stats.ContainsKey("StatusResistance") ? stats["StatusResistance"] : 0;
             double statusResistanceBase = stats.ContainsKey("StatusResistanceBase") ? stats["StatusResistanceBase"] : 0;
-            double finalEffectResistance = Math.Round((statusResistance + statusResistanceBase) * 100.0, 1);
+            double rawEffectResistance = (statusResistance + statusResistanceBase) * 100.0;
+            double finalEffectResistance = Math.Floor(rawEffectResistance * 10) / 10;
             finalStats["EffectResistance"] = new HSRStatValue(finalEffectResistance, _options, true, 1);
 
             Dictionary<string, string> elementMapping = new Dictionary<string, string>
@@ -310,8 +318,9 @@ namespace EnkaDotNet.Utils.HSR
             {
                 string propName = $"{elem.Key}AddedRatio";
                 double valueDecimal = stats.ContainsKey(propName) ? stats[propName] : 0;
-                double valuePercent = Math.Round(valueDecimal * 100.0, 1);
-                finalStats[elem.Value] = new HSRStatValue(valuePercent, _options, true, 1);
+                double valuePercent = valueDecimal * 100.0;
+                double finalValue = Math.Floor(valuePercent * 10) / 10;
+                finalStats[elem.Value] = new HSRStatValue(finalValue, _options, true, 1);
             }
 
             return finalStats;

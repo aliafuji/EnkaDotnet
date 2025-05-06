@@ -180,26 +180,24 @@ namespace EnkaDotNet.Assets.HSR
             _relicSets.Clear();
             try
             {
-                var relicData = await FetchAndDeserializeAssetAsync<HSRRelicData>("relics.json");
+                var relicItemsMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRRelicItemInfo>>("relics.json");
+                foreach (var kvp in relicItemsMap)
+                {
+                    _relicItems[kvp.Key] = kvp.Value;
 
-                if (relicData?.Items != null)
-                {
-                    foreach (var kvp in relicData.Items)
+                    string setId = kvp.Value.SetID.ToString();
+                    if (!_relicSets.ContainsKey(setId))
                     {
-                        _relicItems[kvp.Key] = kvp.Value;
-                    }
-                }
-                if (relicData?.Sets != null)
-                {
-                    foreach (var kvp in relicData.Sets)
-                    {
-                        _relicSets[kvp.Key] = kvp.Value;
+                        _relicSets[setId] = new HSRRelicSetInfo
+                        {
+                            SetName = kvp.Value.SetID.ToString()
+                        };
                     }
                 }
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException("Failed to load essential relics data", ex);
+                throw new InvalidOperationException($"Failed to load essential relics data", ex);
             }
         }
 

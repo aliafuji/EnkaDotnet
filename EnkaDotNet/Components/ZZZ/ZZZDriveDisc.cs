@@ -62,7 +62,7 @@ namespace EnkaDotNet.Components.ZZZ
                     else if (stat.IsEnergyRegen && !raw) value = (totalValue / 100).ToString("F1", CultureInfo.InvariantCulture) + "%";
                     else if (stat.IsEnergyRegen && raw) value = (totalValue / 100).ToString("F1", CultureInfo.InvariantCulture);
                     else value = Math.Floor(totalValue).ToString();
-                    formattedList.Add(new KeyValuePair<string, string>(key, $"{value} +{stat.Level}"));
+                    formattedList.Add(new KeyValuePair<string, string>(key, value));
                 }
                 return formattedList;
             }
