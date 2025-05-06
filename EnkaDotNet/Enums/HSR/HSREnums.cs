@@ -56,47 +56,49 @@ namespace EnkaDotNet.Enums.HSR
 
     public enum StatPropertyType
     {
-        None = 0,
+        None,
 
         // Base Stats
-        HPDelta = 1,
-        HPAddedRatio = 2,
-        AttackDelta = 3,
-        AttackAddedRatio = 4,
-        DefenceDelta = 5,
-        DefenceAddedRatio = 6,
-        SpeedDelta = 7,
+        HPDelta,
+        HPAddedRatio,
+        AttackDelta,
+        AttackAddedRatio,
+        DefenceDelta,
+        DefenceAddedRatio,
+        SpeedDelta,
 
         // Critical Stats
-        CriticalChance = 8,
-        CriticalDamage = 9,
+        CriticalChance,
+        CriticalDamage,
 
         // Effect Stats
-        StatusProbability = 10,
-        StatusResistance = 11,
-        BreakDamageAddedRatio = 12,
+        StatusProbability,
+        StatusResistance,
+        BreakDamageAddedRatio,
 
         // Base properties
-        BaseHP = 1001,
-        BaseAttack = 1002,
-        BaseDefence = 1003,
-        BaseSpeed = 1004,
+        BaseHP,
+        BaseAttack,
+        BaseDefence,
+        BaseSpeed,
 
         // Elemental DMG
-        PhysicalAddedRatio = 2001,
-        FireAddedRatio = 2002,
-        IceAddedRatio = 2003,
-        LightningAddedRatio = 2004,
-        WindAddedRatio = 2005,
-        QuantumAddedRatio = 2006,
-        ImaginaryAddedRatio = 2007,
+        PhysicalAddedRatio,
+        FireAddedRatio,
+        IceAddedRatio,
+        LightningAddedRatio,
+        WindAddedRatio,
+        QuantumAddedRatio,
+        ImaginaryAddedRatio,
 
         // Special stats
-        HealRatioBase = 3001,
-        SPRatioBase = 3002,
-        CriticalChanceBase = 3003,
-        CriticalDamageBase = 3004,
-        BreakDamageAddedRatioBase = 3005
+        HealRatioBase,
+        SPRatioBase,
+        CriticalChanceBase,
+        CriticalDamageBase,
+        BreakDamageAddedRatioBase,
+        SpeedAddedRatio,
+        StatusResistanceBase
     }
 
     public enum Rarity

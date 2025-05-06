@@ -199,10 +199,10 @@ namespace ZZZStatsViewer
                 var options = new EnkaClientOptions
                 {
                     GameType = EnkaDotNet.Enums.GameType.ZZZ,
-                    Language = "ja",
+                    Language = "en",
                     EnableCaching = true,
                     UserAgent = "EnkaDotNet/5.0",
-                    Raw = false
+                    Raw = false,
                 };
 
                 using var client = new EnkaClient(options);
@@ -246,11 +246,24 @@ namespace ZZZStatsViewer
                     Console.WriteLine($"Obtained Time: {agent.ObtainmentTimestamp.ToLocalTime()}");
                     Console.WriteLine($"Weapon Effect State: {agent.WeaponEffectState}");
 
-                    Console.WriteLine("\nAGENT STATS:");
+                    foreach(var color in agent.Colors)
+                    {
+                        Console.WriteLine($"Color: {color.Accent} - {color.Mindscape}");
+                    }
+
+                    Console.WriteLine("\nAGENT STATS SIMPLE:");
                     var agentStats = agent.GetAllStats();
                     foreach (var statPair in agentStats)
                     {
                         Console.WriteLine($"{statPair.Key}: {statPair.Value}");
+                    }
+
+                    Console.WriteLine("\nAGENT STATS DETAILED:");
+                    var agentStatsDetailed = agent.GetAllStats();
+                    foreach (var statPair in agentStats)
+                    {
+                        Console.WriteLine($"{statPair.Key}: {statPair.Value.Final}");
+                        Console.WriteLine($"{statPair.Value.Base} + {statPair.Value.Added}");
                     }
 
                     if (agent.Weapon != null)

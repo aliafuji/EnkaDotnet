@@ -45,6 +45,8 @@ namespace EnkaDotNet.Utils.HSR
             { "CriticalDamage", true },
             { "StatusProbability", true },
             { "StatusResistance", true },
+            { "StatusResistanceBase", true },
+            { "SpeedAddedRatio", true },
             { "BreakDamageAddedRatio", true },
             { "SPRatioBase", true },
             { "HealRatioBase", true },
@@ -124,6 +126,8 @@ namespace EnkaDotNet.Utils.HSR
             PropertyTypeToDisplayName["DefenceDelta"] = "DEF";
             PropertyTypeToDisplayName["DefenceAddedRatio"] = "DEF%";
             PropertyTypeToDisplayName["SpeedDelta"] = "SPD";
+            PropertyTypeToDisplayName["StatusResistanceBase"] = "Effect RES";
+            PropertyTypeToDisplayName["SpeedAddedRatio"] = "SPD";
 
 
             PropertyTypeToDisplayName["BaseHP"] = "Base HP";

@@ -16,7 +16,7 @@
        <RepositoryUrl>https://github.com/aliafuji/EnkaDotnet</RepositoryUrl>
        <PackageLicenseFile>LICENSE</PackageLicenseFile>
        <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-       <Version>1.3.3</Version>
+       <Version>1.3.4</Version>
        <ApplicationIcon>image.ico</ApplicationIcon>
        <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
        <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
