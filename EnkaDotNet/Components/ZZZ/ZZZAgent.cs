@@ -1,15 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Globalization;
 using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
+using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
 using EnkaDotNet.Utils.ZZZ;
-using EnkaDotNet.Assets.ZZZ;
-using EnkaDotNet.Assets.ZZZ.Models;
-using System.Globalization;
 
 namespace EnkaDotNet.Components.ZZZ
 {
@@ -38,9 +33,7 @@ namespace EnkaDotNet.Components.ZZZ
         public List<ElementType> ElementTypes { get; internal set; } = new List<ElementType>();
         public string ImageUrl { get; internal set; } = string.Empty;
         public string CircleIconUrl { get; internal set; } = string.Empty;
-
-        public List<ZZZAvatarColors> Colors { get; internal set; } = new List<ZZZAvatarColors>();
-
+        public List<Assets.ZZZ.Models.ZZZAvatarColors> Colors { get; internal set; } = new List<Assets.ZZZ.Models.ZZZAvatarColors>();
         public Dictionary<StatType, double> Stats { get; internal set; } = new Dictionary<StatType, double>();
 
         internal EnkaClientOptions Options { get; set; }
@@ -50,7 +43,13 @@ namespace EnkaDotNet.Components.ZZZ
         {
             bool raw = this.Options?.Raw ?? false;
             var resultStats = new Dictionary<string, FormattedStatValues>();
-            var calculatedStats = ZZZStatsHelpers.CalculateAllTotalStats(this);
+
+            if (this.Assets == null)
+            {
+                Console.Error.WriteLine($"Warning: ZZZAgent {Name} ({Id}) has null Assets. Cannot calculate stats.");
+                return resultStats;
+            }
+            var calculatedStats = ZZZStatsHelpers.CalculateAllTotalStats(this, this.Assets);
 
             foreach (var statPair in calculatedStats)
             {
@@ -58,19 +57,21 @@ namespace EnkaDotNet.Components.ZZZ
                 double numericValue = statPair.Value.FinalValue;
                 double baseValue = statPair.Value.BaseValue;
                 double addedValue = statPair.Value.AddedValue;
-                bool isPercentage = ZZZStatsHelpers.IsDisplayPercentageStatForGroup(friendlyKey);
-                bool isEnergyRegen = friendlyKey == "Energy Regen";
-                StatType statType = ZZZStatsHelpers.GetStatTypeFromFriendlyName(friendlyKey, isPercentage, isEnergyRegen);
+                bool isPercentageDisplay = ZZZStatsHelpers.IsDisplayPercentageStatForGroup(friendlyKey);
 
-                string displayKey;
+                string displayKey = raw ? ZZZStatsHelpers.GetStatTypeFromFriendlyName(friendlyKey, isPercentageDisplay, friendlyKey == "Energy Regen").ToString() : friendlyKey;
                 string displayValue;
                 string displayBase;
                 string displayAdded;
 
-                if (raw)
+                CultureInfo invariantCulture = CultureInfo.InvariantCulture;
+
+                if (isPercentageDisplay)
                 {
-                    displayKey = statType.ToString();
-                    if (isEnergyRegen)
+                    displayValue = numericValue.ToString("F1", invariantCulture) + (raw ? "" : "%");
+                    displayBase = baseValue.ToString("F1", invariantCulture) + (raw ? "" : "%");
+                    displayAdded = addedValue.ToString("F1", invariantCulture) + (raw ? "" : "%");
+                    if (friendlyKey == "Energy Regen" && !raw)
                     {
                         if (Math.Abs(numericValue) < 0.01)
                         {
@@ -102,66 +103,44 @@ namespace EnkaDotNet.Components.ZZZ
                             displayAdded = formattedAdded.EndsWith("0") ? formattedAdded.TrimEnd('0') : formattedAdded;
                         }
                     }
-                    else if (isPercentage)
+                }
+                else if (friendlyKey == "Energy Regen" && raw)
+                {
+                    if (Math.Abs(numericValue) < 0.01)
                     {
-                        displayValue = numericValue.ToString("F1", CultureInfo.InvariantCulture);
-                        displayBase = baseValue.ToString("F2", CultureInfo.InvariantCulture);
-                        displayAdded = addedValue.ToString("F2", CultureInfo.InvariantCulture);
+                        displayValue = "0";
                     }
                     else
                     {
-                        displayValue = Math.Floor(numericValue).ToString();
-                        displayBase = Math.Floor(baseValue).ToString();
-                        displayAdded = Math.Floor(addedValue).ToString();
+                        string formatted = numericValue.ToString("F2", CultureInfo.InvariantCulture);
+                        displayValue = formatted.EndsWith("0") ? formatted.TrimEnd('0') : formatted;
+                    }
+
+                    if (Math.Abs(baseValue) < 0.01)
+                    {
+                        displayBase = "0";
+                    }
+                    else
+                    {
+                        string formattedBase = baseValue.ToString("F2", CultureInfo.InvariantCulture);
+                        displayBase = formattedBase.EndsWith("0") ? formattedBase.TrimEnd('0') : formattedBase;
+                    }
+
+                    if (Math.Abs(addedValue) < 0.01)
+                    {
+                        displayAdded = "0";
+                    }
+                    else
+                    {
+                        string formattedAdded = addedValue.ToString("F2", CultureInfo.InvariantCulture);
+                        displayAdded = formattedAdded.EndsWith("0") ? formattedAdded.TrimEnd('0') : formattedAdded;
                     }
                 }
                 else
                 {
-                    displayKey = friendlyKey;
-                    if (isEnergyRegen)
-                    {
-                        if (Math.Abs(numericValue) < 0.01)
-                        {
-                            displayValue = "0";
-                        }
-                        else
-                        {
-                            string formatted = numericValue.ToString("F2", CultureInfo.InvariantCulture);
-                            displayValue = formatted.EndsWith("0") ? formatted.TrimEnd('0') : formatted;
-                        }
-
-                        if (Math.Abs(baseValue) < 0.01)
-                        {
-                            displayBase = "0";
-                        }
-                        else
-                        {
-                            string formattedBase = baseValue.ToString("F2", CultureInfo.InvariantCulture);
-                            displayBase = formattedBase.EndsWith("0") ? formattedBase.TrimEnd('0') : formattedBase;
-                        }
-
-                        if (Math.Abs(addedValue) < 0.01)
-                        {
-                            displayAdded = "0";
-                        }
-                        else
-                        {
-                            string formattedAdded = addedValue.ToString("F2", CultureInfo.InvariantCulture);
-                            displayAdded = formattedAdded.EndsWith("0") ? formattedAdded.TrimEnd('0') : formattedAdded;
-                        }
-                    }
-                    else if (isPercentage)
-                    {
-                        displayValue = numericValue.ToString("F1", CultureInfo.InvariantCulture) + "%";
-                        displayBase = baseValue.ToString("F1", CultureInfo.InvariantCulture) + "%";
-                        displayAdded = addedValue.ToString("F1", CultureInfo.InvariantCulture) + "%";
-                    }
-                    else
-                    {
-                        displayValue = Math.Floor(numericValue).ToString();
-                        displayBase = Math.Floor(baseValue).ToString();
-                        displayAdded = Math.Floor(addedValue).ToString();
-                    }
+                    displayValue = Math.Floor(numericValue).ToString(invariantCulture);
+                    displayBase = Math.Floor(baseValue).ToString(invariantCulture);
+                    displayAdded = Math.Floor(addedValue).ToString(invariantCulture);
                 }
 
                 resultStats[displayKey] = new FormattedStatValues
@@ -171,7 +150,6 @@ namespace EnkaDotNet.Components.ZZZ
                     Added = displayAdded
                 };
             }
-
             return resultStats;
         }
 
@@ -180,7 +158,11 @@ namespace EnkaDotNet.Components.ZZZ
             var result = new List<FormattedDriveDiscSetInfo>();
             bool raw = this.Options?.Raw ?? false;
 
-            if (Assets == null) return result;
+            if (Assets == null)
+            {
+                Console.Error.WriteLine($"Warning: ZZZAgent {Name} ({Id}) has null Assets. Cannot get equipped disc sets.");
+                return result;
+            }
             if (EquippedDiscs.Count < 2) return result;
 
             var discSetsGrouped = EquippedDiscs
@@ -198,35 +180,33 @@ namespace EnkaDotNet.Components.ZZZ
                 {
                     SuitName = firstDisc.SuitName,
                     PieceCount = set.Count,
+                    BonusStats = new List<KeyValuePair<string, string>>()
                 };
 
                 if (suitInfo?.SetBonusProps != null && suitInfo.SetBonusProps.Any())
                 {
-                    setInfo.BonusStats = suitInfo.SetBonusProps
-                        .Where(prop => int.TryParse(prop.Key, out int propId) && Enum.IsDefined(typeof(StatType), propId))
-                        .Select(prop =>
+                    foreach (var prop in suitInfo.SetBonusProps)
+                    {
+                        if (int.TryParse(prop.Key, out int propId) && Enum.IsDefined(typeof(StatType), propId))
                         {
-                            var statType = (StatType)int.Parse(prop.Key);
-                            string key;
-                            string value;
+                            var statType = (StatType)propId;
                             double numericValue = prop.Value;
+                            string key = raw ? statType.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(statType);
+                            string value;
+
+                            bool isDisplayPercent = ZZZStatsHelpers.IsDisplayPercentageStat(statType);
 
                             if (raw)
                             {
-                                key = statType.ToString();
-                                if (statType == StatType.EnergyRegenPercent) value = Math.Floor(numericValue).ToString();
-                                else if (ZZZStatsHelpers.IsCalculationPercentageStat(statType)) value = (numericValue).ToString("F1", CultureInfo.InvariantCulture);
-                                else value = Math.Floor(numericValue).ToString();
+                                value = (isDisplayPercent ? numericValue / 100.0 : numericValue).ToString("F1", CultureInfo.InvariantCulture);
                             }
                             else
                             {
-                                key = ZZZStatsHelpers.GetStatCategoryDisplay(statType);
-                                if (statType == StatType.EnergyRegenPercent) value = $"{(numericValue / 100.0):F1}%";
-                                else if (ZZZStatsHelpers.IsDisplayPercentageStat(statType)) value = $"{(numericValue / 100.0):F1}%";
-                                else value = $"{Math.Floor(numericValue)}";
+                                value = isDisplayPercent ? $"{(numericValue / 100.0):F1}%" : $"{Math.Floor(numericValue)}";
                             }
-                            return new KeyValuePair<string, string>(key, value);
-                        }).ToList();
+                            setInfo.BonusStats.Add(new KeyValuePair<string, string>(key, value));
+                        }
+                    }
                 }
                 result.Add(setInfo);
             }
@@ -234,10 +214,10 @@ namespace EnkaDotNet.Components.ZZZ
         }
     }
 
-    public class FormattedDriveDiscSetInfo
-    {
-        public string SuitName { get; set; } = string.Empty;
-        public int PieceCount { get; set; }
-        public List<KeyValuePair<string, string>> BonusStats { get; set; } = new List<KeyValuePair<string, string>>();
+public class FormattedDriveDiscSetInfo
+{
+    public string SuitName { get; set; } = string.Empty;
+    public int PieceCount { get; set; }
+    public List<KeyValuePair<string, string>> BonusStats { get; set; } = new List<KeyValuePair<string, string>>();
     }
 }

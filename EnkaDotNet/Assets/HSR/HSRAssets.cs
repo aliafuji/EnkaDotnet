@@ -1,33 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Assets.HSR.Models;
 using EnkaDotNet.Enums;
-using EnkaDotNet.Utils;
 using EnkaDotNet.Enums.HSR;
+using EnkaDotNet.Utils;
 using EnkaDotNet.Utils.HSR;
+using Microsoft.Extensions.Logging;
 
 namespace EnkaDotNet.Assets.HSR
 {
     public class HSRAssets : BaseAssets, IHSRAssets
     {
-        private static readonly Dictionary<string, string> HSRAssetUrls = new Dictionary<string, string>()
-        {
-            { "text_map.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/hsr/hsr.json" },
-            { "characters.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/hsr/honker_characters.json" },
-            { "lightcones.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/hsr/honker_weps.json" },
-            { "relics.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/hsr/honker_relics.json" },
-            { "avatars.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/hsr/honker_avatars.json" },
-            { "skills.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/hsr/honker_skills.json" },
-            { "ranks.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/hsr/honker_ranks.json" },
-            { "skill_tree.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/hsr/skill_tree.json" },
-            { "meta.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/hsr/honker_meta.json" }
-        };
-
         private readonly Dictionary<string, HSRCharacterAssetInfo> _characters = new Dictionary<string, HSRCharacterAssetInfo>();
         private readonly Dictionary<string, HSRLightConeAssetInfo> _lightCones = new Dictionary<string, HSRLightConeAssetInfo>();
         private readonly Dictionary<string, HSRPfpAssetInfo> _pfps = new Dictionary<string, HSRPfpAssetInfo>();
@@ -35,48 +21,45 @@ namespace EnkaDotNet.Assets.HSR
         private readonly Dictionary<string, HSRRelicSetInfo> _relicSets = new Dictionary<string, HSRRelicSetInfo>();
         private readonly Dictionary<string, HSRSkillAssetInfo> _skills = new Dictionary<string, HSRSkillAssetInfo>();
         private readonly Dictionary<string, HSREidolonAssetInfo> _eidolons = new Dictionary<string, HSREidolonAssetInfo>();
-        private Dictionary<string, string> _localization;
         private HSRMetaData _metaData;
         private Dictionary<string, HSRSkillTreePointInfo> _skillTreeData;
 
-        public HSRAssets(string language = "en")
-            : base(language, GameType.HSR)
+        public HSRAssets(string language, HttpClient httpClient, ILogger<HSRAssets> logger)
+            : base(language, GameType.HSR, httpClient, logger)
         {
         }
 
-        protected override Dictionary<string, string> GetAssetUrls() => HSRAssetUrls;
-
-        protected override async Task LoadAssets()
+        protected override async Task LoadAssetsInternalAsync()
         {
             var tasks = new List<Task>
             {
-                LoadLocalizations(),
+                LoadMetaData(),
                 LoadCharacters(),
                 LoadLightCones(),
                 LoadRelics(),
                 LoadSkills(),
                 LoadAvatars(),
                 LoadEidolons(),
-                LoadMetaData(),
                 LoadSkillTree()
             };
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
         }
 
         private async Task LoadMetaData()
         {
             try
             {
-                _metaData = await FetchAndDeserializeAssetAsync<HSRMetaData>("meta.json");
+                _metaData = await FetchAndDeserializeAssetAsync<HSRMetaData>("meta.json").ConfigureAwait(false);
                 if (_metaData == null)
                 {
-                    _metaData = new HSRMetaData();
+                    _logger.LogWarning("HSR MetaData (meta.json) was null after deserialization, initialized to new HSRMetaData().");
+                    throw new InvalidOperationException("Failed to load essential Honkai: Star Rail meta.json data (result was null).");
                 }
             }
             catch (Exception ex)
             {
-                _metaData = new HSRMetaData();
-                throw new InvalidOperationException("Failed to load essential meta data", ex);
+                _logger.LogError(ex, "Error loading Honkai: Star Rail meta.json asset.");
+                throw new InvalidOperationException("Failed to load essential Honkai: Star Rail meta.json data.", ex);
             }
         }
 
@@ -85,39 +68,16 @@ namespace EnkaDotNet.Assets.HSR
             _eidolons.Clear();
             try
             {
-                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSREidolonAssetInfo>>("ranks.json");
-                foreach (var kvp in deserializedMap)
+                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSREidolonAssetInfo>>("ranks.json").ConfigureAwait(false);
+                if (deserializedMap != null)
                 {
-                    _eidolons[kvp.Key] = kvp.Value;
+                    foreach (var kvp in deserializedMap) _eidolons[kvp.Key] = kvp.Value;
                 }
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException("Failed to load essential eidolons data", ex);
-            }
-        }
-        private async Task LoadLocalizations()
-        {
-            try
-            {
-                var localizationData = await FetchAndDeserializeAssetAsync<Dictionary<string, Dictionary<string, string>>>("text_map.json");
-                if (localizationData.TryGetValue(Language, out var langMap))
-                {
-                    _localization = langMap;
-                }
-                else if (localizationData.TryGetValue("en", out var enMap))
-                {
-                    _localization = enMap;
-                }
-                else
-                {
-                    _localization = localizationData.FirstOrDefault().Value ?? new Dictionary<string, string>();
-                }
-            }
-            catch (Exception ex)
-            {
-                _localization = new Dictionary<string, string>();
-                throw new InvalidOperationException("Failed to load essential localization data", ex);
+                _logger.LogError(ex, "Error loading Honkai: Star Rail ranks.json (eidolons) asset.");
+                throw new InvalidOperationException("Failed to load essential Honkai: Star Rail eidolon data.", ex);
             }
         }
 
@@ -126,34 +86,37 @@ namespace EnkaDotNet.Assets.HSR
             _pfps.Clear();
             try
             {
-                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRPfpAssetInfo>>("avatars.json");
-                foreach (var kvp in deserializedMap)
+                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRPfpAssetInfo>>("avatars.json").ConfigureAwait(false);
+                if (deserializedMap != null)
                 {
-                    if (kvp.Value?.Icon != null)
+                    foreach (var kvp in deserializedMap)
                     {
-                        _pfps[kvp.Key] = kvp.Value;
+                        if (kvp.Value?.Icon != null) _pfps[kvp.Key] = kvp.Value;
                     }
                 }
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException("Failed to load essential avatars data", ex);
+                _logger.LogError(ex, "Error loading Honkai: Star Rail avatars.json (profile pictures) asset.");
+                throw new InvalidOperationException("Failed to load essential Honkai: Star Rail profile picture data.", ex);
             }
         }
+
         private async Task LoadCharacters()
         {
             _characters.Clear();
             try
             {
-                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRCharacterAssetInfo>>("characters.json");
-                foreach (var kvp in deserializedMap)
+                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRCharacterAssetInfo>>("characters.json").ConfigureAwait(false);
+                if (deserializedMap != null)
                 {
-                    _characters[kvp.Key] = kvp.Value;
+                    foreach (var kvp in deserializedMap) _characters[kvp.Key] = kvp.Value;
                 }
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException("Failed to load essential characters data", ex);
+                _logger.LogError(ex, "Error loading Honkai: Star Rail characters.json asset.");
+                throw new InvalidOperationException("Failed to load essential Honkai: Star Rail character data.", ex);
             }
         }
 
@@ -162,15 +125,16 @@ namespace EnkaDotNet.Assets.HSR
             _lightCones.Clear();
             try
             {
-                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRLightConeAssetInfo>>("lightcones.json");
-                foreach (var kvp in deserializedMap)
+                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRLightConeAssetInfo>>("lightcones.json").ConfigureAwait(false);
+                if (deserializedMap != null)
                 {
-                    _lightCones[kvp.Key] = kvp.Value;
+                    foreach (var kvp in deserializedMap) _lightCones[kvp.Key] = kvp.Value;
                 }
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException("Failed to load essential light cones data", ex);
+                _logger.LogError(ex, "Error loading Honkai: Star Rail lightcones.json asset.");
+                throw new InvalidOperationException("Failed to load essential Honkai: Star Rail light cone data.", ex);
             }
         }
 
@@ -180,24 +144,25 @@ namespace EnkaDotNet.Assets.HSR
             _relicSets.Clear();
             try
             {
-                var relicItemsMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRRelicItemInfo>>("relics.json");
-                foreach (var kvp in relicItemsMap)
+                var relicItemsMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRRelicItemInfo>>("relics.json").ConfigureAwait(false);
+                if (relicItemsMap != null)
                 {
-                    _relicItems[kvp.Key] = kvp.Value;
-
-                    string setId = kvp.Value.SetID.ToString();
-                    if (!_relicSets.ContainsKey(setId))
+                    foreach (var kvp in relicItemsMap)
                     {
-                        _relicSets[setId] = new HSRRelicSetInfo
+                        _relicItems[kvp.Key] = kvp.Value;
+                        string setId = kvp.Value.SetID.ToString();
+                        if (!_relicSets.ContainsKey(setId))
                         {
-                            SetName = kvp.Value.SetID.ToString()
-                        };
+                            string setName = GetText($"RelicSet_{setId}_Name") ?? GetText(kvp.Value.SetID.ToString()) ?? $"Set {setId}";
+                            _relicSets[setId] = new HSRRelicSetInfo { SetName = setName };
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to load essential relics data", ex);
+                _logger.LogError(ex, "Error loading Honkai: Star Rail relics.json asset.");
+                throw new InvalidOperationException("Failed to load essential Honkai: Star Rail relic data.", ex);
             }
         }
 
@@ -206,39 +171,44 @@ namespace EnkaDotNet.Assets.HSR
             _skills.Clear();
             try
             {
-                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRSkillAssetInfo>>("skills.json");
-                foreach (var kvp in deserializedMap)
+                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRSkillAssetInfo>>("skills.json").ConfigureAwait(false);
+                if (deserializedMap != null)
                 {
-                    _skills[kvp.Key] = kvp.Value;
+                    foreach (var kvp in deserializedMap) _skills[kvp.Key] = kvp.Value;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Assets] Warning: Error loading skills: {ex.Message}. Skill data might be incomplete.");
+                _logger.LogError(ex, "Error loading Honkai: Star Rail skills.json asset.");
+                throw new InvalidOperationException("Failed to load essential Honkai: Star Rail skill data.", ex);
             }
         }
 
         private async Task LoadSkillTree()
         {
-            _skillTreeData = new Dictionary<string, HSRSkillTreePointInfo>();
             try
             {
-                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRSkillTreePointInfo>>("skill_tree.json");
-                _skillTreeData = deserializedMap ?? new Dictionary<string, HSRSkillTreePointInfo>();
+                _skillTreeData = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRSkillTreePointInfo>>("skill_tree.json").ConfigureAwait(false);
+                if (_skillTreeData == null)
+                {
+                    _skillTreeData = new Dictionary<string, HSRSkillTreePointInfo>();
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Assets] Warning: Error loading skill tree: {ex.Message}. Skill tree data might be incomplete.");
-                _skillTreeData = new Dictionary<string, HSRSkillTreePointInfo>();
+                _logger.LogError(ex, "Error loading Honkai: Star Rail skill_tree.json asset.");
+                throw new InvalidOperationException("Failed to load essential Honkai: Star Rail skill tree data.", ex);
             }
         }
+
+        public string GetLocalizedText(string key) => GetText(key);
 
         public string GetEidolonIconUrl(int eidolonId)
         {
             string eidolonIdStr = eidolonId.ToString();
             if (_eidolons.TryGetValue(eidolonIdStr, out var eidolonInfo) && !string.IsNullOrEmpty(eidolonInfo.IconPath))
             {
-                return $"{Constants.GetAssetBaseUrl(GameType)}{eidolonInfo.IconPath}";
+                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{eidolonInfo.IconPath}";
             }
             return string.Empty;
         }
@@ -248,36 +218,13 @@ namespace EnkaDotNet.Assets.HSR
             return info;
         }
 
-        public string GetLocalizedText(string key)
-        {
-            if (_localization != null && !string.IsNullOrEmpty(key) && _localization.TryGetValue(key, out var text))
-            {
-                return text;
-            }
-            return key;
-        }
-
-        public HSRCharacterAssetInfo GetCharacterInfo(string characterId)
-        {
-            _characters.TryGetValue(characterId, out var info);
-            return info;
-        }
-        public HSRLightConeAssetInfo GetLightConeInfo(string lightConeId)
-        {
-            _lightCones.TryGetValue(lightConeId, out var info);
-            return info;
-        }
-
         public string GetCharacterName(int characterId)
         {
             string characterIdStr = characterId.ToString();
             if (_characters.TryGetValue(characterIdStr, out var characterInfo) && characterInfo.AvatarName?.Hash != null)
             {
-                string localizedName = GetLocalizedText(characterInfo.AvatarName.Hash);
-                if (localizedName != characterInfo.AvatarName.Hash)
-                {
-                    return localizedName;
-                }
+                string localizedName = GetText(characterInfo.AvatarName.Hash);
+                if (localizedName != characterInfo.AvatarName.Hash) return localizedName;
             }
             return $"Character_{characterId}";
         }
@@ -287,7 +234,7 @@ namespace EnkaDotNet.Assets.HSR
             string characterIdStr = characterId.ToString();
             if (_characters.TryGetValue(characterIdStr, out var characterInfo) && !string.IsNullOrEmpty(characterInfo.AvatarCutinFrontImgPath))
             {
-                return $"{Constants.GetAssetBaseUrl(GameType)}{characterInfo.AvatarCutinFrontImgPath}";
+                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{characterInfo.AvatarCutinFrontImgPath}";
             }
             return string.Empty;
         }
@@ -297,7 +244,7 @@ namespace EnkaDotNet.Assets.HSR
             string characterIdStr = characterId.ToString();
             if (_characters.TryGetValue(characterIdStr, out var characterInfo) && !string.IsNullOrEmpty(characterInfo.AvatarSideIconPath))
             {
-                return $"{Constants.GetAssetBaseUrl(GameType)}{characterInfo.AvatarSideIconPath}";
+                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{characterInfo.AvatarSideIconPath}";
             }
             return string.Empty;
         }
@@ -328,23 +275,37 @@ namespace EnkaDotNet.Assets.HSR
             _characters.TryGetValue(characterIdStr, out var characterInfo);
             return characterInfo?.Rarity ?? 0;
         }
-
-        public HSRRelicSetInfo GetRelicSetInfo(string setId)
+        public HSRCharacterAssetInfo GetCharacterInfo(string characterId)
         {
-            _relicSets.TryGetValue(setId, out var info);
+            _characters.TryGetValue(characterId, out var info);
             return info;
         }
-        public Dictionary<string, HSRRelicSetInfo> GetAllRelicSets()
+        public HSRLightConeAssetInfo GetLightConeInfo(string lightConeId)
         {
-            return _relicSets;
+            _lightCones.TryGetValue(lightConeId, out var info);
+            return info;
         }
+        public HSRRelicSetInfo GetRelicSetInfo(string setId)
+        {
+            if (_relicSets.TryGetValue(setId, out var info))
+            {
+                if (info != null && (info.SetName == $"Set {setId}" || string.IsNullOrEmpty(info.SetName)))
+                {
+                    string localizedSetName = GetText($"RelicSet_{setId}_Name") ?? GetText(setId) ?? $"Set {setId}";
+                    info.SetName = localizedSetName;
+                }
+                return info;
+            }
+            return null;
+        }
+        public Dictionary<string, HSRRelicSetInfo> GetAllRelicSets() => _relicSets;
 
         public string GetLightConeName(int lightConeId)
         {
             string lightConeIdStr = lightConeId.ToString();
             if (_lightCones.TryGetValue(lightConeIdStr, out var lightConeInfo) && lightConeInfo.EquipmentName?.Hash != null)
             {
-                return GetLocalizedText(lightConeInfo.EquipmentName.Hash);
+                return GetText(lightConeInfo.EquipmentName.Hash);
             }
             return $"LightCone_{lightConeId}";
         }
@@ -354,7 +315,7 @@ namespace EnkaDotNet.Assets.HSR
             string lightConeIdStr = lightConeId.ToString();
             if (_lightCones.TryGetValue(lightConeIdStr, out var lightConeInfo) && !string.IsNullOrEmpty(lightConeInfo.ImagePath))
             {
-                return $"{Constants.GetAssetBaseUrl(GameType)}{lightConeInfo.ImagePath}";
+                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{lightConeInfo.ImagePath}";
             }
             return string.Empty;
         }
@@ -379,19 +340,16 @@ namespace EnkaDotNet.Assets.HSR
         public string GetRelicSetName(int setId)
         {
             string setIdStr = setId.ToString();
-            if (_relicSets.TryGetValue(setIdStr, out var setInfo) && !string.IsNullOrEmpty(setInfo.SetName))
-            {
-                string localizedName = GetLocalizedText(setInfo.SetName);
-                return localizedName != setInfo.SetName ? localizedName : setInfo.SetName;
-            }
-            return $"RelicSet_{setId}";
+            var setInfo = GetRelicSetInfo(setIdStr);
+            return setInfo?.SetName ?? $"RelicSet_{setId}";
         }
+
         public string GetRelicIconUrl(int relicId)
         {
             string relicIdStr = relicId.ToString();
             if (_relicItems.TryGetValue(relicIdStr, out var relicInfo) && !string.IsNullOrEmpty(relicInfo.Icon))
             {
-                return $"{Constants.GetAssetBaseUrl(GameType)}{relicInfo.Icon}";
+                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{relicInfo.Icon}";
             }
             return string.Empty;
         }
@@ -433,7 +391,6 @@ namespace EnkaDotNet.Assets.HSR
             {
                 var propType = (StatPropertyType)propertyId;
                 bool isPercentage = HSRStatPropertyUtils.IsPercentageType(propType.ToString());
-
                 if (isPercentage) return $"{value * 100:F1}%";
                 if (propType == StatPropertyType.SpeedDelta) return $"{value:F1}";
                 return $"{(int)value}";
@@ -441,24 +398,24 @@ namespace EnkaDotNet.Assets.HSR
             return value.ToString();
         }
 
-        public string GetNameCardIconUrl(int nameCardId) => $"NameCard_{nameCardId}";
+        public string GetNameCardIconUrl(int nameCardId) => string.Empty;
 
         public string GetProfilePictureIconUrl(int profilePictureId)
         {
             string profilePictureIdstr = profilePictureId.ToString();
             if (_pfps.TryGetValue(profilePictureIdstr, out var pfpInfo) && !string.IsNullOrEmpty(pfpInfo.Icon))
             {
-                return $"{Constants.GetAssetBaseUrl(GameType)}{pfpInfo.Icon}";
+                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{pfpInfo.Icon}";
             }
             return string.Empty;
         }
 
         public string GetSkillIconUrl(int characterId, SkillType skillType)
         {
-            string skillIdStr = $"{characterId}{(int)skillType:D2}";
-            if (_skills.TryGetValue(skillIdStr, out var skillInfo) && !string.IsNullOrEmpty(skillInfo.IconPath))
+            string skillIdKey = $"{characterId}_{(int)skillType}";
+            if (_skills.TryGetValue(skillIdKey, out var skillInfo) && !string.IsNullOrEmpty(skillInfo.IconPath))
             {
-                return $"{Constants.GetAssetBaseUrl(GameType)}{skillInfo.IconPath}";
+                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{skillInfo.IconPath}";
             }
             return string.Empty;
         }
@@ -469,14 +426,10 @@ namespace EnkaDotNet.Assets.HSR
             var stats = GetAvatarStats(characterId.ToString(), promotionLevel);
             if (stats != null)
             {
-                result["HPBase"] = stats.HPBase;
-                result["HPAdd"] = stats.HPAdd;
-                result["AttackBase"] = stats.AttackBase;
-                result["AttackAdd"] = stats.AttackAdd;
-                result["DefenceBase"] = stats.DefenceBase;
-                result["DefenceAdd"] = stats.DefenceAdd;
-                result["SpeedBase"] = stats.SpeedBase;
-                result["CriticalChance"] = stats.CriticalChance;
+                result["HPBase"] = stats.HPBase; result["HPAdd"] = stats.HPAdd;
+                result["AttackBase"] = stats.AttackBase; result["AttackAdd"] = stats.AttackAdd;
+                result["DefenceBase"] = stats.DefenceBase; result["DefenceAdd"] = stats.DefenceAdd;
+                result["SpeedBase"] = stats.SpeedBase; result["CriticalChance"] = stats.CriticalChance;
                 result["CriticalDamage"] = stats.CriticalDamage;
             }
             return result;
@@ -488,31 +441,25 @@ namespace EnkaDotNet.Assets.HSR
             var stats = GetEquipmentStats(lightConeId.ToString(), promotionLevel);
             if (stats != null)
             {
-                result["BaseHP"] = stats.BaseHP;
-                result["HPAdd"] = stats.HPAdd;
-                result["BaseAttack"] = stats.BaseAttack;
-                result["AttackAdd"] = stats.AttackAdd;
-                result["BaseDefence"] = stats.BaseDefence;
-                result["DefenceAdd"] = stats.DefenceAdd;
+                result["BaseHP"] = stats.BaseHP; result["HPAdd"] = stats.HPAdd;
+                result["BaseAttack"] = stats.BaseAttack; result["AttackAdd"] = stats.AttackAdd;
+                result["BaseDefence"] = stats.BaseDefence; result["DefenceAdd"] = stats.DefenceAdd;
             }
             return result;
         }
 
-        public Dictionary<string, double> GetLightConeSkillEffects(int lightConeId, int rank)
-        {
-            return GetEquipmentSkillProps(lightConeId.ToString(), rank) ?? new Dictionary<string, double>();
-        }
+        public Dictionary<string, double> GetLightConeSkillEffects(int lightConeId, int rank) => GetEquipmentSkillProps(lightConeId.ToString(), rank) ?? new Dictionary<string, double>();
 
         public Dictionary<string, double> GetRelicSetEffects(int setId, int pieceCount)
         {
             if (_metaData?.RelicInfo?.SetSkill == null) return new Dictionary<string, double>();
-
             string setIdStr = setId.ToString();
             string pieceCountStr = pieceCount.ToString();
 
             if (_metaData.RelicInfo.SetSkill.TryGetValue(setIdStr, out var setData) &&
+                setData != null &&
                 setData.TryGetValue(pieceCountStr, out var skillInfo) &&
-                skillInfo.Props != null)
+                skillInfo?.Props != null)
             {
                 return skillInfo.Props;
             }
@@ -523,8 +470,7 @@ namespace EnkaDotNet.Assets.HSR
         {
             if (_metaData?.AvatarStats != null && _metaData.AvatarStats.TryGetValue(avatarId, out var promoDict))
             {
-                promoDict.TryGetValue(promotion.ToString(), out var stats);
-                return stats;
+                if (promoDict != null && promoDict.TryGetValue(promotion.ToString(), out var stats)) return stats;
             }
             return null;
         }
@@ -533,8 +479,7 @@ namespace EnkaDotNet.Assets.HSR
         {
             if (_metaData?.EquipmentStats != null && _metaData.EquipmentStats.TryGetValue(equipmentId, out var promoDict))
             {
-                promoDict.TryGetValue(promotion.ToString(), out var stats);
-                return stats;
+                if (promoDict != null && promoDict.TryGetValue(promotion.ToString(), out var stats)) return stats;
             }
             return null;
         }
@@ -556,8 +501,8 @@ namespace EnkaDotNet.Assets.HSR
             if (_metaData?.RelicInfo?.MainAffix != null &&
                 _metaData.RelicInfo.MainAffix.TryGetValue(groupId.ToString(), out var groupDict))
             {
-                groupDict.TryGetValue(affixId.ToString(), out var affixInfo);
-                return affixInfo;
+                if (groupDict != null && groupDict.TryGetValue(affixId.ToString(), out var affixInfo))
+                    return affixInfo;
             }
             return null;
         }
@@ -566,8 +511,8 @@ namespace EnkaDotNet.Assets.HSR
         {
             if (_metaData?.RelicInfo?.SubAffix != null && _metaData.RelicInfo.SubAffix.TryGetValue(groupId.ToString(), out var groupDict))
             {
-                groupDict.TryGetValue(affixId.ToString(), out var affixInfo);
-                return affixInfo;
+                if (groupDict != null && groupDict.TryGetValue(affixId.ToString(), out var affixInfo))
+                    return affixInfo;
             }
             return null;
         }
@@ -579,10 +524,7 @@ namespace EnkaDotNet.Assets.HSR
             if (affixInfo != null)
             {
                 result["Value"] = affixInfo.BaseValue + (affixInfo.LevelAdd * level);
-                if (!string.IsNullOrEmpty(affixInfo.Property))
-                {
-                    result["PropertyType"] = (double)HSRStatPropertyUtils.MapToStatPropertyType(affixInfo.Property);
-                }
+                if (!string.IsNullOrEmpty(affixInfo.Property)) result["PropertyType"] = (double)HSRStatPropertyUtils.MapToStatPropertyType(affixInfo.Property);
             }
             return result;
         }
@@ -594,10 +536,7 @@ namespace EnkaDotNet.Assets.HSR
             if (affixInfo != null)
             {
                 result["Value"] = affixInfo.BaseValue + (affixInfo.StepValue * step);
-                if (!string.IsNullOrEmpty(affixInfo.Property))
-                {
-                    result["PropertyType"] = (double)HSRStatPropertyUtils.MapToStatPropertyType(affixInfo.Property);
-                }
+                if (!string.IsNullOrEmpty(affixInfo.Property)) result["PropertyType"] = (double)HSRStatPropertyUtils.MapToStatPropertyType(affixInfo.Property);
             }
             return result;
         }
@@ -606,18 +545,15 @@ namespace EnkaDotNet.Assets.HSR
         {
             if (_metaData?.SkillTreeInfo != null && _metaData.SkillTreeInfo.TryGetValue(pointId, out var levelDict))
             {
-                levelDict.TryGetValue(level.ToString(), out var skillInfo);
-                return skillInfo?.Props ?? new Dictionary<string, double>();
+                if (levelDict != null && levelDict.TryGetValue(level.ToString(), out var skillInfo))
+                    return skillInfo?.Props ?? new Dictionary<string, double>();
             }
             return new Dictionary<string, double>();
         }
 
         public HSRSkillTreePointInfo GetSkillTreePointInfo(string pointId)
         {
-            if (_skillTreeData != null && _skillTreeData.TryGetValue(pointId, out var info))
-            {
-                return info;
-            }
+            if (_skillTreeData != null && _skillTreeData.TryGetValue(pointId, out var info)) return info;
             return null;
         }
 
@@ -627,9 +563,9 @@ namespace EnkaDotNet.Assets.HSR
             if (pointInfo?.SkillIds != null && pointInfo.SkillIds.Any())
             {
                 string skillIdStr = pointInfo.SkillIds.First().ToString();
-                if (_skills.TryGetValue(skillIdStr, out var skillInfo))
-                {
-                }
+                string skillNameKey = $"SkillName_{skillIdStr}";
+                string localizedName = GetText(skillNameKey);
+                if (!string.IsNullOrEmpty(localizedName) && localizedName != skillNameKey) return localizedName;
             }
             return $"Trace_{pointId}";
         }
@@ -637,28 +573,29 @@ namespace EnkaDotNet.Assets.HSR
         public string GetSkillTreePointDescription(string pointId)
         {
             var pointInfo = GetSkillTreePointInfo(pointId);
+            if (pointInfo?.SkillIds != null && pointInfo.SkillIds.Any())
+            {
+                string skillIdStr = pointInfo.SkillIds.First().ToString();
+                string skillDescKey = $"SkillDesc_{skillIdStr}";
+                string localizedDesc = GetText(skillDescKey);
+                if (!string.IsNullOrEmpty(localizedDesc) && localizedDesc != skillDescKey) return localizedDesc;
+            }
             return $"Description for Trace_{pointId}";
         }
 
-        public Dictionary<string, double> GetRelicMainStatInfo(int mainAffixGroup, int mainAffixId, int level)
-        {
-            return GetRelicMainAffixValueAtLevel(mainAffixGroup, mainAffixId, level);
-        }
+        public Dictionary<string, double> GetRelicMainStatInfo(int mainAffixGroup, int mainAffixId, int level) => GetRelicMainAffixValueAtLevel(mainAffixGroup, mainAffixId, level);
 
         public string GetSkillTreeIconUrl(int pointId)
         {
             var pointInfo = GetSkillTreePointInfo(pointId.ToString());
             if (pointInfo != null && !string.IsNullOrEmpty(pointInfo.Icon))
             {
-                return $"{Constants.GetAssetBaseUrl(GameType)}{pointInfo.Icon}";
+                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{pointInfo.Icon}";
             }
             return string.Empty;
         }
 
-        public Dictionary<string, double> GetTraceEffects(int traceId, int level)
-        {
-            return GetSkillTreeProps(traceId.ToString(), level) ?? new Dictionary<string, double>();
-        }
+        public Dictionary<string, double> GetTraceEffects(int traceId, int level) => GetSkillTreeProps(traceId.ToString(), level) ?? new Dictionary<string, double>();
 
         private ElementType MapElementNameToEnum(string elementName)
         {
@@ -667,8 +604,7 @@ namespace EnkaDotNet.Assets.HSR
                 case "PHYSICAL": return ElementType.Physical;
                 case "FIRE": return ElementType.Fire;
                 case "ICE": return ElementType.Ice;
-                case "LIGHTNING": return ElementType.Lightning;
-                case "THUNDER": return ElementType.Lightning;
+                case "LIGHTNING": case "THUNDER": return ElementType.Lightning;
                 case "WIND": return ElementType.Wind;
                 case "QUANTUM": return ElementType.Quantum;
                 case "IMAGINARY": return ElementType.Imaginary;

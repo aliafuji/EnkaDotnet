@@ -1,18 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using EnkaDotNet.Models.HSR;
 using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Assets.HSR;
-using EnkaDotNet.Utils.HSR;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Components.HSR.EnkaDotNet.Enums.HSR;
-using EnkaDotNet.Enums;
-using System.Globalization;
+using Microsoft.Extensions.Options;
 
 namespace EnkaDotNet.Utils.HSR
 {
@@ -22,12 +16,20 @@ namespace EnkaDotNet.Utils.HSR
         private readonly HSRStatCalculator _statCalculator;
         private readonly EnkaClientOptions _options;
 
+        public HSRDataMapper(IHSRAssets assets, IOptions<EnkaClientOptions> options)
+        {
+            _assets = assets ?? throw new ArgumentNullException(nameof(assets));
+            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+            _statCalculator = new HSRStatCalculator(_assets, _options);
+        }
+
         public HSRDataMapper(IHSRAssets assets, EnkaClientOptions options)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _statCalculator = new HSRStatCalculator(_assets, _options);
         }
+
 
         public HSRPlayerInfo MapPlayerInfo(HSRApiResponse response)
         {

@@ -1,15 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using EnkaDotNet.Models.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
-using EnkaDotNet.Assets.ZZZ.Models;
+using Microsoft.Extensions.Options;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
@@ -18,6 +14,13 @@ namespace EnkaDotNet.Utils.ZZZ
         private readonly IZZZAssets _assets;
         private readonly ZZZStatsCalculator _statsCalculator;
         private readonly EnkaClientOptions _options;
+
+        public ZZZDataMapper(IZZZAssets assets, IOptions<EnkaClientOptions> options)
+        {
+            _assets = assets ?? throw new ArgumentNullException(nameof(assets));
+            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+            _statsCalculator = new ZZZStatsCalculator(assets);
+        }
 
         public ZZZDataMapper(IZZZAssets assets, EnkaClientOptions options)
         {
@@ -33,8 +36,9 @@ namespace EnkaDotNet.Utils.ZZZ
 
             var profileDetail = response.PlayerInfo.SocialDetail?.ProfileDetail;
             var socialDetail = response.PlayerInfo.SocialDetail;
-            if (profileDetail == null) throw new ArgumentException("ProfileDetail is null", nameof(response));
-            if (socialDetail == null) throw new ArgumentException("SocialDetail is null", nameof(response));
+            if (profileDetail == null && socialDetail?.ProfileDetail == null) throw new ArgumentException("ProfileDetail and SocialDetail.ProfileDetail are null", nameof(response));
+
+            profileDetail = profileDetail ?? socialDetail.ProfileDetail;
 
             string nickname = profileDetail?.Nickname ?? "Unknown";
             int level = profileDetail?.Level ?? 0;
@@ -46,8 +50,9 @@ namespace EnkaDotNet.Utils.ZZZ
             int titleId = 0;
             if (socialDetail?.TitleInfo != null) titleId = socialDetail.TitleInfo.Title;
             else if (profileDetail?.TitleInfo != null) titleId = profileDetail.TitleInfo.Title;
-            else if (profileDetail != null) titleId = profileDetail.Title;
-            else if (socialDetail != null) titleId = socialDetail.Title;
+            else if (profileDetail != null && profileDetail.Title != 0) titleId = profileDetail.Title; // Obsolete Title
+            else if (socialDetail != null && socialDetail.Title != 0) titleId = socialDetail.Title; // Obsolete Title
+
 
             var playerInfo = new ZZZPlayerInfo
             {
@@ -55,7 +60,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 TTL = response.Ttl.ToString(),
                 Nickname = nickname,
                 Level = level,
-                Signature = socialDetail?.Desc ?? "",
+                Signature = socialDetail?.Desc ?? response.PlayerInfo.Desc ?? "",
                 ProfilePictureId = profileId,
                 ProfilePictureIcon = _assets.GetProfilePictureIconUrl(profileId),
                 TitleId = titleId,
@@ -87,9 +92,9 @@ namespace EnkaDotNet.Utils.ZZZ
                     playerInfo.ShowcaseAgents.Add(agent);
                 }
             }
-
             return playerInfo;
         }
+
 
         public ZZZAgent MapAgent(ZZZAvatarModel model)
         {
@@ -202,18 +207,17 @@ namespace EnkaDotNet.Utils.ZZZ
             }
             else driveDisc.MainStat = new ZZZStat { Type = StatType.None };
 
-            driveDisc.SubStats.Clear();
+            driveDisc.SubStatsRaw.Clear();
             if (model.RandomPropertyList != null)
             {
                 foreach (var property in model.RandomPropertyList)
                 {
-                    var SubStatsRaw = _statsCalculator.CreateStatWithProperScaling(
+                    var subStat = _statsCalculator.CreateStatWithProperScaling(
                         property.PropertyId, property.PropertyValue, property.PropertyLevel
                     );
-                    driveDisc.SubStatsRaw.Add(SubStatsRaw);
+                    driveDisc.SubStatsRaw.Add(subStat);
                 }
             }
-
             return driveDisc;
         }
 
@@ -221,13 +225,7 @@ namespace EnkaDotNet.Utils.ZZZ
         {
             if (elements == null || elements.Count == 0) return new List<ElementType> { ElementType.Unknown };
             var validElements = elements.Where(e => e != ElementType.Unknown).Distinct().ToList();
-            return validElements.Count > 0 ? validElements : elements;
-        }
-
-        private List<ZZZAvatarColors> GetAgentColor(int agentId)
-        {
-            var colors = _assets.GetAvatarColors(agentId);
-            return colors ?? new List<ZZZAvatarColors>();
+            return validElements.Count > 0 ? validElements : new List<ElementType> { ElementType.Unknown };
         }
     }
 }
