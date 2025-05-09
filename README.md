@@ -6,7 +6,7 @@ Enka.DotNet is a C# wrapper for accessing and processing character data from the
 
 ## Features
 
-  * **Comprehensive Data Retrieval (Direct Instantiation & Dependency Injection):**
+  * **Comprehensive Data Retrieval (DI friendly design):**
       * Fetch detailed Genshin Impact character builds including artifacts, weapons, stats, and constellations.
       * Access Genshin Impact player profile information, including namecards and achievements.
       * Retrieve comprehensive Zenless Zone Zero agent details, including stats, W-Engines (weapons), and Drive Discs.
@@ -44,7 +44,7 @@ dotnet add package EnkaDotNet
 
 ## Usage & Examples
 
-Enka.DotNet supports both direct instantiation (Non-DI) for simpler applications and Dependency Injection (DI) for more complex setups like ASP.NET Core or Worker Services.
+Enka.DotNet supports both direct instantiation (Non DI) for simpler applications and Dependency Injection (DI) for more complex setups like ASP.NET Core or Worker Services.
 
 ### Key Concepts:
 
