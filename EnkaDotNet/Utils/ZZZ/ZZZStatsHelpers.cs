@@ -62,7 +62,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 case "HP%":
                 case "ATK%":
                 case "DEF%":
-                case "Impact%":
+                case "Impact":
                 case "Energy Regen":
                     return true;
                 default: return false;
@@ -642,7 +642,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.HPPercent: return "HP%";
                 case StatType.ATKPercent: return "ATK%";
                 case StatType.DefPercent: return "DEF%";
-                case StatType.ImpactPercent: return "Impact%";
+                case StatType.ImpactPercent: return "Impact";
                 case StatType.CritRateBase: case StatType.CritRateFlat: return "CRIT Rate";
                 case StatType.CritDMGBase: case StatType.CritDMGFlat: return "CRIT DMG";
                 case StatType.EnergyRegenBase: case StatType.EnergyRegenPercent: case StatType.EnergyRegenFlat: return "Energy Regen";

@@ -1,17 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.Genshin.Models
 {
     public class PfpAssetInfo
     {
-        [JsonProperty("iconPath")]
+        [JsonPropertyName("iconPath")]
         public string IconPath { get; set; }
     }
 }

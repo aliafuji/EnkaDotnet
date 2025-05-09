@@ -5,7 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Enums;
 using EnkaDotNet.Utils;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -142,7 +143,7 @@ namespace EnkaDotNet.Assets
             string jsonContent = await FetchAssetAsync(assetKey).ConfigureAwait(false);
             try
             {
-                var result = JsonConvert.DeserializeObject<T>(jsonContent);
+                var result = JsonSerializer.Deserialize<T>(jsonContent);
                 if (result == null)
                 {
                     throw new JsonException($"Failed to deserialize {assetKey} - result was null");

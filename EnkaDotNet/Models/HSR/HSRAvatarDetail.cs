@@ -1,86 +1,80 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Models.HSR
 {
     public class HSRAvatarDetail
     {
-        [JsonProperty("avatarId")]
+        [JsonPropertyName("avatarId")]
         public int AvatarId { get; set; }
 
-        [JsonProperty("level")]
+        [JsonPropertyName("level")]
         public int Level { get; set; }
 
-        [JsonProperty("promotion")]
+        [JsonPropertyName("promotion")]
         public int Promotion { get; set; }
 
-        [JsonProperty("rank")]
+        [JsonPropertyName("rank")]
         public int Rank { get; set; }
 
-        [JsonProperty("pos")]
+        [JsonPropertyName("pos")]
         public int Position { get; set; }
 
-        [JsonProperty("equipment")]
+        [JsonPropertyName("equipment")]
         public HSREquipment Equipment { get; set; }
 
-        [JsonProperty("skillTreeList")]
+        [JsonPropertyName("skillTreeList")]
         public List<HSRSkillTreeModel> SkillTreeList { get; set; }
 
-        [JsonProperty("relicList")]
+        [JsonPropertyName("relicList")]
         public List<HSRRelicModel> RelicList { get; set; }
 
-        [JsonProperty("_assist")]
+        [JsonPropertyName("_assist")]
         public bool IsAssist { get; set; }
     }
 
     public class HSRSkillTreeModel
     {
-        [JsonProperty("pointId")]
+        [JsonPropertyName("pointId")]
         public int PointId { get; set; }
 
-        [JsonProperty("level")]
+        [JsonPropertyName("level")]
         public int Level { get; set; }
     }
 
     public class HSREquipment
     {
-        [JsonProperty("tid")]
+        [JsonPropertyName("tid")]
         public int Id { get; set; }
 
-        [JsonProperty("level")]
+        [JsonPropertyName("level")]
         public int Level { get; set; }
 
-        [JsonProperty("promotion")]
+        [JsonPropertyName("promotion")]
         public int Promotion { get; set; }
 
-        [JsonProperty("rank")]
+        [JsonPropertyName("rank")]
         public int Rank { get; set; }
 
-        [JsonProperty("_flat")]
+        [JsonPropertyName("_flat")]
         public HSREquipmentFlat Flat { get; set; }
     }
 
     public class HSREquipmentFlat
     {
-        [JsonProperty("props")]
+        [JsonPropertyName("props")]
         public List<HSRPropertyInfo> Props { get; set; }
 
-        [JsonProperty("name")]
+        [JsonPropertyName("name")]
         public string Name { get; set; }
     }
 
     public class HSRPropertyInfo
     {
-        [JsonProperty("type")]
+        [JsonPropertyName("type")]
         public string Type { get; set; }
 
-        [JsonProperty("value")]
+        [JsonPropertyName("value")]
         public double Value { get; set; }
     }
 }

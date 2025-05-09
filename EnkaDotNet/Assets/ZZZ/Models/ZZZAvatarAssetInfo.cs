@@ -1,62 +1,56 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.ZZZ.Models
 {
     public class ZZZAvatarAssetInfo
     {
-        [JsonProperty("Name")]
+        [JsonPropertyName("Name")]
         public string Name { get; set; }
 
-        [JsonProperty("Rarity")]
+        [JsonPropertyName("Rarity")]
         public int Rarity { get; set; }
 
-        [JsonProperty("ProfessionType")]
+        [JsonPropertyName("ProfessionType")]
         public string ProfessionType { get; set; }
 
-        [JsonProperty("ElementTypes")]
+        [JsonPropertyName("ElementTypes")]
         public List<string> ElementTypes { get; set; }
 
-        [JsonProperty("Image")]
+        [JsonPropertyName("Image")]
         public string Image { get; set; }
 
-        [JsonProperty("CircleIcon")]
+        [JsonPropertyName("CircleIcon")]
         public string CircleIcon { get; set; }
 
-        [JsonProperty("WeaponId")]
+        [JsonPropertyName("WeaponId")]
         public int WeaponId { get; set; }
 
-        [JsonProperty("Colors")]
+        [JsonPropertyName("Colors")]
         public ZZZAvatarColors Colors { get; set; }
 
-        [JsonProperty("HighlightProps")]
+        [JsonPropertyName("HighlightProps")]
         public List<int> HighlightProps { get; set; }
 
-        [JsonProperty("BaseProps")]
+        [JsonPropertyName("BaseProps")]
         public Dictionary<string, int> BaseProps { get; set; }
 
-        [JsonProperty("GrowthProps")]
+        [JsonPropertyName("GrowthProps")]
         public Dictionary<string, int> GrowthProps { get; set; }
 
-        [JsonProperty("PromotionProps")]
+        [JsonPropertyName("PromotionProps")]
         public List<Dictionary<string, int>> PromotionProps { get; set; }
 
-        [JsonProperty("CoreEnhancementProps")]
+        [JsonPropertyName("CoreEnhancementProps")]
         public List<Dictionary<string, int>> CoreEnhancementProps { get; set; }
     }
 
     public class ZZZAvatarColors
     {
-        [JsonProperty("Accent")]
+        [JsonPropertyName("Accent")]
         public string Accent { get; set; }
 
-        [JsonProperty("Mindscape")]
+        [JsonPropertyName("Mindscape")]
         public string Mindscape { get; set; }
     }
 }

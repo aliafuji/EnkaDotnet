@@ -1,26 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Models.Genshin
 {
     public class ApiResponse
     {
-        [JsonProperty("playerInfo")]
+        [JsonPropertyName("playerInfo")]
         public PlayerInfoModel PlayerInfo { get; set; }
 
-        [JsonProperty("avatarInfoList")]
+        [JsonPropertyName("avatarInfoList")]
         public List<AvatarInfoModel> AvatarInfoList { get; set; }
 
-        [JsonProperty("ttl")]
+        [JsonPropertyName("ttl")]
         public int Ttl { get; set; }
 
-        [JsonProperty("uid")]
+        [JsonPropertyName("uid")]
         public string Uid { get; set; }
     }
 }

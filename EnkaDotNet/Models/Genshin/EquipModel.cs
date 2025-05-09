@@ -1,50 +1,44 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System.Text.Json.Serialization;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace EnkaDotNet.Models.Genshin
 {
     public class EquipModel
     {
-        [JsonProperty("itemId")]
+        [JsonPropertyName("itemId")]
         public int ItemId { get; set; }
 
-        [JsonProperty("weapon")]
+        [JsonPropertyName("weapon")]
         public WeaponModel Weapon { get; set; }
 
-        [JsonProperty("reliquary")]
+        [JsonPropertyName("reliquary")]
         public ReliquaryModel Reliquary { get; set; }
 
-        [JsonProperty("flat")]
+        [JsonPropertyName("flat")]
         public FlatDataModel Flat { get; set; }
     }
 
     public class WeaponModel
     {
-        [JsonProperty("level")]
+        [JsonPropertyName("level")]
         public int Level { get; set; }
 
-        [JsonProperty("promoteLevel")]
+        [JsonPropertyName("promoteLevel")]
         public int PromoteLevel { get; set; }
 
-        [JsonProperty("affixMap")]
+        [JsonPropertyName("affixMap")]
         public Dictionary<string, int> AffixMap { get; set; }
     }
 
     public class ReliquaryModel
     {
-        [JsonProperty("level")]
+        [JsonPropertyName("level")]
         public int Level { get; set; }
 
-        [JsonProperty("mainPropId")]
+        [JsonPropertyName("mainPropId")]
         public int MainPropId { get; set; }
 
-        [JsonProperty("appendPropIdList")]
+        [JsonPropertyName("appendPropIdList")]
         public List<int> AppendPropIdList { get; set; }
     }
 }

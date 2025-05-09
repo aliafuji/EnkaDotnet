@@ -4,9 +4,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
-using EnkaDotNet.Enums;
 using EnkaDotNet.Exceptions;
-using Newtonsoft.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
@@ -140,7 +139,7 @@ namespace EnkaDotNet.Utils.Common
                             var updatedEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(newExpiration);
                             _memoryCache.Set(cacheKey, cachedEntry, updatedEntryOptions);
                             _trackedCacheKeys.TryAdd(cacheKey, true);
-                            return JsonConvert.DeserializeObject<T>(cachedEntry.JsonResponse) ?? throw new EnkaNetworkException($"Failed to deserialize cached JSON response from {relativeUrl} after 304 (result was null)");
+                            return JsonSerializer.Deserialize<T>(cachedEntry.JsonResponse) ?? throw new EnkaNetworkException($"Failed to deserialize cached JSON response from {relativeUrl} after 304 (result was null)");
                         }
 
                         if (_options.RetryOnStatusCodes.Contains(response.StatusCode) && attempts <= _options.MaxRetries)
@@ -197,7 +196,7 @@ namespace EnkaDotNet.Utils.Common
                             _logger.Log(LogLevel.Trace, "Stored response in cache for {Url} with ETag: {ETag} and expiration: {Expiration}", relativeUrl, etag, expiration);
                         }
 
-                        return JsonConvert.DeserializeObject<T>(jsonString) ?? throw new EnkaNetworkException($"Failed to deserialize JSON response from {relativeUrl}. Result was null.");
+                        return JsonSerializer.Deserialize<T>(jsonString) ?? throw new EnkaNetworkException($"Failed to deserialize JSON response from {relativeUrl}. Result was null.");
                     }
                 }
                 catch (RateLimitException) { throw; }
@@ -223,7 +222,7 @@ namespace EnkaDotNet.Utils.Common
                     _logger.LogError(ex, "HTTP request failed for URL: {Url} after {Attempts} attempts. Status Code: {StatusCode}", relativeUrl, attempts, response?.StatusCode);
                     throw new EnkaNetworkException($"HTTP request failed for URL: {relativeUrl} after {attempts} attempts. Message: {ex.Message}", ex);
                 }
-                catch (JsonException ex)
+                catch (System.Text.Json.JsonException ex)
                 {
                     string snippet = "Could not read response content for snippet.";
                     if (response?.Content != null)

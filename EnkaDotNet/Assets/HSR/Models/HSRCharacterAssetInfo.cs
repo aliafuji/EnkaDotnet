@@ -1,50 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.HSR.Models
 {
     public class HSRCharacterAssetInfo
     {
-        [JsonProperty("AvatarName")]
+        [JsonPropertyName("AvatarName")]
         public AvatarNameInfo AvatarName { get; set; }
 
-        [JsonProperty("AvatarFullName")]
+        [JsonPropertyName("AvatarFullName")]
         public AvatarNameInfo AvatarFullName { get; set; }
 
-        [JsonProperty("AvatarSideIconPath")]
+        [JsonPropertyName("AvatarSideIconPath")]
         public string AvatarSideIconPath { get; set; }
 
-        [JsonProperty("ActionAvatarHeadIconPath")]
+        [JsonPropertyName("ActionAvatarHeadIconPath")]
         public string ActionAvatarHeadIconPath { get; set; }
 
-        [JsonProperty("AvatarCutinFrontImgPath")]
+        [JsonPropertyName("AvatarCutinFrontImgPath")]
         public string AvatarCutinFrontImgPath { get; set; }
 
-        [JsonProperty("AvatarBaseType")]
+        [JsonPropertyName("AvatarBaseType")]
         public string AvatarBaseType { get; set; }
 
-        [JsonProperty("Element")]
+        [JsonPropertyName("Element")]
         public string Element { get; set; }
 
-        [JsonProperty("Rarity")]
+        [JsonPropertyName("Rarity")]
         public int Rarity { get; set; }
 
-        [JsonProperty("SkillList")]
+        [JsonPropertyName("SkillList")]
         public List<int> SkillList { get; set; }
 
-        [JsonProperty("RankIDList")]
+        [JsonPropertyName("RankIDList")]
         public List<int> RankIDList { get; set; }
     }
 
     public class AvatarNameInfo
     {
-        [JsonProperty("Hash")]
+        [JsonPropertyName("Hash")]
         public string Hash { get; set; }
     }
 }
