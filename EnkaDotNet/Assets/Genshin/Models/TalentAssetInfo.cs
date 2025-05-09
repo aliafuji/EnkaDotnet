@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.Genshin.Models
 {
@@ -10,10 +11,7 @@ namespace EnkaDotNet.Assets.Genshin.Models
         [JsonPropertyName("icon")]
         public string Icon { get; set; }
 
-        [JsonPropertyName("NameTextMapHash")]
-        public string NameTextMapHash { get; set; }
-
-        [JsonPropertyName("DescTextMapHash")]
-        public string DescTextMapHash { get; set; }
+        [JsonPropertyName("nameTextMapHash")]
+        public JsonElement NameTextMapHash { get; set; }
     }
 }

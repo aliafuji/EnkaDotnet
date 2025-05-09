@@ -1,11 +1,6 @@
 ﻿using EnkaDotNet.Enums.Genshin;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Globalization;
 
 namespace EnkaDotNet.Utils.Genshin
@@ -96,7 +91,6 @@ namespace EnkaDotNet.Utils.Genshin
                 return Math.Round(value).ToString("N0", CultureInfo.InvariantCulture);
             }
         }
-
         public static string FormatValueStats(StatType statType, double value, bool raw)
         {
             if (raw)
@@ -108,10 +102,10 @@ namespace EnkaDotNet.Utils.Genshin
             if (isPercent)
             {
                 if (statType == StatType.EnergyRecharge ||
-                    statType == StatType.CooldownReduction ||
-                    statType == StatType.CriticalRate ||
-                    statType == StatType.CriticalDamage ||
-                    statType == StatType.IncomingHealingBonus)
+                   statType == StatType.CooldownReduction ||
+                   statType == StatType.CriticalRate ||
+                   statType == StatType.CriticalDamage ||
+                   statType == StatType.IncomingHealingBonus)
                 {
                     if (statType == StatType.CriticalDamage && value < 50)
                     {

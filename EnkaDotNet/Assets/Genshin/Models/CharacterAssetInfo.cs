@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.Genshin.Models
@@ -6,7 +7,7 @@ namespace EnkaDotNet.Assets.Genshin.Models
     public class CharacterAssetInfo
     {
         [JsonPropertyName("NameTextMapHash")]
-        public string NameTextMapHash { get; set; }
+        public JsonElement NameTextMapHash { get; set; }
 
         [JsonPropertyName("Element")]
         public string Element { get; set; }

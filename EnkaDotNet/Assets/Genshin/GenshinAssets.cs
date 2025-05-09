@@ -7,6 +7,7 @@ using EnkaDotNet.Enums;
 using EnkaDotNet.Enums.Genshin;
 using EnkaDotNet.Utils;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace EnkaDotNet.Assets.Genshin
 {
@@ -30,12 +31,35 @@ namespace EnkaDotNet.Assets.Genshin
             var tasks = new List<Task>
             {
                 LoadCharacters(),
+                LoadWeapons(),
+                LoadArtifacts(),
                 LoadTalents(),
                 LoadConstellations(),
                 LoadNamecards(),
                 LoadPfps()
             };
             await Task.WhenAll(tasks).ConfigureAwait(false);
+        }
+
+        private string GetStringFromHashJsonElement(JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                return element.GetString();
+            }
+            if (element.ValueKind == JsonValueKind.Number)
+            {
+                if (element.TryGetInt64(out long longValue))
+                {
+                    return longValue.ToString();
+                }
+                return element.GetRawText();
+            }
+            if (element.ValueKind == JsonValueKind.Undefined || element.ValueKind == JsonValueKind.Null)
+            {
+                return null;
+            }
+            return element.ToString();
         }
 
         private async Task LoadCharacters()
@@ -59,6 +83,49 @@ namespace EnkaDotNet.Assets.Genshin
                 throw new InvalidOperationException("Failed to load essential Genshin Impact character data.", ex);
             }
         }
+
+        private async Task LoadWeapons()
+        {
+            _weapons.Clear();
+            try
+            {
+                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, WeaponAssetInfo>>("weapons.json").ConfigureAwait(false);
+                if (deserializedMap != null)
+                {
+                    foreach (var kvp in deserializedMap)
+                    {
+                        if (int.TryParse(kvp.Key, out int weaponId))
+                            _weapons[weaponId] = kvp.Value;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading Genshin Impact weapons.json asset.");
+            }
+        }
+
+        private async Task LoadArtifacts()
+        {
+            _artifacts.Clear();
+            try
+            {
+                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, ArtifactAssetInfo>>("artifacts.json").ConfigureAwait(false);
+                if (deserializedMap != null)
+                {
+                    foreach (var kvp in deserializedMap)
+                    {
+                        if (int.TryParse(kvp.Key, out int artifactId))
+                            _artifacts[artifactId] = kvp.Value;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading Genshin Impact artifacts.json asset.");
+            }
+        }
+
 
         private async Task LoadPfps()
         {
@@ -91,8 +158,7 @@ namespace EnkaDotNet.Assets.Genshin
                 {
                     foreach (var kvp in deserializedMap)
                     {
-                        if (int.TryParse(kvp.Key, out int talentId))
-                            _talents[talentId] = kvp.Value;
+                        _talents[int.Parse(kvp.Key)] = kvp.Value;
                     }
                 }
             }
@@ -113,9 +179,14 @@ namespace EnkaDotNet.Assets.Genshin
                 {
                     foreach (var kvp in deserializedMap)
                     {
-                        if (kvp.Value?.NameTextMapHash != null)
+                        if (kvp.Value != null && kvp.Value.NameTextMapHash.ValueKind != JsonValueKind.Undefined && kvp.Value.NameTextMapHash.ValueKind != JsonValueKind.Null)
                         {
                             _constellations[kvp.Key] = kvp.Value;
+                        }
+                        else if (kvp.Value != null)
+                        {
+                            _constellations[kvp.Key] = kvp.Value;
+                            _logger.LogWarning($"Constellation '{kvp.Key}' has a null or undefined NameTextMapHash.");
                         }
                     }
                 }
@@ -148,7 +219,16 @@ namespace EnkaDotNet.Assets.Genshin
             }
         }
 
-        public string GetCharacterName(int characterId) => _characters.TryGetValue(characterId, out var charInfo) && charInfo.NameTextMapHash != null ? GetText(charInfo.NameTextMapHash) : $"Character_{characterId}";
+        public string GetCharacterName(int characterId)
+        {
+            if (_characters.TryGetValue(characterId, out var charInfo))
+            {
+                string hashValue = GetStringFromHashJsonElement(charInfo.NameTextMapHash);
+                if (hashValue != null)
+                    return GetText(hashValue);
+            }
+            return $"Character_{characterId}";
+        }
 
         public string GetCharacterIconUrl(int characterId)
         {
@@ -164,12 +244,33 @@ namespace EnkaDotNet.Assets.Genshin
         }
 
         public ElementType GetCharacterElement(int characterId) => _characters.TryGetValue(characterId, out var charInfo) && charInfo.Element != null ? MapElementNameToEnum(charInfo.Element) : ElementType.Unknown;
-        public string GetWeaponName(int weaponId) => _weapons.TryGetValue(weaponId, out var weaponInfo) && weaponInfo.NameTextMapHash != null ? GetText(weaponInfo.NameTextMapHash) : $"Weapon_{weaponId}";
+
+        public string GetWeaponName(int weaponId)
+        {
+            if (_weapons.TryGetValue(weaponId, out var weaponInfo))
+            {
+                string hashValue = GetStringFromHashJsonElement(weaponInfo.NameTextMapHash);
+                if (hashValue != null)
+                    return GetText(hashValue);
+            }
+            return $"Weapon_{weaponId}";
+        }
+
         public string GetWeaponNameFromHash(string nameHash) => GetText(nameHash);
         public string GetWeaponIconUrl(int weaponId) => _weapons.TryGetValue(weaponId, out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.Icon) ? $"{Constants.GetAssetCdnBaseUrl(GameType)}{weaponInfo.Icon}.png" : string.Empty;
         public string GetWeaponIconUrlFromIconName(string iconName) => !string.IsNullOrEmpty(iconName) ? $"{Constants.GetAssetCdnBaseUrl(GameType)}{iconName}.png" : string.Empty;
         public WeaponType GetWeaponType(int weaponId) => _weapons.TryGetValue(weaponId, out var weaponInfo) && weaponInfo.WeaponType != null ? MapWeaponTypeNameToEnum(weaponInfo.WeaponType) : WeaponType.Unknown;
-        public string GetArtifactName(int artifactId) => _artifacts.TryGetValue(artifactId, out var artifactInfo) && artifactInfo.NameTextMapHash != null ? GetText(artifactInfo.NameTextMapHash) : $"Artifact_{artifactId}";
+
+        public string GetArtifactName(int artifactId)
+        {
+            if (_artifacts.TryGetValue(artifactId, out var artifactInfo))
+            {
+                string hashValue = GetStringFromHashJsonElement(artifactInfo.NameTextMapHash);
+                if (hashValue != null)
+                    return GetText(hashValue);
+            }
+            return $"Artifact_{artifactId}";
+        }
         public string GetArtifactNameFromHash(string nameHash) => GetText(nameHash);
         public string GetArtifactSetNameFromHash(string setNameHash) => GetText(setNameHash);
         public string GetArtifactIconUrl(int artifactId) => _artifacts.TryGetValue(artifactId, out var artifactInfo) && !string.IsNullOrEmpty(artifactInfo.Icon) ? $"{Constants.GetAssetCdnBaseUrl(GameType)}{artifactInfo.Icon}.png" : string.Empty;
@@ -179,21 +280,28 @@ namespace EnkaDotNet.Assets.Genshin
         {
             if (_talents.TryGetValue(talentId, out var talentInfo))
             {
-                if (!string.IsNullOrEmpty(talentInfo.NameTextMapHash))
+                string nameHashValue = GetStringFromHashJsonElement(talentInfo.NameTextMapHash);
+                if (!string.IsNullOrEmpty(nameHashValue))
                 {
-                    string name = GetText(talentInfo.NameTextMapHash);
-                    if (!string.IsNullOrEmpty(name) && name != talentInfo.NameTextMapHash)
+                    string nameFromHash = GetText(nameHashValue);
+                    if (!string.IsNullOrEmpty(nameFromHash) && nameFromHash != nameHashValue)
                     {
-                        return name;
+                        return nameFromHash;
                     }
                 }
                 if (!string.IsNullOrEmpty(talentInfo.Name))
                 {
+                    string nameFromDirectProperty = GetText(talentInfo.Name);
+                    if (!string.IsNullOrEmpty(nameFromDirectProperty) && nameFromDirectProperty != talentInfo.Name)
+                    {
+                        return nameFromDirectProperty;
+                    }
                     return talentInfo.Name;
                 }
             }
             return $"Talent_{talentId}";
         }
+
 
         public string GetProfilePictureIconUrl(int characterId)
         {
@@ -210,9 +318,31 @@ namespace EnkaDotNet.Assets.Genshin
         }
 
         public string GetNameCardIconUrl(int nameCardId) => _namecards.TryGetValue(nameCardId.ToString(), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon) ? $"{Constants.GetAssetCdnBaseUrl(GameType)}{nameCardInfo.Icon}.png" : string.Empty;
-        public string GetConstellationName(int constellationId) => _constellations.TryGetValue(constellationId.ToString(), out var constellationInfo) && constellationInfo.NameTextMapHash != null ? GetText(constellationInfo.NameTextMapHash) : $"Constellation_{constellationId}";
+
+        public string GetConstellationName(int constellationId)
+        {
+            if (_constellations.TryGetValue(constellationId.ToString(), out var constellationInfo))
+            {
+                string hashValue = GetStringFromHashJsonElement(constellationInfo.NameTextMapHash);
+                if (hashValue != null)
+                    return GetText(hashValue);
+            }
+            return $"Constellation_{constellationId}";
+        }
+
+        public string GetTalentIconUrl(int talentId)
+        {
+            _talents.TryGetValue(talentId, out var talentInfo);
+            if (talentInfo != null && !string.IsNullOrEmpty(talentInfo.Icon))
+            {
+                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{talentInfo.Icon}.png";
+            }
+
+            return string.Empty;
+        }
+
         public string GetConstellationIconUrl(int constellationId) => _constellations.TryGetValue(constellationId.ToString(), out var constellationInfo) && !string.IsNullOrEmpty(constellationInfo.Icon) ? $"{Constants.GetAssetCdnBaseUrl(GameType)}{constellationInfo.Icon}.png" : string.Empty;
-        public string GetTalentIconUrl(int talentId) => _talents.TryGetValue(talentId, out var talentInfo) && !string.IsNullOrEmpty(talentInfo.Icon) ? $"{Constants.GetAssetCdnBaseUrl(GameType)}{talentInfo.Icon}.png" : string.Empty;
+
 
         private ElementType MapElementNameToEnum(string elementName)
         {

@@ -1,11 +1,12 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.Genshin.Models
 {
     public class ArtifactAssetInfo
     {
         [JsonPropertyName("NameTextMapHash")]
-        public string NameTextMapHash { get; set; }
+        public JsonElement NameTextMapHash { get; set; }
 
         [JsonPropertyName("setIcon")]
         public int SetIcon { get; set; }
