@@ -1,95 +1,89 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.HSR.Models
 {
     public class HSRAvatarMetaStats
     {
-        [JsonProperty("AttackAdd")]
+        [JsonPropertyName("AttackAdd")]
         public double AttackAdd { get; set; }
 
-        [JsonProperty("AttackBase")]
+        [JsonPropertyName("AttackBase")]
         public double AttackBase { get; set; }
 
-        [JsonProperty("BaseAggro")]
+        [JsonPropertyName("BaseAggro")]
         public double BaseAggro { get; set; }
 
-        [JsonProperty("CriticalChance")]
+        [JsonPropertyName("CriticalChance")]
         public double CriticalChance { get; set; }
 
-        [JsonProperty("CriticalDamage")]
+        [JsonPropertyName("CriticalDamage")]
         public double CriticalDamage { get; set; }
 
-        [JsonProperty("DefenceAdd")]
+        [JsonPropertyName("DefenceAdd")]
         public double DefenceAdd { get; set; }
 
-        [JsonProperty("DefenceBase")]
+        [JsonPropertyName("DefenceBase")]
         public double DefenceBase { get; set; }
 
-        [JsonProperty("HPAdd")]
+        [JsonPropertyName("HPAdd")]
         public double HPAdd { get; set; }
 
-        [JsonProperty("HPBase")]
+        [JsonPropertyName("HPBase")]
         public double HPBase { get; set; }
 
-        [JsonProperty("SpeedBase")]
+        [JsonPropertyName("SpeedBase")]
         public double SpeedBase { get; set; }
     }
 
     public class HSREquipmentMetaStats
     {
-        [JsonProperty("AttackAdd")]
+        [JsonPropertyName("AttackAdd")]
         public double AttackAdd { get; set; }
 
-        [JsonProperty("BaseAttack")]
+        [JsonPropertyName("BaseAttack")]
         public double BaseAttack { get; set; }
 
-        [JsonProperty("BaseDefence")]
+        [JsonPropertyName("BaseDefence")]
         public double BaseDefence { get; set; }
 
-        [JsonProperty("BaseHP")]
+        [JsonPropertyName("BaseHP")]
         public double BaseHP { get; set; }
 
-        [JsonProperty("DefenceAdd")]
+        [JsonPropertyName("DefenceAdd")]
         public double DefenceAdd { get; set; }
 
-        [JsonProperty("HPAdd")]
+        [JsonPropertyName("HPAdd")]
         public double HPAdd { get; set; }
     }
 
     public class HSRMetaData
     {
-        [JsonProperty("avatar")]
+        [JsonPropertyName("avatar")]
         public Dictionary<string, Dictionary<string, HSRAvatarMetaStats>> AvatarStats { get; set; }
 
-        [JsonProperty("equipment")]
+        [JsonPropertyName("equipment")]
         public Dictionary<string, Dictionary<string, HSREquipmentMetaStats>> EquipmentStats { get; set; }
 
-        [JsonProperty("equipmentSkill")]
+        [JsonPropertyName("equipmentSkill")]
         public Dictionary<string, Dictionary<string, HSREquipmentSkillInfo>> EquipmentSkills { get; set; }
 
-        [JsonProperty("relic")]
+        [JsonPropertyName("relic")]
         public HSRRelicMetaInfo RelicInfo { get; set; }
 
-        [JsonProperty("tree")]
+        [JsonPropertyName("tree")]
         public Dictionary<string, Dictionary<string, HSRSkillTreeMetaInfo>> SkillTreeInfo { get; set; }
     }
 
     public class HSREquipmentSkillInfo
     {
-        [JsonProperty("props")]
+        [JsonPropertyName("props")]
         public Dictionary<string, double> Props { get; set; }
     }
 
     public class HSRSkillTreeMetaInfo
     {
-        [JsonProperty("props")]
+        [JsonPropertyName("props")]
         public Dictionary<string, double> Props { get; set; }
     }
 }

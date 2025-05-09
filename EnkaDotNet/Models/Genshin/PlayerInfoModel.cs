@@ -1,81 +1,75 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Models.Genshin
 {
     public class PlayerInfoModel
     {
-        [JsonProperty("nickname")]
+        [JsonPropertyName("nickname")]
         public string Nickname { get; set; }
 
-        [JsonProperty("level")]
+        [JsonPropertyName("level")]
         public int Level { get; set; }
 
-        [JsonProperty("signature")]
+        [JsonPropertyName("signature")]
         public string Signature { get; set; }
 
-        [JsonProperty("worldLevel")]
+        [JsonPropertyName("worldLevel")]
         public int WorldLevel { get; set; }
 
-        [JsonProperty("nameCardId")]
+        [JsonPropertyName("nameCardId")]
         public int NameCardId { get; set; }
 
-        [JsonProperty("finishAchievementNum")]
+        [JsonPropertyName("finishAchievementNum")]
         public int FinishAchievementNum { get; set; }
 
-        [JsonProperty("towerFloorIndex")]
+        [JsonPropertyName("towerFloorIndex")]
         public int TowerFloorIndex { get; set; }
 
-        [JsonProperty("towerLevelIndex")]
+        [JsonPropertyName("towerLevelIndex")]
         public int TowerLevelIndex { get; set; }
 
-        [JsonProperty("towerStarIndex")]
+        [JsonPropertyName("towerStarIndex")]
         public int TowerStarIndex { get; set; }
 
-        [JsonProperty("theaterActIndex")]
+        [JsonPropertyName("theaterActIndex")]
         public int TheaterActIndex { get; set; }
 
-        [JsonProperty("theaterStarIndex")]
+        [JsonPropertyName("theaterStarIndex")]
         public int TheaterStarIndex { get; set; }
 
 
-        [JsonProperty("showAvatarInfoList")]
+        [JsonPropertyName("showAvatarInfoList")]
         public List<ShowAvatarInfoModel> ShowAvatarInfoList { get; set; }
 
-        [JsonProperty("showNameCardIdList")]
+        [JsonPropertyName("showNameCardIdList")]
         public List<int> ShowNameCardIdList { get; set; }
 
-        [JsonProperty("profilePicture")]
+        [JsonPropertyName("profilePicture")]
         public ProfilePictureModel ProfilePicture { get; set; }
     }
 
     public class ShowAvatarInfoModel
     {
-        [JsonProperty("avatarId")]
+        [JsonPropertyName("avatarId")]
         public int AvatarId { get; set; }
 
-        [JsonProperty("level")]
+        [JsonPropertyName("level")]
         public int Level { get; set; }
 
-        [JsonProperty("costumeId")]
+        [JsonPropertyName("costumeId")]
         public int CostumeId { get; set; }
     }
 
     public class ProfilePictureModel
     {
-        [JsonProperty("id")]
+        [JsonPropertyName("id")]
         public int Id { get; set; }
 
-        [JsonProperty("avatarId")]
+        [JsonPropertyName("avatarId")]
         public int AvatarId { get; set; }
 
-        [JsonProperty("costumeId")]
+        [JsonPropertyName("costumeId")]
         public int CostumeId { get; set; }
     }
 }

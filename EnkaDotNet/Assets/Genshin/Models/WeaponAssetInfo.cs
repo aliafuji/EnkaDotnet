@@ -1,26 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.Genshin.Models
 {
     public class WeaponAssetInfo
     {
-        [JsonProperty("NameTextMapHash")]
-        public string NameTextMapHash { get; set; }
+        [JsonPropertyName("NameTextMapHash")]
+        public JsonElement NameTextMapHash { get; set; }
 
-        [JsonProperty("Icon")]
+        [JsonPropertyName("Icon")]
         public string Icon { get; set; }
 
-        [JsonProperty("WeaponType")]
+        [JsonPropertyName("WeaponType")]
         public string WeaponType { get; set; }
 
-        [JsonProperty("RankLevel")]
+        [JsonPropertyName("RankLevel")]
         public int RankLevel { get; set; }
     }
 }

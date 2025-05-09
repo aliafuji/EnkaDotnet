@@ -1,43 +1,37 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Models.ZZZ
 {
     public class ZZZProfileDetailModel
     {
-        [JsonProperty("Nickname")]
+        [JsonPropertyName("Nickname")]
         public string Nickname { get; set; }
 
-        [JsonProperty("AvatarId")]
+        [JsonPropertyName("AvatarId")]
         public int AvatarId { get; set; }
 
-        [JsonProperty("Uid")]
+        [JsonPropertyName("Uid")]
         public long Uid { get; set; }
 
-        [JsonProperty("Level")]
+        [JsonPropertyName("Level")]
         public int Level { get; set; }
 
-        [JsonProperty("Title")]
+        [JsonPropertyName("Title")]
         [Obsolete("Use TitleInfo field if available.")]
         public int Title { get; set; }
 
-        [JsonProperty("TitleInfo")]
+        [JsonPropertyName("TitleInfo")]
         public ZZZTitleInfoModel TitleInfo { get; set; }
 
 
-        [JsonProperty("ProfileId")]
+        [JsonPropertyName("ProfileId")]
         public int ProfileId { get; set; }
 
-        [JsonProperty("PlatformType")]
+        [JsonPropertyName("PlatformType")]
         public int PlatformType { get; set; }
 
-        [JsonProperty("CallingCardId")]
+        [JsonPropertyName("CallingCardId")]
         public int CallingCardId { get; set; }
     }
 }

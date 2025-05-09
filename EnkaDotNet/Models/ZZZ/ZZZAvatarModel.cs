@@ -1,152 +1,146 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Models.ZZZ
 {
     public class ZZZAvatarModel
     {
-        [JsonProperty("Id")]
+        [JsonPropertyName("Id")]
         public int Id { get; set; }
 
-        [JsonProperty("Level")]
+        [JsonPropertyName("Level")]
         public int Level { get; set; }
 
-        [JsonProperty("PromotionLevel")]
+        [JsonPropertyName("PromotionLevel")]
         public int PromotionLevel { get; set; }
 
-        [JsonProperty("Exp")]
+        [JsonPropertyName("Exp")]
         public int Exp { get; set; }
 
-        [JsonProperty("SkinId")]
+        [JsonPropertyName("SkinId")]
         public int SkinId { get; set; }
 
-        [JsonProperty("TalentLevel")]
+        [JsonPropertyName("TalentLevel")]
         public int TalentLevel { get; set; }
 
-        [JsonProperty("CoreSkillEnhancement")]
+        [JsonPropertyName("CoreSkillEnhancement")]
         public int CoreSkillEnhancement { get; set; }
 
-        [JsonProperty("WeaponUid")]
+        [JsonPropertyName("WeaponUid")]
         public int WeaponUid { get; set; }
 
-        [JsonProperty("ObtainmentTimestamp")]
+        [JsonPropertyName("ObtainmentTimestamp")]
         public long ObtainmentTimestamp { get; set; }
 
-        [JsonProperty("WeaponEffectState")]
+        [JsonPropertyName("WeaponEffectState")]
         public int WeaponEffectState { get; set; }
 
-        [JsonProperty("TalentToggleList")]
+        [JsonPropertyName("TalentToggleList")]
         public List<bool> TalentToggleList { get; set; }
 
-        [JsonProperty("ClaimedRewardList")]
+        [JsonPropertyName("ClaimedRewardList")]
         public List<int> ClaimedRewardList { get; set; }
 
-        [JsonProperty("IsHidden")]
+        [JsonPropertyName("IsHidden")]
         public bool IsHidden { get; set; }
 
-        [JsonProperty("Weapon")]
+        [JsonPropertyName("Weapon")]
         public ZZZWeaponModel Weapon { get; set; }
 
-        [JsonProperty("SkillLevelList")]
+        [JsonPropertyName("SkillLevelList")]
         public List<ZZZSkillLevelModel> SkillLevelList { get; set; }
 
-        [JsonProperty("EquippedList")]
+        [JsonPropertyName("EquippedList")]
         public List<ZZZEquippedItemModel> EquippedList { get; set; }
     }
 
     public class ZZZSkillLevelModel
     {
-        [JsonProperty("Level")]
+        [JsonPropertyName("Level")]
         public int Level { get; set; }
 
-        [JsonProperty("Index")]
+        [JsonPropertyName("Index")]
         public int Index { get; set; }
     }
 
     public class ZZZEquippedItemModel
     {
-        [JsonProperty("Slot")]
+        [JsonPropertyName("Slot")]
         public int Slot { get; set; }
 
-        [JsonProperty("Equipment")]
+        [JsonPropertyName("Equipment")]
         public ZZZEquipmentModel Equipment { get; set; }
     }
 
     public class ZZZEquipmentModel
     {
-        [JsonProperty("RandomPropertyList")]
+        [JsonPropertyName("RandomPropertyList")]
         public List<ZZZPropertyModel> RandomPropertyList { get; set; }
 
-        [JsonProperty("MainPropertyList")]
+        [JsonPropertyName("MainPropertyList")]
         public List<ZZZPropertyModel> MainPropertyList { get; set; }
 
-        [JsonProperty("IsAvailable")]
+        [JsonPropertyName("IsAvailable")]
         public bool IsAvailable { get; set; }
 
-        [JsonProperty("IsLocked")]
+        [JsonPropertyName("IsLocked")]
         public bool IsLocked { get; set; }
 
-        [JsonProperty("IsTrash")]
+        [JsonPropertyName("IsTrash")]
         public bool IsTrash { get; set; }
 
-        [JsonProperty("Id")]
+        [JsonPropertyName("Id")]
         public int Id { get; set; }
 
-        [JsonProperty("Uid")]
+        [JsonPropertyName("Uid")]
         public int Uid { get; set; }
 
-        [JsonProperty("Level")]
+        [JsonPropertyName("Level")]
         public int Level { get; set; }
 
-        [JsonProperty("BreakLevel")]
+        [JsonPropertyName("BreakLevel")]
         public int BreakLevel { get; set; }
 
-        [JsonProperty("Exp")]
+        [JsonPropertyName("Exp")]
         public int Exp { get; set; }
     }
 
     public class ZZZPropertyModel
     {
-        [JsonProperty("PropertyId")]
+        [JsonPropertyName("PropertyId")]
         public int PropertyId { get; set; }
 
-        [JsonProperty("PropertyLevel")]
+        [JsonPropertyName("PropertyLevel")]
         public int PropertyLevel { get; set; }
 
-        [JsonProperty("PropertyValue")]
+        [JsonPropertyName("PropertyValue")]
         public int PropertyValue { get; set; }
     }
 
     public class ZZZWeaponModel
     {
-        [JsonProperty("IsAvailable")]
+        [JsonPropertyName("IsAvailable")]
         public bool IsAvailable { get; set; }
 
-        [JsonProperty("IsLocked")]
+        [JsonPropertyName("IsLocked")]
         public bool IsLocked { get; set; }
 
-        [JsonProperty("Id")]
+        [JsonPropertyName("Id")]
         public int Id { get; set; }
 
-        [JsonProperty("Uid")]
+        [JsonPropertyName("Uid")]
         public int Uid { get; set; }
 
-        [JsonProperty("Level")]
+        [JsonPropertyName("Level")]
         public int Level { get; set; }
 
-        [JsonProperty("BreakLevel")]
+        [JsonPropertyName("BreakLevel")]
         public int BreakLevel { get; set; }
 
-        [JsonProperty("Exp")]
+        [JsonPropertyName("Exp")]
         public int Exp { get; set; }
 
-        [JsonProperty("UpgradeLevel")]
+        [JsonPropertyName("UpgradeLevel")]
         public int UpgradeLevel { get; set; }
     }
 }

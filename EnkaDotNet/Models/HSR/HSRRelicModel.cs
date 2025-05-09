@@ -1,56 +1,50 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Models.HSR
 {
     public class HSRRelicModel
     {
-        [JsonProperty("tid")]
+        [JsonPropertyName("tid")]
         public int Id { get; set; }
 
-        [JsonProperty("level")]
+        [JsonPropertyName("level")]
         public int Level { get; set; }
 
-        [JsonProperty("type")]
+        [JsonPropertyName("type")]
         public int Type { get; set; }
 
-        [JsonProperty("mainAffixId")]
+        [JsonPropertyName("mainAffixId")]
         public int MainAffixId { get; set; }
 
-        [JsonProperty("subAffixList")]
+        [JsonPropertyName("subAffixList")]
         public List<HSRSubAffix> SubAffixList { get; set; }
 
-        [JsonProperty("_flat")]
+        [JsonPropertyName("_flat")]
         public HSRRelicFlat Flat { get; set; }
     }
 
     public class HSRSubAffix
     {
-        [JsonProperty("affixId")]
+        [JsonPropertyName("affixId")]
         public int AffixId { get; set; }
 
-        [JsonProperty("cnt")]
+        [JsonPropertyName("cnt")]
         public int Count { get; set; }
 
-        [JsonProperty("step")]
+        [JsonPropertyName("step")]
         public int Step { get; set; }
     }
 
     public class HSRRelicFlat
     {
-        [JsonProperty("props")]
+        [JsonPropertyName("props")]
         public List<HSRPropertyInfo> Props { get; set; }
 
-        [JsonProperty("setName")]
+        [JsonPropertyName("setName")]
         public string SetName { get; set; }
 
-        [JsonProperty("setID")]
+        [JsonPropertyName("setID")]
         public int SetId { get; set; }
     }
 }

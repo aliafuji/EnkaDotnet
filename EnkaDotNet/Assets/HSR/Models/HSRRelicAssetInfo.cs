@@ -1,50 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.HSR.Models
 {
     public class HSRRelicItemInfo
     {
-        [JsonProperty("Icon")]
+        [JsonPropertyName("Icon")]
         public string Icon { get; set; }
 
-        [JsonProperty("Rarity")]
+        [JsonPropertyName("Rarity")]
         public int Rarity { get; set; }
 
-        [JsonProperty("SetID")]
+        [JsonPropertyName("SetID")]
         public int SetID { get; set; }
 
-        [JsonProperty("Type")]
+        [JsonPropertyName("Type")]
         public string Type { get; set; }
 
-        [JsonProperty("MainAffixGroup")]
+        [JsonPropertyName("MainAffixGroup")]
         public int MainAffixGroup { get; set; }
 
-        [JsonProperty("SubAffixGroup")]
+        [JsonPropertyName("SubAffixGroup")]
         public int SubAffixGroup { get; set; }
     }
 
     public class HSRRelicSetInfo
     {
-        [JsonProperty("SetName")]
+        [JsonPropertyName("SetName")]
         public string SetName { get; set; }
 
-        [JsonProperty("SetEffects")]
+        [JsonPropertyName("SetEffects")]
         public Dictionary<string, HSRSetEffectInfo> SetEffects { get; set; }
     }
 
     public class HSRSetEffectInfo
     {
-        [JsonProperty("EffectDesc")]
+        [JsonPropertyName("EffectDesc")]
         public string EffectDesc { get; set; }
 
-        [JsonProperty("Properties")]
+        [JsonPropertyName("Properties")]
         public Dictionary<string, double> Properties { get; set; }
     }
 }

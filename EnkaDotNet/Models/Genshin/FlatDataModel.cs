@@ -1,53 +1,47 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Models.Genshin
 {
     public class FlatDataModel
     {
-        [JsonProperty("nameTextMapHash")]
+        [JsonPropertyName("nameTextMapHash")]
         public string NameTextMapHash { get; set; }
 
-        [JsonProperty("setNameTextMapHash")]
+        [JsonPropertyName("setNameTextMapHash")]
         public string SetNameTextMapHash { get; set; }
 
-        [JsonProperty("rankLevel")]
+        [JsonPropertyName("rankLevel")]
         public int RankLevel { get; set; }
 
-        [JsonProperty("reliquaryMainstat")]
+        [JsonPropertyName("reliquaryMainstat")]
         public StatPropertyModel ReliquaryMainstat { get; set; }
 
-        [JsonProperty("reliquarySubstats")]
+        [JsonPropertyName("reliquarySubstats")]
         public List<StatPropertyModel> ReliquarySubstats { get; set; }
 
-        [JsonProperty("weaponStats")]
+        [JsonPropertyName("weaponStats")]
         public List<StatPropertyModel> WeaponStats { get; set; }
 
-        [JsonProperty("itemType")]
+        [JsonPropertyName("itemType")]
         public string ItemType { get; set; }
 
-        [JsonProperty("icon")]
+        [JsonPropertyName("icon")]
         public string Icon { get; set; }
 
-        [JsonProperty("equipType")]
+        [JsonPropertyName("equipType")]
         public string EquipType { get; set; }
     }
 
     public class StatPropertyModel
     {
-        [JsonProperty("mainPropId")]
+        [JsonPropertyName("mainPropId")]
         public string MainPropId { get; set; }
 
-        [JsonProperty("appendPropId")]
+        [JsonPropertyName("appendPropId")]
         public string AppendPropId { get; set; }
 
-        [JsonProperty("statValue")]
+        [JsonPropertyName("statValue")]
         public double StatValue { get; set; }
     }
 }

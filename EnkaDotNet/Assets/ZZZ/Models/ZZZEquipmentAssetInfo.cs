@@ -1,41 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.ZZZ.Models
 {
     public class ZZZEquipmentData
     {
-        [JsonProperty("Items")]
+        [JsonPropertyName("Items")]
         public Dictionary<string, ZZZEquipmentItemInfo> Items { get; set; }
 
-        [JsonProperty("Suits")]
+        [JsonPropertyName("Suits")]
         public Dictionary<string, ZZZEquipmentSuitInfo> Suits { get; set; }
     }
 
     public class ZZZEquipmentItemInfo
     {
-        [JsonProperty("Rarity")]
+        [JsonPropertyName("Rarity")]
         public int Rarity { get; set; }
 
-        [JsonProperty("SuitId")]
+        [JsonPropertyName("SuitId")]
         public int SuitId { get; set; }
     }
 
     public class ZZZEquipmentSuitInfo
     {
-        [JsonProperty("Icon")]
+        [JsonPropertyName("Icon")]
         public string Icon { get; set; }
 
-        [JsonProperty("Name")]
+        [JsonPropertyName("Name")]
         public string Name { get; set; }
 
-        [JsonProperty("SetBonusProps")]
+        [JsonPropertyName("SetBonusProps")]
         public Dictionary<string, int> SetBonusProps { get; set; }
     }
 }

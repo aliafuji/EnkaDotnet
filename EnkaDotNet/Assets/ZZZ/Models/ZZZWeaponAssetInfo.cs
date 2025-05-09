@@ -1,41 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.ZZZ.Models
 {
     public class ZZZWeaponAssetInfo
     {
-        [JsonProperty("ItemName")]
+        [JsonPropertyName("ItemName")]
         public string ItemName { get; set; }
 
-        [JsonProperty("Rarity")]
+        [JsonPropertyName("Rarity")]
         public int Rarity { get; set; }
 
-        [JsonProperty("ProfessionType")]
+        [JsonPropertyName("ProfessionType")]
         public string ProfessionType { get; set; }
 
-        [JsonProperty("ImagePath")]
+        [JsonPropertyName("ImagePath")]
         public string ImagePath { get; set; }
 
-        [JsonProperty("MainStat")]
+        [JsonPropertyName("MainStat")]
         public ZZZStatProperty MainStat { get; set; }
 
-        [JsonProperty("SecondaryStat")]
+        [JsonPropertyName("SecondaryStat")]
         public ZZZStatProperty SecondaryStat { get; set; }
     }
 
     public class ZZZStatProperty
     {
-        [JsonProperty("PropertyId")]
+        [JsonPropertyName("PropertyId")]
         public int PropertyId { get; set; }
 
-        [JsonProperty("PropertyValue")]
+        [JsonPropertyName("PropertyValue")]
         public int PropertyValue { get; set; }
     }
 }
