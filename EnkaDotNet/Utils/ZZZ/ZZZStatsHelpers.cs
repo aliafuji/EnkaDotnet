@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
+using EnkaDotNet.Assets;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
@@ -16,13 +13,10 @@ namespace EnkaDotNet.Utils.ZZZ
         private const double BASE_CRIT_RATE = 0;
         private const double BASE_CRIT_DMG = 0;
         private const double BASE_ENERGY_REGEN = 0;
-        private static readonly IZZZAssets assets = new ZZZAssets();
 
-
-        public static Dictionary<string, StatSummary> CalculateAllTotalStats(ZZZAgent agent)
+        public static Dictionary<string, StatSummary> CalculateAllTotalStats(ZZZAgent agent, IZZZAssets assets)
         {
             var breakdown = CalculateTotalBreakdown(agent, assets);
-
             return breakdown.ToDictionary(
                 kvp => kvp.Key,
                 kvp => new StatSummary
@@ -33,7 +27,6 @@ namespace EnkaDotNet.Utils.ZZZ
                 }
             );
         }
-
 
         public static bool IsDisplayPercentageStatForGroup(string statGroup)
         {
@@ -47,12 +40,11 @@ namespace EnkaDotNet.Utils.ZZZ
                 case "Ice DMG":
                 case "Electric DMG":
                 case "Ether DMG":
+                case "Energy Regen":
                     return true;
-                default:
-                    return false;
+                default: return false;
             }
         }
-
 
         public static bool IsDisplayPercentageStat(StatType statType)
         {
@@ -71,20 +63,11 @@ namespace EnkaDotNet.Utils.ZZZ
                 case "ATK%":
                 case "DEF%":
                 case "Impact%":
-                    return true;
                 case "Energy Regen":
-                case "HP":
-                case "ATK":
-                case "DEF":
-                case "Impact":
-                case "Anomaly Mastery":
-                case "Anomaly Proficiency":
-                case "PEN":
-                default:
-                    return false;
+                    return true;
+                default: return false;
             }
         }
-
 
         public static bool IsCalculationPercentageStat(StatType statType)
         {
@@ -115,14 +98,17 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.EtherDMGBonusBase:
                 case StatType.EtherDMGBonusFlat:
                     return true;
-                default:
-                    return false;
+                default: return false;
             }
         }
 
-
-        private static Dictionary<string, Dictionary<string, double>> CalculateTotalBreakdown(ZZZAgent agent, IZZZAssets assets)
+        internal static Dictionary<string, Dictionary<string, double>> CalculateTotalBreakdown(ZZZAgent agent, IZZZAssets assets)
         {
+            if (assets == null)
+            {
+                throw new ArgumentNullException(nameof(assets), "IZZZAssets instance cannot be null for calculating stats.");
+            }
+
             var breakdown = InitializeTotalsDictionary();
 
             foreach (var stat in agent.Stats)
@@ -220,6 +206,28 @@ namespace EnkaDotNet.Utils.ZZZ
 
             return breakdown;
         }
+
+        private static bool IsCritOrEnergyRegenRelated(StatType statType)
+        {
+            return statType == StatType.CritRateFlat || statType == StatType.CritDMGFlat ||
+                   statType == StatType.EnergyRegenFlat || statType == StatType.EnergyRegenPercent ||
+                   statType == StatType.CritRateBase || statType == StatType.CritDMGBase ||
+                   statType == StatType.EnergyRegenBase;
+        }
+
+        private static void AddCritOrEnergyContribution(Dictionary<string, Dictionary<string, double>> breakdown, string category, double value, string bucketKey)
+        {
+            if (string.IsNullOrEmpty(category) || !breakdown.ContainsKey(category)) return;
+            double valueToAdd = value;
+            if (value > 1.0 && (category == "CRIT Rate" || category == "CRIT DMG" || category == "Energy Regen"))
+            {
+                valueToAdd = value / 100.0;
+            }
+            if (!breakdown[category].ContainsKey(bucketKey)) breakdown[category][bucketKey] = 0;
+            breakdown[category][bucketKey] += valueToAdd;
+        }
+
+
         private static Dictionary<string, Dictionary<string, double>> InitializeTotalsDictionary()
         {
             var breakdown = new Dictionary<string, Dictionary<string, double>>();
@@ -228,26 +236,21 @@ namespace EnkaDotNet.Utils.ZZZ
                 "Anomaly Mastery", "Anomaly Proficiency", "Pen Ratio", "PEN",
                 "Physical DMG", "Fire DMG", "Ice DMG", "Electric DMG", "Ether DMG"
             };
-
             foreach (var group in statGroups)
             {
                 breakdown[group] = new Dictionary<string, double> {
                     { "Agent_Base", 0 }, { "Agent_Flat", 0 }, { "Agent_Percent", 0 },
-                    { "WeaponBase", 0 },
-                    { "Weapon_Flat", 0 }, { "Weapon_Percent", 0 },
+                    { "WeaponBase", 0 },{ "Weapon_Flat", 0 }, { "Weapon_Percent", 0 },
                     { "Discs_Flat", 0 }, { "Discs_Percent", 0 },
                     { "SetBonus_Flat", 0 }, { "SetBonus_Percent", 0 },
-                    { "Final", 0 }
+                    { "Final", 0 }, {"BaseDisplay", 0}, {"AddedDisplay", 0}
                 };
             }
-
             breakdown["CRIT Rate"]["Agent_Base"] = BASE_CRIT_RATE;
             breakdown["CRIT DMG"]["Agent_Base"] = BASE_CRIT_DMG;
             breakdown["Energy Regen"]["Agent_Base"] = BASE_ENERGY_REGEN;
-
             return breakdown;
         }
-
 
         private static void AddContribution(Dictionary<string, Dictionary<string, double>> breakdown, StatType statType, double value, string sourcePrefix)
         {
@@ -344,7 +347,6 @@ namespace EnkaDotNet.Utils.ZZZ
             breakdown[category][bucketKey] += valueToAdd;
         }
 
-
         private static void ApplySetBonuses(ZZZAgent agent, Dictionary<string, Dictionary<string, double>> breakdown, IZZZAssets assets)
         {
             var equippedSets = agent.EquippedDiscs
@@ -393,7 +395,6 @@ namespace EnkaDotNet.Utils.ZZZ
                 }
             }
         }
-
 
         private static void CalculateFinalValues(Dictionary<string, Dictionary<string, double>> breakdown)
         {
@@ -590,9 +591,9 @@ namespace EnkaDotNet.Utils.ZZZ
 
                         double elemTotalValue = elemDiscValue + elemSetValue + elemAgentWeaponValue + elemFlatBonuses;
 
-                        finalValue = Math.Floor(elemTotalValue);
+                        finalValue = elemTotalValue;
                         catBreakdown["BaseDisplay"] = 0;
-                        catBreakdown["AddedDisplay"] = finalValue;
+                        catBreakdown["AddedDisplay"] = elemTotalValue;
                         break;
 
                     default:
@@ -606,7 +607,6 @@ namespace EnkaDotNet.Utils.ZZZ
             }
         }
 
-
         public static string GetStatCategory(StatType statType)
         {
             switch (statType)
@@ -615,28 +615,21 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.ATKBase: case StatType.ATKPercent: case StatType.ATKFlat: return "ATK";
                 case StatType.DefBase: case StatType.DefPercent: case StatType.DefFlat: return "DEF";
                 case StatType.ImpactBase: case StatType.ImpactPercent: return "Impact";
-
                 case StatType.CritRateBase: case StatType.CritRateFlat: return "CRIT Rate";
                 case StatType.CritDMGBase: case StatType.CritDMGFlat: return "CRIT DMG";
-
                 case StatType.EnergyRegenBase: case StatType.EnergyRegenPercent: case StatType.EnergyRegenFlat: return "Energy Regen";
-
                 case StatType.AnomalyMasteryBase: case StatType.AnomalyMasteryPercent: case StatType.AnomalyMasteryFlat: return "Anomaly Mastery";
                 case StatType.AnomalyProficiencyBase: case StatType.AnomalyProficiencyFlat: return "Anomaly Proficiency";
-
                 case StatType.PenRatioBase: case StatType.PenRatioFlat: return "Pen Ratio";
                 case StatType.PENBase: case StatType.PENFlat: return "PEN";
-
                 case StatType.PhysicalDMGBonusBase: case StatType.PhysicalDMGBonusFlat: return "Physical DMG";
                 case StatType.FireDMGBonusBase: case StatType.FireDMGBonusFlat: return "Fire DMG";
                 case StatType.IceDMGBonusBase: case StatType.IceDMGBonusFlat: return "Ice DMG";
                 case StatType.ElectricDMGBonusBase: case StatType.ElectricDMGBonusFlat: return "Electric DMG";
                 case StatType.EtherDMGBonusBase: case StatType.EtherDMGBonusFlat: return "Ether DMG";
-
                 default: return "";
             }
         }
-
 
         public static string GetStatCategoryDisplay(StatType statType)
         {
@@ -646,37 +639,29 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.ATKBase: case StatType.ATKFlat: return "ATK";
                 case StatType.DefBase: case StatType.DefFlat: return "DEF";
                 case StatType.ImpactBase: return "Impact";
-
                 case StatType.HPPercent: return "HP%";
                 case StatType.ATKPercent: return "ATK%";
                 case StatType.DefPercent: return "DEF%";
                 case StatType.ImpactPercent: return "Impact%";
-
                 case StatType.CritRateBase: case StatType.CritRateFlat: return "CRIT Rate";
                 case StatType.CritDMGBase: case StatType.CritDMGFlat: return "CRIT DMG";
-
                 case StatType.EnergyRegenBase: case StatType.EnergyRegenPercent: case StatType.EnergyRegenFlat: return "Energy Regen";
-
                 case StatType.AnomalyMasteryBase: case StatType.AnomalyMasteryPercent: case StatType.AnomalyMasteryFlat: return "Anomaly Mastery";
                 case StatType.AnomalyProficiencyBase: case StatType.AnomalyProficiencyFlat: return "Anomaly Proficiency";
-
                 case StatType.PenRatioBase: case StatType.PenRatioFlat: return "Pen Ratio";
                 case StatType.PENBase: case StatType.PENFlat: return "PEN";
-
                 case StatType.PhysicalDMGBonusBase: case StatType.PhysicalDMGBonusFlat: return "Physical DMG";
                 case StatType.FireDMGBonusBase: case StatType.FireDMGBonusFlat: return "Fire DMG";
                 case StatType.IceDMGBonusBase: case StatType.IceDMGBonusFlat: return "Ice DMG";
                 case StatType.ElectricDMGBonusBase: case StatType.ElectricDMGBonusFlat: return "Electric DMG";
                 case StatType.EtherDMGBonusBase: case StatType.EtherDMGBonusFlat: return "Ether DMG";
-
                 default: return "";
             }
         }
 
-
         public static StatBreakdown GetStatSourceBreakdown(ZZZAgent agent, string statGroup)
         {
-            var breakdownData = CalculateTotalBreakdown(agent, assets);
+            var breakdownData = CalculateTotalBreakdown(agent, agent.Assets);
             if (!breakdownData.TryGetValue(statGroup, out var catBreakdown))
             {
                 return new StatBreakdown { StatGroup = statGroup };
@@ -728,7 +713,6 @@ namespace EnkaDotNet.Utils.ZZZ
         public static StatType GetStatTypeFromFriendlyName(string friendlyName, bool isPercentage, bool isEnergyRegen = false)
         {
             if (isEnergyRegen) return StatType.EnergyRegenPercent;
-
             switch (friendlyName)
             {
                 case "HP": return isPercentage ? StatType.HPPercent : StatType.HPFlat;
@@ -755,25 +739,21 @@ namespace EnkaDotNet.Utils.ZZZ
     {
         public string StatGroup { get; set; } = string.Empty;
         public bool IsPercentage { get; set; }
-
         public double BaseValue { get; set; }
         public double WeaponValue { get; set; }
         public double DiscsValue { get; set; }
         public double SetBonusValue { get; set; }
         public double TotalValue { get; set; }
-
         public double BaseContributionPercent { get; set; }
         public double WeaponContributionPercent { get; set; }
         public double DiscsContributionPercent { get; set; }
         public double SetBonusContributionPercent { get; set; }
-
-        public ZZZStatValue Base => new ZZZStatValue(BaseValue, IsPercentage);
-        public ZZZStatValue Weapon => new ZZZStatValue(WeaponValue, IsPercentage);
-        public ZZZStatValue Discs => new ZZZStatValue(DiscsValue, IsPercentage);
-        public ZZZStatValue SetBonus => new ZZZStatValue(SetBonusValue, IsPercentage);
-        public ZZZStatValue Total => new ZZZStatValue(TotalValue, IsPercentage);
-
+        public ZZZStatValue Base => new ZZZStatValue(BaseValue, IsPercentage, StatGroup == "Energy Regen");
+        public ZZZStatValue Weapon => new ZZZStatValue(WeaponValue, IsPercentage, StatGroup == "Energy Regen");
+        public ZZZStatValue Discs => new ZZZStatValue(DiscsValue, IsPercentage, StatGroup == "Energy Regen");
+        public ZZZStatValue SetBonus => new ZZZStatValue(SetBonusValue, IsPercentage, StatGroup == "Energy Regen");
+        public ZZZStatValue Total => new ZZZStatValue(TotalValue, IsPercentage, StatGroup == "Energy Regen");
         public double AddedValue => TotalValue - BaseValue;
-        public ZZZStatValue Added => new ZZZStatValue(AddedValue, IsPercentage);
+        public ZZZStatValue Added => new ZZZStatValue(AddedValue, IsPercentage, StatGroup == "Energy Regen");
     }
 }

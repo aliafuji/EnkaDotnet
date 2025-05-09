@@ -6,9 +6,12 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Assets.Genshin;
+using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Components.Genshin;
 using EnkaDotNet.Enums.Genshin;
 using EnkaDotNet.Models.Genshin;
+using EnkaDotNet.Utils.HSR;
+using Microsoft.Extensions.Options;
 
 namespace EnkaDotNet.Utils.Genshin
 {
@@ -21,6 +24,12 @@ namespace EnkaDotNet.Utils.Genshin
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
             _options = options ?? throw new ArgumentNullException(nameof(options));
+        }
+
+        public DataMapper(IGenshinAssets assets, IOptions<EnkaClientOptions> options)
+        {
+            _assets = assets ?? throw new ArgumentNullException(nameof(assets));
+            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         }
 
         public PlayerInfo MapPlayerInfo(PlayerInfoModel model)
