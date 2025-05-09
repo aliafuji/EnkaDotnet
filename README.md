@@ -11,8 +11,8 @@ Enka.DotNet is a C# wrapper for accessing and processing character data from the
       * Access Genshin Impact player profile information, including namecards and achievements.
       * Retrieve comprehensive Zenless Zone Zero agent details, including stats, W-Engines (weapons), and Drive Discs.
       * View detailed Honkai: Star Rail character stats, Relics, Light Cones, Traces (Skill Trees), and Eidolons.
-  * **Multi-Game Support:** Seamlessly switch between Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero by configuring the client.
-  * **Strongly-Typed Models:** Provides clear and easy to use C# models for all game entities.
+  * **Multi Game Support:** Switch between Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero by configuring the client.
+  * **Strongly Typed Models:** Provides clear and easy to use C# models for all game entities.
   * **Flexible Client Instantiation:**
       * **Non DI:** Easy setup using the `EnkaClient.CreateAsync()` factory method.
       * **DI:** Full support for .NET Dependency Injection via `AddEnkaNetClient()` for integration into ASP.NET Core, Worker Services, etc.
