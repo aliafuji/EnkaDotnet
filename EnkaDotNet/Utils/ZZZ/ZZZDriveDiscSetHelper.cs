@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
@@ -14,11 +10,17 @@ namespace EnkaDotNet.Utils.ZZZ
     public static class ZZZDriveDiscSetHelper
     {
         private const int MIN_SET_PIECES = 2;
-        private static readonly IZZZAssets assets = new ZZZAssets();
 
         public static List<DriveDiscSetInfo> GetEquippedDiscSets(this ZZZAgent agent)
         {
             var result = new List<DriveDiscSetInfo>();
+            IZZZAssets assets = agent.Assets;
+
+            if (assets == null)
+            {
+                Console.Error.WriteLine("Warning: IZZZAssets instance is null in ZZZDriveDiscSetHelper.GetEquippedDiscSets. Cannot determine set bonuses.");
+                return result;
+            }
 
             if (agent.EquippedDiscs.Count < MIN_SET_PIECES)
                 return result;
@@ -45,7 +47,6 @@ namespace EnkaDotNet.Utils.ZZZ
                 if (suitInfo?.SetBonusProps != null && suitInfo.SetBonusProps.Any())
                 {
                     var bonusDescriptions = new List<string>();
-
                     foreach (var prop in suitInfo.SetBonusProps)
                     {
                         string formattedValue = string.Empty;
@@ -75,30 +76,26 @@ namespace EnkaDotNet.Utils.ZZZ
                             string valueDisplay;
                             if (ZZZStatsHelpers.IsDisplayPercentageStat(statType))
                             {
-                                valueDisplay = $"{(prop.Value / 100.0):F1}%"; // Show decimal for percentages
+                                valueDisplay = $"{(prop.Value / 100.0):F1}%";
                             }
                             else
                             {
-                                valueDisplay = $"{Math.Floor((double)prop.Value)}"; // Floor for non-percentages
+                                valueDisplay = $"{Math.Floor((double)prop.Value)}";
                             }
-
                             return new BonusStats
                             {
                                 StatType = statType,
                                 Value = valueDisplay,
                                 Description = setInfo.BonusDescription
                             };
-
                         }).ToList();
                 }
                 else
                 {
                     setInfo.BonusDescription = "No set bonus information available";
                 }
-
                 result.Add(setInfo);
             }
-
             return result;
         }
     }

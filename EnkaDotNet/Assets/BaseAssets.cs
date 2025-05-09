@@ -1,45 +1,112 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Enums;
 using EnkaDotNet.Utils;
-using EnkaDotNet.Utils.Common;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace EnkaDotNet.Assets
 {
     public abstract class BaseAssets : IAssets
     {
-        private static readonly HttpClient _httpClient = new HttpClient();
+        private readonly HttpClient _httpClient;
         protected readonly Dictionary<string, object> _assetCache = new Dictionary<string, object>();
+        private static readonly SemaphoreSlim _initializationSemaphore = new SemaphoreSlim(1, 1);
         protected Dictionary<string, string> _textMap;
+        protected readonly ILogger _logger;
+        private volatile bool _isInitialized = false;
 
         public GameType GameType { get; }
         public string Language { get; }
 
-        protected BaseAssets(string language, GameType gameType)
+        protected BaseAssets(string language, GameType gameType, HttpClient httpClient, ILogger logger)
         {
             Language = language ?? throw new ArgumentNullException(nameof(language));
             GameType = gameType;
-
-            LoadTextMap(language).GetAwaiter().GetResult();
-            LoadAssets().GetAwaiter().GetResult();
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _logger = logger ?? NullLogger.Instance;
         }
 
-        protected abstract Dictionary<string, string> GetAssetUrls();
-        protected abstract Task LoadAssets();
+        public async Task EnsureInitializedAsync()
+        {
+            if (_isInitialized) return;
 
-        public string GetText(string hash) => hash != null && _textMap != null && _textMap.TryGetValue(hash, out var text) ? text ?? string.Empty : hash ?? string.Empty;
+            await _initializationSemaphore.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (_isInitialized) return;
+
+                await LoadTextMapInternalAsync(Language).ConfigureAwait(false);
+                await LoadAssetsInternalAsync().ConfigureAwait(false);
+                _isInitialized = true;
+            }
+            finally
+            {
+                _initializationSemaphore.Release();
+            }
+        }
+
+        protected abstract Task LoadAssetsInternalAsync();
+
+        protected virtual async Task LoadTextMapInternalAsync(string language)
+        {
+            try
+            {
+                _textMap = new Dictionary<string, string>();
+                var allLanguageMaps = await FetchAndDeserializeAssetAsync<Dictionary<string, Dictionary<string, string>>>("text_map.json").ConfigureAwait(false);
+
+                if (allLanguageMaps.TryGetValue(language, out var languageSpecificMap))
+                {
+                    _textMap = languageSpecificMap;
+                }
+                else
+                {
+                    _logger.LogWarning("Language code '{Language}' not found in the TextMap file for {GameType}. Available: {AvailableLanguages}", language, this.GameType, string.Join(", ", allLanguageMaps.Keys));
+                    string fallbackLanguage = "en";
+                    if (this.GameType == GameType.ZZZ && language != "en" && !allLanguageMaps.ContainsKey("en"))
+                    {
+                        fallbackLanguage = System.Linq.Enumerable.FirstOrDefault(allLanguageMaps.Keys);
+                        if (fallbackLanguage == null) throw new InvalidOperationException($"No languages found in ZZZ TextMap data.");
+                    }
+
+                    if (allLanguageMaps.TryGetValue(fallbackLanguage, out var fallbackMap))
+                    {
+                        _logger.LogInformation("Falling back to '{FallbackLanguage}' language for {GameType}.", fallbackLanguage, this.GameType);
+                        _textMap = fallbackMap;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Fallback language '{fallbackLanguage}' also not found for {GameType}.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading TextMap for {GameType}.", this.GameType);
+                throw new InvalidOperationException($"Failed to load essential TextMap for {this.GameType}", ex);
+            }
+        }
+
+        public string GetText(string hash)
+        {
+            if (!_isInitialized)
+            {
+                _logger.LogError("GetText called before assets were initialized. Call EnsureInitializedAsync() first. Returning hash or empty string as fallback.");
+                return hash ?? string.Empty;
+            }
+            return hash != null && _textMap != null && _textMap.TryGetValue(hash, out var text) ? text ?? string.Empty : hash ?? string.Empty;
+        }
 
         protected async Task<string> FetchAssetAsync(string assetKey)
         {
-            var assetUrls = GetAssetUrls();
-            if (!assetUrls.TryGetValue(assetKey, out var url))
+            var assetFileUrls = GetAssetFileUrls();
+            if (!assetFileUrls.TryGetValue(assetKey, out var url))
             {
+                _logger.LogError("No URL defined for asset '{AssetKey}' in game type {GameType}.", assetKey, GameType);
                 throw new InvalidOperationException($"No URL defined for asset '{assetKey}' in game type {GameType}.");
             }
 
@@ -48,30 +115,19 @@ namespace EnkaDotNet.Assets
                 using (var request = new HttpRequestMessage(HttpMethod.Get, url))
                 {
                     request.Headers.UserAgent.ParseAdd(Constants.DefaultUserAgent);
-
-                    HttpResponseMessage response = await _httpClient.SendAsync(request);
-
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        throw new HttpRequestException($"Failed to fetch '{assetKey}': HTTP {(int)response.StatusCode} ({response.ReasonPhrase})");
-                    }
-
-                    string content = await response.Content.ReadAsStringAsync();
-                    return content;
+                    HttpResponseMessage response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+                    response.EnsureSuccessStatusCode();
+                    return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 }
             }
             catch (HttpRequestException ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"[Assets] FAILED to fetch '{assetKey}' (Network Error): {ex.Message}");
-                Console.ResetColor();
+                _logger.LogError(ex, "FAILED to fetch '{AssetKey}' (Network Error). URL: {Url}", assetKey, url);
                 throw;
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"[Assets] Unexpected error fetching '{assetKey}': {ex.Message}");
-                Console.ResetColor();
+                _logger.LogError(ex, "Unexpected error fetching '{AssetKey}'. URL: {Url}", assetKey, url);
                 throw;
             }
         }
@@ -83,82 +139,27 @@ namespace EnkaDotNet.Assets
                 return typedAsset;
             }
 
-            string jsonContent = await FetchAssetAsync(assetKey);
-
+            string jsonContent = await FetchAssetAsync(assetKey).ConfigureAwait(false);
             try
             {
                 var result = JsonConvert.DeserializeObject<T>(jsonContent);
-
                 if (result == null)
                 {
                     throw new JsonException($"Failed to deserialize {assetKey} - result was null");
                 }
-
                 _assetCache[assetKey] = result;
                 return result;
             }
             catch (JsonException ex)
             {
-                Console.WriteLine($"[Assets] Error parsing {assetKey} JSON: {ex.Message}");
+                _logger.LogError(ex, "Error parsing {AssetKey} JSON.", assetKey);
                 throw;
             }
         }
 
-
-        protected async Task LoadTextMap(string language)
+        protected virtual IReadOnlyDictionary<string, string> GetAssetFileUrls()
         {
-            try
-            {
-                _textMap = new Dictionary<string, string>();
-
-                var allLanguageMaps = await FetchAndDeserializeAssetAsync<Dictionary<string, Dictionary<string, string>>>("text_map.json");
-
-                if (allLanguageMaps.TryGetValue(language, out var languageSpecificMap))
-                {
-                    _textMap = languageSpecificMap;
-                }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"[Assets] Error: Language code '{language}' not found in the TextMap file.");
-                    Console.ResetColor();
-                    Console.WriteLine($"[Assets] Available languages in file: {string.Join(", ", allLanguageMaps.Keys)}");
-
-                    if (language != "en" && allLanguageMaps.TryGetValue("en", out var englishMap))
-                    {
-                        Console.WriteLine($"[Assets] Falling back to English language.");
-                        _textMap = englishMap;
-                    }
-                    else
-                    {
-                        var firstLang = allLanguageMaps.Keys.FirstOrDefault();
-                        if (firstLang != null && allLanguageMaps.TryGetValue(firstLang, out var firstLangMap))
-                        {
-                            Console.WriteLine($"[Assets] Falling back to '{firstLang}' language.");
-                            _textMap = firstLangMap;
-                        }
-                        else
-                        {
-                            throw new InvalidOperationException("No languages found in the TextMap data.");
-                        }
-                    }
-                }
-            }
-            catch (HttpRequestException ex)
-            {
-                Console.WriteLine($"[Assets] Error fetching TextMap: {ex.Message}");
-                throw new InvalidOperationException("Failed to fetch essential TextMap", ex);
-            }
-            catch (JsonException ex)
-            {
-                Console.WriteLine($"[Assets] Error parsing TextMap JSON: {ex.Message}");
-                throw new InvalidOperationException("Failed to parse essential TextMap JSON structure", ex);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[Assets] Unexpected error loading TextMap: {ex.Message}");
-                throw new InvalidOperationException("Failed to load essential TextMap", ex);
-            }
+            return Constants.GetGameAssetFileUrls(this.GameType);
         }
     }
 }
