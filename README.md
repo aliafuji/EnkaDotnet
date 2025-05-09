@@ -17,8 +17,8 @@ Enka.DotNet is a C# wrapper for accessing and processing character data from the
       * **Direct Instantiation:** Easy setup using the `EnkaClient.CreateAsync()` factory method.
       * **Dependency Injection:** Full support for .NET Dependency Injection via `AddEnkaNetClient()` for integration into ASP.NET Core, Worker Services, etc.
   * **Asset Management:** Handles fetching and caching of necessary game assets (text maps, item details).
-  * **Configurable Caching:** Built-in support for caching API responses with options to control duration, bypass, and clear the cache. [cite: 1, 2, 3, 4]
-  * **Customizable Options:** Control aspects like language, user agent, and API request behavior. [cite: 3]
+  * **Configurable Caching:** Built-in support for caching API responses with options to control duration, bypass, and clear the cache.
+  * **Customizable Options:** Control aspects like language, user agent, and API request behavior.
 
 ## Supported Games
 
@@ -48,9 +48,9 @@ Enka.DotNet supports both direct instantiation (Non DI) for simpler applications
 
 ### Key Concepts:
 
-  * **`EnkaClientOptions`**: Use this class to configure the `GameType` (Genshin, HSR, ZZZ), `Language`, caching behavior, and other settings. [cite: 3]
-  * **Direct Instantiation Usage**: Instantiate the client using the static factory method `await EnkaClient.CreateAsync(options)`. This method handles asynchronous initialization of game assets. [cite: 4]
-  * **Dependency Injection Usage**: Register the client in your service collection using the `services.AddEnkaNetClient(options => { ... });` extension method. Then, inject `IEnkaClient` into your services. [cite: 5]
+  * **`EnkaClientOptions`**: Use this class to configure the `GameType` (Genshin, HSR, ZZZ), `Language`, caching behavior, and other settings.
+  * **Direct Instantiation Usage**: Instantiate the client using the static factory method `await EnkaClient.CreateAsync(options)`. This method handles asynchronous initialization of game assets.
+  * **Dependency Injection Usage**: Register the client in your service collection using the `services.AddEnkaNetClient(options => { ... });` extension method. Then, inject `IEnkaClient` into your services.
 
 ### Detailed Code Examples
 
@@ -65,9 +65,9 @@ These examples cover fetching player profiles, character/agent details, equipmen
 
 ## Controlling the Cache
 
-Enka.DotNet provides several ways to control caching behavior for API responses. [cite: 1, 2, 3, 4]
+Enka.DotNet provides several ways to control caching behavior for API responses.
 
-### 1\. Configuration via `EnkaClientOptions` [cite: 3]
+### 1\. Configuration via `EnkaClientOptions`
 
 When creating an `EnkaClient` instance (either directly or via DI configuration), you can set the following options:
 
@@ -102,7 +102,7 @@ builder.Services.AddEnkaNetClient(options =>
 
 ### 2\. Runtime Cache Control via `IEnkaClient`
 
-#### Bypassing Cache for Specific Requests [cite: 2, 4]
+#### Bypassing Cache for Specific Requests
 
 All data fetching methods on `IEnkaClient` (e.g., `GetUserProfileAsync`, `GetHSRPlayerInfoAsync`, `GetZZZAgentsAsync`) accept an optional `bypassCache` boolean parameter. Setting this to `true` for a specific call will force the client to fetch fresh data from the API, ignoring any existing cached response for that particular UID.
 
@@ -119,7 +119,7 @@ var (playerInfoCached, charactersCached) = await client.GetUserProfileAsync(uid)
 var (playerInfoFresh, charactersFresh) = await client.GetUserProfileAsync(uid, bypassCache: true);
 ```
 
-#### Clearing the Entire Cache [cite: 2, 4]
+#### Clearing the Entire Cache
 
 You can programmatically clear all cached responses held by an `EnkaClient` instance.
 
@@ -131,7 +131,7 @@ client.ClearCache();
 Console.WriteLine("All Enka.DotNet cache entries have been cleared.");
 ```
 
-#### Getting Cache Statistics [cite: 2, 4]
+#### Getting Cache Statistics
 
 You can retrieve statistics about the current state of the cache.
 
