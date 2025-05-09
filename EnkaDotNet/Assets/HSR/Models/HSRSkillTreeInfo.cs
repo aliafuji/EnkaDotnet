@@ -1,41 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.HSR.Models
 {
     public class HSRSkillTreeData
     {
-        [JsonProperty("0")]
+        [JsonPropertyName("0")]
         public List<string> BasicSkills { get; set; }
 
-        [JsonProperty("1")]
+        [JsonPropertyName("1")]
         public List<List<string>> MinorTraces { get; set; }
 
-        [JsonProperty("2")]
+        [JsonPropertyName("2")]
         public List<List<string>> MajorTraces { get; set; }
     }
 
     public class HSRSkillTreePointInfo
     {
-        [JsonProperty("icon")]
+        [JsonPropertyName("icon")]
         public string Icon { get; set; }
 
-        [JsonProperty("pointType")]
+        [JsonPropertyName("pointType")]
         public int PointType { get; set; }
 
-        [JsonProperty("anchor")]
+        [JsonPropertyName("anchor")]
         public string Anchor { get; set; }
 
-        [JsonProperty("maxLevel")]
+        [JsonPropertyName("maxLevel")]
         public int MaxLevel { get; set; }
 
-        [JsonProperty("skillIds")]
+        [JsonPropertyName("skillIds")]
         public List<int> SkillIds { get; set; }
     }
 }

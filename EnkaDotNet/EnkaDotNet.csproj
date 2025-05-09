@@ -16,7 +16,7 @@
        <RepositoryUrl>https://github.com/aliafuji/EnkaDotnet</RepositoryUrl>
        <PackageLicenseFile>LICENSE</PackageLicenseFile>
        <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-       <Version>1.4.0</Version>
+       <Version>1.4.1</Version>
        <ApplicationIcon>image.ico</ApplicationIcon>
        <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
        <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
@@ -58,6 +58,5 @@
    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.4" />
    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.4" />
    <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.4" />
-   <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
  </ItemGroup>
 </Project>

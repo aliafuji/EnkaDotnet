@@ -1,80 +1,74 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Models.HSR
 {
     public class HSRApiResponse
     {
-        [JsonProperty("detailInfo")]
+        [JsonPropertyName("detailInfo")]
         public HSRDetailInfo DetailInfo { get; set; }
 
-        [JsonProperty("ttl")]
+        [JsonPropertyName("ttl")]
         public int Ttl { get; set; }
 
-        [JsonProperty("uid")]
+        [JsonPropertyName("uid")]
         public string Uid { get; set; }
     }
 
     public class HSRDetailInfo
     {
-        [JsonProperty("worldLevel")]
+        [JsonPropertyName("worldLevel")]
         public int WorldLevel { get; set; }
 
-        [JsonProperty("headIcon")]
+        [JsonPropertyName("headIcon")]
         public int HeadIcon { get; set; }
 
-        [JsonProperty("signature")]
+        [JsonPropertyName("signature")]
         public string Signature { get; set; }
 
-        [JsonProperty("platform")]
+        [JsonPropertyName("platform")]
         public string Platform { get; set; }
 
-        [JsonProperty("isDisplayAvatar")]
+        [JsonPropertyName("isDisplayAvatar")]
         public bool IsDisplayAvatar { get; set; }
 
-        [JsonProperty("friendCount")]
+        [JsonPropertyName("friendCount")]
         public int FriendCount { get; set; }
 
-        [JsonProperty("avatarDetailList")]
+        [JsonPropertyName("avatarDetailList")]
         public List<HSRAvatarDetail> AvatarDetailList { get; set; }
 
-        [JsonProperty("uid")]
+        [JsonPropertyName("uid")]
         public long Uid { get; set; }
 
-        [JsonProperty("level")]
+        [JsonPropertyName("level")]
         public int Level { get; set; }
 
-        [JsonProperty("nickname")]
+        [JsonPropertyName("nickname")]
         public string Nickname { get; set; }
 
-        [JsonProperty("recordInfo")]
+        [JsonPropertyName("recordInfo")]
         public HSRRecordInfoModel RecordInfo { get; set; }
     }
 
     public class HSRRecordInfoModel
     {
-        [JsonProperty("achievementCount")]
+        [JsonPropertyName("achievementCount")]
         public int AchievementCount { get; set; }
 
-        [JsonProperty("avatarCount")]
+        [JsonPropertyName("avatarCount")]
         public int AvatarCount { get; set; }
 
-        [JsonProperty("equipmentCount")]
+        [JsonPropertyName("equipmentCount")]
         public int EquipmentCount { get; set; }
 
-        [JsonProperty("relicCount")]
+        [JsonPropertyName("relicCount")]
         public int RelicCount { get; set; }
 
-        [JsonProperty("challengeInfo")]
+        [JsonPropertyName("challengeInfo")]
         public Dictionary<string, object> ChallengeInfo { get; set; }
 
-        [JsonProperty("maxRogueChallengeScore")]
+        [JsonPropertyName("maxRogueChallengeScore")]
         public int MaxRogueChallengeScore { get; set; }
     }
 }

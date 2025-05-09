@@ -1,20 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace EnkaDotNet.Assets.Genshin.Models
 {
     public class ArtifactSetAssetInfo
     {
-        [JsonProperty("NameTextMapHash")]
+        [JsonPropertyName("NameTextMapHash")]
         public string NameTextMapHash { get; set; }
 
-        [JsonProperty("SetNeedNum")]
+        [JsonPropertyName("SetNeedNum")]
         public List<int> SetNeedNum { get; set; }
     }
 }
