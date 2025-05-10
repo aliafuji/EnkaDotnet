@@ -6,7 +6,6 @@ using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Components.HSR.EnkaDotNet.Enums.HSR;
-using Microsoft.Extensions.Options;
 
 namespace EnkaDotNet.Utils.HSR
 {
@@ -16,21 +15,12 @@ namespace EnkaDotNet.Utils.HSR
         private readonly HSRStatCalculator _statCalculator;
         private readonly EnkaClientOptions _options;
 
-        public HSRDataMapper(IHSRAssets assets, IOptions<EnkaClientOptions> options)
-        {
-            _assets = assets ?? throw new ArgumentNullException(nameof(assets));
-            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-            _statCalculator = new HSRStatCalculator(_assets, _options);
-        }
-
         public HSRDataMapper(IHSRAssets assets, EnkaClientOptions options)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _statCalculator = new HSRStatCalculator(_assets, _options);
         }
-
-
         public HSRPlayerInfo MapPlayerInfo(HSRApiResponse response)
         {
             if (response == null) throw new ArgumentNullException(nameof(response));
@@ -137,6 +127,7 @@ namespace EnkaDotNet.Utils.HSR
             if (avatarDetail.Equipment != null)
             {
                 character.Equipment = MapLightCone(avatarDetail.Equipment);
+                if (character.Equipment != null) character.Equipment.Options = this._options;
             }
 
             if (avatarDetail.SkillTreeList != null)
@@ -199,12 +190,22 @@ namespace EnkaDotNet.Utils.HSR
                 {
                     if (relicModel.Id > 0)
                     {
-                        character.RelicList.Add(MapRelicModelToRelic(relicModel));
+                        var relic = MapRelicModelToRelic(relicModel);
+                        relic.Options = this._options;
+                        if (relic.MainStat != null) relic.MainStat.Options = this._options;
+                        foreach (var subStat in relic.SubStats) subStat.Options = this._options;
+                        character.RelicList.Add(relic);
                     }
                 }
             }
 
             character.Stats = _statCalculator.CalculateCharacterStats(character);
+
+            foreach (var statVal in character.Stats.Values)
+            {
+                if (statVal != null) statVal.Options = this._options;
+            }
+
 
             return character;
         }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Assets.ZZZ.Models;
 using EnkaDotNet.Components.ZZZ;
@@ -10,7 +11,8 @@ namespace EnkaDotNet.Utils.ZZZ
 {
     public class ZZZStatsCalculator
     {
-        private readonly IZZZAssets _assets;
+        private readonly Task<IZZZAssets> _assetsTask;
+        private IZZZAssets _assets;
         private Dictionary<string, object> _calculationCache = new Dictionary<string, object>();
 
         public ZZZStatsCalculator(IZZZAssets assets)

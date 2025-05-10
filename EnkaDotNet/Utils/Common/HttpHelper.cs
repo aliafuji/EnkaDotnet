@@ -10,11 +10,11 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using EnkaDotNet.Models.Genshin;
-using EnkaDotNet.Models.HSR;
-using EnkaDotNet.Models.ZZZ;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Collections.Generic;
+using Polly;
+using Polly.Retry;
 
 namespace EnkaDotNet.Utils.Common
 {
@@ -26,6 +26,7 @@ namespace EnkaDotNet.Utils.Common
         private readonly ILogger<HttpHelper> _logger;
         private bool _disposed = false;
         private readonly ConcurrentDictionary<string, bool> _trackedCacheKeys;
+        private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
         private static readonly Random _jitterer = new Random();
 
         public HttpHelper(
@@ -39,61 +40,30 @@ namespace EnkaDotNet.Utils.Common
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
             _logger = logger ?? NullLogger<HttpHelper>.Instance;
             _trackedCacheKeys = new ConcurrentDictionary<string, bool>();
-        }
 
-        private bool IsEmptyOrInvalidProfile<T>(string jsonString) where T : class
-        {
-            if (string.IsNullOrWhiteSpace(jsonString))
-            {
-                return true;
-            }
-
-            if (typeof(T) == typeof(ApiResponse))
-            {
-                bool hasPlayerInfoBlock = jsonString.Contains("\"playerInfo\":{");
-                bool lacksNickname = !jsonString.Contains("\"nickname\":");
-                bool hasMinimalPlayerInfo = hasPlayerInfoBlock && lacksNickname;
-
-                bool hasNoAvatarList = !jsonString.Contains("\"avatarInfoList\":") || jsonString.Contains("\"avatarInfoList\":[]");
-
-                if (hasMinimalPlayerInfo && hasNoAvatarList)
-                {
-                    _logger.LogWarning("Genshin profile appears empty/invalid based on content: {JsonSnippet}", jsonString.Substring(0, Math.Min(jsonString.Length, 200)));
-                    return true;
-                }
-            }
-            else if (typeof(T) == typeof(HSRApiResponse))
-            {
-                bool hasDetailInfoBlock = jsonString.Contains("\"detailInfo\":{");
-                bool lacksNicknameInDetailInfo = hasDetailInfoBlock && !jsonString.Contains("\"nickname\":");
-
-                bool hasNoAvatarDetailList = !jsonString.Contains("\"avatarDetailList\":") || jsonString.Contains("\"avatarDetailList\":[]");
-
-                if (hasDetailInfoBlock && lacksNicknameInDetailInfo && hasNoAvatarDetailList)
-                {
-                    _logger.LogWarning("HSR profile appears empty/invalid based on content: {JsonSnippet}", jsonString.Substring(0, Math.Min(jsonString.Length, 200)));
-                    return true;
-                }
-                if (!hasDetailInfoBlock && !jsonString.Contains("\"detailInfo\":null"))
-                {
-                    if (jsonString == "{}") return true;
-                }
-            }
-            else if (typeof(T) == typeof(ZZZApiResponse))
-            {
-                bool hasPlayerInfoBlock = jsonString.Contains("\"PlayerInfo\":{");
-                bool lacksProfileDetailNickname = hasPlayerInfoBlock && !jsonString.Contains("\"Nickname\":\"");
-
-                bool hasNoAvatarList = !jsonString.Contains("\"AvatarList\":") || jsonString.Contains("\"AvatarList\":[]");
-
-                if (hasPlayerInfoBlock && lacksProfileDetailNickname && hasNoAvatarList)
-                {
-                    _logger.LogWarning("ZZZ profile appears empty/invalid based on content: {JsonSnippet}", jsonString.Substring(0, Math.Min(jsonString.Length, 200)));
-                    return true;
-                }
-            }
-
-            return false;
+            _retryPolicy = Policy
+                .Handle<HttpRequestException>()
+                .OrResult<HttpResponseMessage>(r => _options.RetryOnStatusCodes.Contains(r.StatusCode) && r.StatusCode != (HttpStatusCode)429)
+                .WaitAndRetryAsync(
+                    _options.MaxRetries,
+                    retryAttempt =>
+                    {
+                        TimeSpan delay = TimeSpan.FromMilliseconds(_options.RetryDelayMs);
+                        if (_options.UseExponentialBackoff)
+                        {
+                            delay = TimeSpan.FromMilliseconds(Math.Min(Math.Pow(2, retryAttempt) * _options.RetryDelayMs, _options.MaxRetryDelayMs));
+                        }
+                        delay += TimeSpan.FromMilliseconds(_jitterer.Next(0, (int)(delay.TotalMilliseconds * 0.2)));
+                        return delay;
+                    },
+                    (outcome, timespan, retryAttempt, context) =>
+                    {
+                        string urlForLog = context.TryGetValue("relativeUrl", out var urlObj) && urlObj is string url ? url : "Unknown URL";
+                        _logger.LogWarning(outcome.Exception,
+                            "Request to {Url} failed. Delaying for {Timespan}, then making retry {RetryAttempt}/{MaxRetries}. Status: {StatusCode}",
+                            urlForLog, timespan, retryAttempt, _options.MaxRetries, outcome.Result?.StatusCode);
+                    }
+                );
         }
 
         public async Task<T> Get<T>(string relativeUrl, bool bypassCache = false, CancellationToken cancellationToken = default) where T : class
@@ -103,180 +73,146 @@ namespace EnkaDotNet.Utils.Common
             string cacheKey = relativeUrl.ToLowerInvariant();
             CacheEntry cachedEntry = null;
 
-            if (_options.EnableCaching && !bypassCache && _memoryCache.TryGetValue(cacheKey, out cachedEntry) && cachedEntry != null)
+            if (_options.EnableCaching && !bypassCache)
             {
-                _logger.Log(LogLevel.Trace, "Cache hit for {Url}", relativeUrl);
-                _trackedCacheKeys.TryAdd(cacheKey, true);
-            }
-            else
-            {
-                cachedEntry = null;
-            }
-
-            int attempts = 0;
-            while (true)
-            {
-                attempts++;
-                HttpResponseMessage response = null;
-                try
+                if (_memoryCache.TryGetValue(cacheKey, out cachedEntry) && cachedEntry != null)
                 {
-                    using (var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl))
-                    {
-                        if (_options.EnableCaching && !bypassCache && cachedEntry != null && !string.IsNullOrEmpty(cachedEntry.ETag))
-                        {
-                            request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(cachedEntry.ETag));
-                        }
-
-                        _logger.Log(LogLevel.Trace, "Attempt {Attempt}: Sending request to {BaseAddress}{Url}", attempts, _httpClient.BaseAddress, relativeUrl);
-                        response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-
-                        if (response.StatusCode == HttpStatusCode.NotModified &&
-                            _options.EnableCaching && !bypassCache && cachedEntry != null)
-                        {
-                            _logger.Log(LogLevel.Trace, "304 Not Modified for {Url}, using cached data and updating expiration.", relativeUrl);
-                            var newExpiration = CalculateExpiration(response, _options.CacheDurationMinutes);
-                            cachedEntry.Expiration = newExpiration.UtcDateTime;
-                            var updatedEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(newExpiration);
-                            _memoryCache.Set(cacheKey, cachedEntry, updatedEntryOptions);
-                            _trackedCacheKeys.TryAdd(cacheKey, true);
-                            return JsonSerializer.Deserialize<T>(cachedEntry.JsonResponse) ?? throw new EnkaNetworkException($"Failed to deserialize cached JSON response from {relativeUrl} after 304 (result was null)");
-                        }
-
-                        if (_options.RetryOnStatusCodes.Contains(response.StatusCode) && attempts <= _options.MaxRetries)
-                        {
-                            throw new HttpRequestException($"Response status code {response.StatusCode} indicates server error, triggering retry.");
-                        }
-
-                        if (response.StatusCode == HttpStatusCode.NotFound)
-                        {
-                            int uid = ExtractUidFromUrl(relativeUrl);
-                            throw new PlayerNotFoundException(uid, $"API returned 404 Not Found for URL: {relativeUrl}");
-                        }
-                        if (response.StatusCode == (HttpStatusCode)429)
-                        {
-                            RetryConditionHeaderValue retryAfter = response.Headers.RetryAfter;
-                            _logger.LogWarning("API returned 429 Too Many Requests for URL: {Url}. Retry-After: {RetryAfter}", relativeUrl, retryAfter);
-                            throw new RateLimitException($"API rate limit exceeded for URL: {relativeUrl}. Please try again later.", retryAfter);
-                        }
-                        if (response.StatusCode == HttpStatusCode.InternalServerError && !_options.RetryOnStatusCodes.Contains(HttpStatusCode.InternalServerError))
-                        {
-                            string errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new EnkaNetworkException($"API returned 500 Internal Server Error for URL: {relativeUrl}. Response: {errorBody}");
-                        }
-                        if (response.StatusCode == HttpStatusCode.Forbidden)
-                        {
-                            int uid = ExtractUidFromUrl(relativeUrl);
-                            throw new ProfilePrivateException(uid, $"API returned 403 Forbidden for URL: {relativeUrl}. Profile may be private or API access restricted.");
-                        }
-
-                        response.EnsureSuccessStatusCode();
-
-                        string jsonString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                        _logger.Log(LogLevel.Trace, "Received {ByteCount} bytes from {Url}", jsonString.Length, relativeUrl);
-
-                        if (IsEmptyOrInvalidProfile<T>(jsonString))
-                        {
-                            int uid = ExtractUidFromUrl(relativeUrl);
-                            throw new PlayerNotFoundException(uid, $"Profile for UID {uid} appears to be invalid or empty based on content analysis, despite a successful HTTP status.");
-                        }
-
-                        if (response.IsSuccessStatusCode && _options.EnableCaching)
-                        {
-                            string etag = response.Headers.ETag?.Tag;
-                            DateTimeOffset expiration = CalculateExpiration(response, _options.CacheDurationMinutes);
-                            var newCacheEntry = new CacheEntry
-                            {
-                                JsonResponse = jsonString,
-                                ETag = etag,
-                                Expiration = expiration.UtcDateTime
-                            };
-                            var entryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(expiration);
-                            _memoryCache.Set(cacheKey, newCacheEntry, entryOptions);
-                            _trackedCacheKeys.TryAdd(cacheKey, true);
-                            _logger.Log(LogLevel.Trace, "Stored response in cache for {Url} with ETag: {ETag} and expiration: {Expiration}", relativeUrl, etag, expiration);
-                        }
-
-                        return JsonSerializer.Deserialize<T>(jsonString) ?? throw new EnkaNetworkException($"Failed to deserialize JSON response from {relativeUrl}. Result was null.");
-                    }
+                    _logger.Log(LogLevel.Trace, "Cache hit for {Url}", relativeUrl);
+                    _trackedCacheKeys.TryAdd(cacheKey, true);
                 }
-                catch (RateLimitException) { throw; }
-                catch (ProfilePrivateException) { throw; }
-                catch (PlayerNotFoundException) { throw; }
-                catch (HttpRequestException ex) when (attempts <= _options.MaxRetries)
+                else
                 {
-                    _logger.LogWarning(ex, "Request failed (attempt {Attempt}/{MaxAttempts}): {ErrorMessage} for URL: {Url}. Status Code: {StatusCode}", attempts, _options.MaxRetries + 1, ex.Message, relativeUrl, response?.StatusCode);
-
-                    int delayMs = _options.RetryDelayMs;
-                    if (_options.UseExponentialBackoff)
-                    {
-                        delayMs = (int)Math.Min(_options.RetryDelayMs * Math.Pow(2, attempts - 1), _options.MaxRetryDelayMs);
-                        delayMs += _jitterer.Next(0, (int)(delayMs * 0.1));
-                    }
-
-                    await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
                     cachedEntry = null;
-                    continue;
-                }
-                catch (HttpRequestException ex)
-                {
-                    _logger.LogError(ex, "HTTP request failed for URL: {Url} after {Attempts} attempts. Status Code: {StatusCode}", relativeUrl, attempts, response?.StatusCode);
-                    throw new EnkaNetworkException($"HTTP request failed for URL: {relativeUrl} after {attempts} attempts. Message: {ex.Message}", ex);
-                }
-                catch (System.Text.Json.JsonException ex)
-                {
-                    string snippet = "Could not read response content for snippet.";
-                    if (response?.Content != null)
-                    {
-                        try
-                        {
-                            snippet = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            snippet = snippet.Length > 200 ? snippet.Substring(0, 200) + "..." : snippet;
-                        }
-                        catch { }
-                    }
-                    _logger.LogError(ex, "Failed to parse JSON response from {Url}. Snippet: {Snippet}", relativeUrl, snippet);
-                    throw new EnkaNetworkException($"Failed to parse JSON response from {relativeUrl}. Snippet: {snippet}", ex);
-                }
-                catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
-                {
-                    _logger.LogWarning(ex, "Request timed out for URL: {Url} on attempt {Attempt}", relativeUrl, attempts);
-                    if (attempts <= _options.MaxRetries)
-                    {
-                        await Task.Delay(_options.RetryDelayMs, cancellationToken).ConfigureAwait(false);
-                        continue;
-                    }
-                    throw new EnkaNetworkException($"Request timed out for URL: {relativeUrl}.", ex);
-                }
-                catch (TaskCanceledException ex)
-                {
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        _logger.LogInformation("Request canceled by cancellation token for URL: {Url}", relativeUrl);
-                        throw;
-                    }
-                    _logger.LogWarning(ex, "Request task was canceled, possibly due to timeout for URL: {Url} on attempt {Attempt}", relativeUrl, attempts);
-                    if (attempts <= _options.MaxRetries)
-                    {
-                        await Task.Delay(_options.RetryDelayMs, cancellationToken).ConfigureAwait(false);
-                        continue;
-                    }
-                    throw new EnkaNetworkException($"Request task was canceled for URL: {relativeUrl}.", ex);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "An unexpected error occurred while fetching data from {Url} on attempt {Attempt}", relativeUrl, attempts);
-                    if (attempts <= _options.MaxRetries)
-                    {
-                        await Task.Delay(_options.RetryDelayMs, cancellationToken).ConfigureAwait(false);
-                        continue;
-                    }
-                    throw new EnkaNetworkException($"An unexpected error occurred while fetching data from {relativeUrl}.", ex);
-                }
-                finally
-                {
-                    response?.Dispose();
                 }
             }
+
+            HttpResponseMessage response = null;
+            string jsonString = null;
+
+            try
+            {
+                response = await SendRequestWithPolicyHandlingAsync(relativeUrl, cachedEntry, bypassCache, cancellationToken).ConfigureAwait(false);
+
+                if (response.StatusCode == HttpStatusCode.NotModified && cachedEntry != null && _options.EnableCaching && !bypassCache)
+                {
+                    _logger.Log(LogLevel.Trace, "304 Not Modified for {Url}, using cached data and updating expiration.", relativeUrl);
+                    UpdateCacheEntryExpiration(cacheKey, cachedEntry, response);
+                    return JsonSerializer.Deserialize<T>(cachedEntry.JsonResponse) ?? throw new EnkaNetworkException($"Failed to deserialize cached JSON response from {relativeUrl} after 304 (result was null)");
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                jsonString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                _logger.Log(LogLevel.Trace, "Received {ByteCount} bytes from {Url}", jsonString.Length, relativeUrl);
+
+                if (string.IsNullOrWhiteSpace(jsonString))
+                {
+                    _logger.LogWarning("Received empty or whitespace JSON response from {Url}", relativeUrl);
+                }
+
+                T deserializedObject = JsonSerializer.Deserialize<T>(jsonString);
+                if (deserializedObject == null && !string.IsNullOrWhiteSpace(jsonString))
+                {
+                    throw new EnkaNetworkException($"Failed to deserialize JSON response from {relativeUrl}, but content was not empty. Result was null.");
+                }
+
+                if (response.IsSuccessStatusCode && _options.EnableCaching)
+                {
+                    CacheSuccessfulResponse(cacheKey, jsonString, response, relativeUrl);
+                }
+                return deserializedObject;
+            }
+            catch (JsonException ex)
+            {
+                string snippet = jsonString?.Length > 200 ? jsonString.Substring(0, 200) + "..." : jsonString ?? "Response content was null or unreadable.";
+                _logger.LogError(ex, "Failed to parse JSON response from {Url}. Snippet: {Snippet}", relativeUrl, snippet);
+                throw new EnkaNetworkException($"Failed to parse JSON response from {relativeUrl}. Snippet: {snippet}", ex);
+            }
+            finally
+            {
+                response?.Dispose();
+            }
+        }
+
+        private async Task<HttpResponseMessage> SendRequestWithPolicyHandlingAsync(string relativeUrl, CacheEntry cachedEntry, bool bypassCache, CancellationToken cancellationToken)
+        {
+            Context pollyContext = new Context();
+            pollyContext.Add("relativeUrl", relativeUrl);
+
+            return await _retryPolicy.ExecuteAsync(async (ctx, ct) =>
+            {
+                using (var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl))
+                {
+                    if (cachedEntry != null && !string.IsNullOrEmpty(cachedEntry.ETag) && _options.EnableCaching && !bypassCache)
+                    {
+                        request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(cachedEntry.ETag));
+                    }
+
+                    _logger.Log(LogLevel.Trace, "Sending request via Polly to {BaseAddress}{Url}.", _httpClient.BaseAddress, relativeUrl);
+                    HttpResponseMessage response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
+
+                    if (response.StatusCode == (HttpStatusCode)429)
+                    {
+                        TimeSpan retryAfterDelay = GetRetryAfterDelay(response.Headers.RetryAfter, TimeSpan.FromSeconds(_options.RetryDelayMs));
+                        _logger.LogWarning("API returned 429 Too Many Requests for URL: {Url}. Will not retry via Polly, throwing RateLimitException. Consider handling Retry-After: {Delay}.", relativeUrl, retryAfterDelay);
+                        throw new RateLimitException($"API rate limit exceeded for URL: {relativeUrl}. Retry-After: {response.Headers.RetryAfter}", response.Headers.RetryAfter);
+                    }
+
+                    if (response.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        int uid = ExtractUidFromUrl(relativeUrl);
+                        throw new PlayerNotFoundException(uid, $"API returned 404 Not Found for URL: {relativeUrl}");
+                    }
+                    if (response.StatusCode == HttpStatusCode.Forbidden)
+                    {
+                        int uid = ExtractUidFromUrl(relativeUrl);
+                        throw new ProfilePrivateException(uid, $"API returned 403 Forbidden for URL: {relativeUrl}. Profile may be private or API access restricted.");
+                    }
+                    return response;
+                }
+            }, pollyContext, cancellationToken).ConfigureAwait(false);
+        }
+
+        private TimeSpan GetRetryAfterDelay(RetryConditionHeaderValue retryAfterHeader, TimeSpan defaultDelay)
+        {
+            if (retryAfterHeader != null)
+            {
+                if (retryAfterHeader.Delta.HasValue)
+                {
+                    return retryAfterHeader.Delta.Value > TimeSpan.Zero ? retryAfterHeader.Delta.Value : defaultDelay;
+                }
+                if (retryAfterHeader.Date.HasValue)
+                {
+                    var delay = retryAfterHeader.Date.Value - DateTimeOffset.UtcNow;
+                    return delay > TimeSpan.Zero ? delay : defaultDelay;
+                }
+            }
+            return defaultDelay;
+        }
+
+        private void UpdateCacheEntryExpiration(string cacheKey, CacheEntry cachedEntry, HttpResponseMessage response)
+        {
+            var newExpiration = CalculateExpiration(response, _options.CacheDurationMinutes);
+            cachedEntry.Expiration = newExpiration.UtcDateTime;
+            var updatedEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(newExpiration);
+            _memoryCache.Set(cacheKey, cachedEntry, updatedEntryOptions);
+            _trackedCacheKeys.TryAdd(cacheKey, true);
+        }
+
+        private void CacheSuccessfulResponse(string cacheKey, string jsonString, HttpResponseMessage response, string relativeUrl)
+        {
+            string etag = response.Headers.ETag?.Tag;
+            DateTimeOffset expiration = CalculateExpiration(response, _options.CacheDurationMinutes);
+            var newCacheEntry = new CacheEntry
+            {
+                JsonResponse = jsonString,
+                ETag = etag,
+                Expiration = expiration.UtcDateTime
+            };
+            var entryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(expiration);
+            _memoryCache.Set(cacheKey, newCacheEntry, entryOptions);
+            _trackedCacheKeys.TryAdd(cacheKey, true);
+            _logger.Log(LogLevel.Trace, "Stored response in cache for {Url} with ETag: {ETag} and expiration: {Expiration}", relativeUrl, etag, expiration);
         }
 
         private static DateTimeOffset CalculateExpiration(HttpResponseMessage response, int defaultCacheDurationMinutes)

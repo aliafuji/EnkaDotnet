@@ -5,9 +5,6 @@ using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Enums;
 using EnkaDotNet.Utils.Common;
-using EnkaDotNet.Utils.Genshin;
-using EnkaDotNet.Utils.HSR;
-using EnkaDotNet.Utils.ZZZ;
 using EnkaDotNet.Utils;
 using EnkaDotNet.Exceptions;
 using Microsoft.Extensions.Caching.Memory;
@@ -74,13 +71,6 @@ namespace EnkaDotNet.DIExtensions
                         var logger = sp.GetService<ILogger<GenshinAssets>>() ?? NullLogger<GenshinAssets>.Instance;
                         return await AssetsFactory.CreateGenshinAsync(opts.Language, httpClient, logger).ConfigureAwait(false);
                     });
-                    services.TryAddTransient<DataMapper>(sp =>
-                    {
-                        var assetsTask = sp.GetRequiredService<Task<IGenshinAssets>>();
-                        var assets = assetsTask.ConfigureAwait(false).GetAwaiter().GetResult(); 
-                        var opts = sp.GetRequiredService<IOptions<EnkaClientOptions>>();
-                        return new DataMapper(assets, opts);
-                    });
                     break;
                 case GameType.HSR:
                     services.TryAddSingleton<Task<IHSRAssets>>(async sp =>
@@ -91,20 +81,6 @@ namespace EnkaDotNet.DIExtensions
                         var logger = sp.GetService<ILogger<HSRAssets>>() ?? NullLogger<HSRAssets>.Instance;
                         return await AssetsFactory.CreateHSRAsync(opts.Language, httpClient, logger).ConfigureAwait(false);
                     });
-                    services.TryAddTransient<HSRDataMapper>(sp =>
-                    {
-                        var assetsTask = sp.GetRequiredService<Task<IHSRAssets>>();
-                        var assets = assetsTask.ConfigureAwait(false).GetAwaiter().GetResult();
-                        var opts = sp.GetRequiredService<IOptions<EnkaClientOptions>>();
-                        return new HSRDataMapper(assets, opts);
-                    });
-                    services.TryAddTransient<HSRStatCalculator>(sp =>
-                    {
-                        var assetsTask = sp.GetRequiredService<Task<IHSRAssets>>();
-                        var assets = assetsTask.ConfigureAwait(false).GetAwaiter().GetResult();
-                        var clientOptions = sp.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
-                        return new HSRStatCalculator(assets, clientOptions);
-                    });
                     break;
                 case GameType.ZZZ:
                     services.TryAddSingleton<Task<IZZZAssets>>(async sp =>
@@ -114,19 +90,6 @@ namespace EnkaDotNet.DIExtensions
                         var httpClient = httpClientFactory.CreateClient(nameof(ZZZAssets));
                         var logger = sp.GetService<ILogger<ZZZAssets>>() ?? NullLogger<ZZZAssets>.Instance;
                         return await AssetsFactory.CreateZZZAsync(opts.Language, httpClient, logger).ConfigureAwait(false);
-                    });
-                    services.TryAddTransient<ZZZDataMapper>(sp =>
-                    {
-                        var assetsTask = sp.GetRequiredService<Task<IZZZAssets>>();
-                        var assets = assetsTask.ConfigureAwait(false).GetAwaiter().GetResult();
-                        var opts = sp.GetRequiredService<IOptions<EnkaClientOptions>>();
-                        return new ZZZDataMapper(assets, opts);
-                    });
-                    services.TryAddTransient<ZZZStatsCalculator>(sp =>
-                    {
-                        var assetsTask = sp.GetRequiredService<Task<IZZZAssets>>();
-                        var assets = assetsTask.ConfigureAwait(false).GetAwaiter().GetResult();
-                        return new ZZZStatsCalculator(assets);
                     });
                     break;
                 default:
