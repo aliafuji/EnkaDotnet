@@ -5,7 +5,6 @@ using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Components.Genshin;
 using EnkaDotNet.Enums.Genshin;
 using EnkaDotNet.Models.Genshin;
-using Microsoft.Extensions.Options;
 
 namespace EnkaDotNet.Utils.Genshin
 {
@@ -18,12 +17,6 @@ namespace EnkaDotNet.Utils.Genshin
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
             _options = options ?? throw new ArgumentNullException(nameof(options));
-        }
-
-        public DataMapper(IGenshinAssets assets, IOptions<EnkaClientOptions> options)
-        {
-            _assets = assets ?? throw new ArgumentNullException(nameof(assets));
-            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         }
 
         public PlayerInfo MapPlayerInfo(PlayerInfoModel model)
@@ -108,6 +101,11 @@ namespace EnkaDotNet.Utils.Genshin
                })
                .ToList();
 
+            if (character.Weapon != null) character.Weapon.Options = this._options;
+            foreach (var artifact in character.Artifacts) artifact.Options = this._options;
+            foreach (var talent in character.Talents) talent.Options = this._options;
+
+
             return character;
         }
 
@@ -132,6 +130,8 @@ namespace EnkaDotNet.Utils.Genshin
             var baseAtkProp = flat.WeaponStats?.FirstOrDefault(s => s.AppendPropId == "FIGHT_PROP_BASE_ATTACK");
             var secondaryStatPropModel = flat.WeaponStats?.FirstOrDefault(s => s.AppendPropId != "FIGHT_PROP_BASE_ATTACK");
             var secondaryStat = secondaryStatPropModel != null ? MapStatProperty(secondaryStatPropModel) : null;
+            if (secondaryStat != null) secondaryStat.Options = this._options;
+
 
             int refinementRank = (weapon.AffixMap?.Values.FirstOrDefault() ?? -1) + 1;
 
@@ -160,10 +160,14 @@ namespace EnkaDotNet.Utils.Genshin
         private Artifact MapArtifact(EquipModel equip, ReliquaryModel reliquary, FlatDataModel flat)
         {
             var mainStat = MapStatProperty(flat.ReliquaryMainstat) ?? new StatProperty { Type = StatType.None, Value = 0, Options = this._options };
+            if (mainStat != null) mainStat.Options = this._options;
+
             var subStats = flat.ReliquarySubstats?
                              .Select(substatModel => MapStatProperty(substatModel))
                              .Where(s => s != null)
                              .ToList() ?? new List<StatProperty>();
+            foreach (var subStat in subStats) subStat.Options = this._options;
+
 
             return new Artifact
             {
@@ -361,9 +365,9 @@ namespace EnkaDotNet.Utils.Genshin
         {
             switch (propIdString)
             {
-                case "FIGHT_PROP_HP": return StatType.BaseHP;
-                case "FIGHT_PROP_ATTACK": return StatType.BaseAttack;
-                case "FIGHT_PROP_DEFENSE": return StatType.BaseDefense;
+                case "FIGHT_PROP_HP": return StatType.HP;
+                case "FIGHT_PROP_ATTACK": return StatType.Attack;
+                case "FIGHT_PROP_DEFENSE": return StatType.Defense;
                 case "FIGHT_PROP_BASE_HP": return StatType.BaseHP;
                 case "FIGHT_PROP_BASE_ATTACK": return StatType.BaseAttack;
                 case "FIGHT_PROP_BASE_DEFENSE": return StatType.BaseDefense;

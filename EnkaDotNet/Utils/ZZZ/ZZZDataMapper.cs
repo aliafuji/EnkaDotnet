@@ -5,7 +5,6 @@ using EnkaDotNet.Models.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
-using Microsoft.Extensions.Options;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
@@ -14,13 +13,6 @@ namespace EnkaDotNet.Utils.ZZZ
         private readonly IZZZAssets _assets;
         private readonly ZZZStatsCalculator _statsCalculator;
         private readonly EnkaClientOptions _options;
-
-        public ZZZDataMapper(IZZZAssets assets, IOptions<EnkaClientOptions> options)
-        {
-            _assets = assets ?? throw new ArgumentNullException(nameof(assets));
-            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-            _statsCalculator = new ZZZStatsCalculator(assets);
-        }
 
         public ZZZDataMapper(IZZZAssets assets, EnkaClientOptions options)
         {
@@ -50,8 +42,8 @@ namespace EnkaDotNet.Utils.ZZZ
             int titleId = 0;
             if (socialDetail?.TitleInfo != null) titleId = socialDetail.TitleInfo.Title;
             else if (profileDetail?.TitleInfo != null) titleId = profileDetail.TitleInfo.Title;
-            else if (profileDetail != null && profileDetail.Title != 0) titleId = profileDetail.Title; // Obsolete Title
-            else if (socialDetail != null && socialDetail.Title != 0) titleId = socialDetail.Title; // Obsolete Title
+            else if (profileDetail != null && profileDetail.Title != 0) titleId = profileDetail.Title;
+            else if (socialDetail != null && socialDetail.Title != 0) titleId = socialDetail.Title;
 
 
             var playerInfo = new ZZZPlayerInfo
@@ -135,13 +127,29 @@ namespace EnkaDotNet.Utils.ZZZ
             agent.ClaimedRewards.Clear();
             if (model.ClaimedRewardList != null) agent.ClaimedRewards.AddRange(model.ClaimedRewardList);
 
-            if (model.Weapon != null) agent.Weapon = MapWeapon(model.Weapon);
+            if (model.Weapon != null)
+            {
+                agent.Weapon = MapWeapon(model.Weapon);
+                if (agent.Weapon != null) agent.Weapon.Options = this._options;
+            }
+
 
             agent.SkillLevels.Clear();
             if (model.SkillLevelList != null) foreach (var skillLevel in model.SkillLevelList) if (Enum.IsDefined(typeof(SkillType), skillLevel.Index)) agent.SkillLevels[(SkillType)skillLevel.Index] = skillLevel.Level;
 
             agent.EquippedDiscs.Clear();
-            if (model.EquippedList != null) foreach (var equippedItem in model.EquippedList) if (equippedItem.Equipment != null) agent.EquippedDiscs.Add(MapDriveDisc(equippedItem.Equipment, equippedItem.Slot));
+            if (model.EquippedList != null)
+            {
+                foreach (var equippedItem in model.EquippedList)
+                {
+                    if (equippedItem.Equipment != null)
+                    {
+                        var disc = MapDriveDisc(equippedItem.Equipment, equippedItem.Slot);
+                        if (disc != null) disc.Options = this._options;
+                        agent.EquippedDiscs.Add(disc);
+                    }
+                }
+            }
 
             return agent;
         }
