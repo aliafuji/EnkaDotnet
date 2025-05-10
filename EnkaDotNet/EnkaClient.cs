@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,9 +15,6 @@ using EnkaDotNet.Models.Genshin;
 using EnkaDotNet.Models.HSR;
 using EnkaDotNet.Models.ZZZ;
 using EnkaDotNet.Utils.Common;
-using EnkaDotNet.Utils.Genshin;
-using EnkaDotNet.Utils.HSR;
-using EnkaDotNet.Utils.ZZZ;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
 using EnkaDotNet.Utils;
@@ -26,6 +22,7 @@ using EnkaDotNet.Assets;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using EnkaDotNet.Internal;
 
 namespace EnkaDotNet
 {
@@ -36,12 +33,7 @@ namespace EnkaDotNet
         private readonly IServiceProvider _serviceProvider;
         private bool _disposed = false;
 
-        private IGenshinAssets _genshinAssets;
-        private DataMapper _genshinDataMapper;
-        private IHSRAssets _hsrAssets;
-        private HSRDataMapper _hsrDataMapper;
-        private IZZZAssets _zzzAssets;
-        private ZZZDataMapper _zzzDataMapper;
+        private object _gameServiceHandler;
 
         private readonly ILogger<EnkaClient> _clientLogger;
         private Task _initializationTask;
@@ -69,30 +61,28 @@ namespace EnkaDotNet
             _httpHelper = httpHelper;
             _clientLogger = logger;
 
-            AssignAssetsAndMappers(assets);
+            InitializeServiceHandlerWithAssets(assets);
             _initializationTask = Task.CompletedTask;
         }
 
-        private void AssignAssetsAndMappers(IAssets assets)
+        private void InitializeServiceHandlerWithAssets(IAssets assets)
         {
             switch (_options.GameType)
             {
                 case GameType.Genshin:
-                    _genshinAssets = (IGenshinAssets)assets;
-                    _genshinDataMapper = new DataMapper(_genshinAssets, _options);
+                    _gameServiceHandler = new GenshinServiceHandler((IGenshinAssets)assets, _options, _httpHelper, _clientLogger);
                     break;
                 case GameType.HSR:
-                    _hsrAssets = (IHSRAssets)assets;
-                    _hsrDataMapper = new HSRDataMapper(_hsrAssets, _options);
+                    _gameServiceHandler = new HSRServiceHandler((IHSRAssets)assets, _options, _httpHelper, _clientLogger);
                     break;
                 case GameType.ZZZ:
-                    _zzzAssets = (IZZZAssets)assets;
-                    _zzzDataMapper = new ZZZDataMapper(_zzzAssets, _options);
+                    _gameServiceHandler = new ZZZServiceHandler((IZZZAssets)assets, _options, _httpHelper, _clientLogger);
                     break;
                 default:
-                    throw new UnsupportedGameTypeException(_options.GameType, "Unsupported game type during asset assignment.");
+                    throw new UnsupportedGameTypeException(_options.GameType, "Unsupported game type during direct service handler initialization.");
             }
         }
+
 
         public static async Task<IEnkaClient> CreateAsync(EnkaClientOptions options = null, ILogger<EnkaClient> logger = null)
         {
@@ -154,22 +144,23 @@ namespace EnkaDotNet
         {
             try
             {
+                IAssets resolvedAssets;
                 switch (_options.GameType)
                 {
                     case GameType.Genshin:
                         var genshinAssetsTask = _serviceProvider.GetRequiredService<Task<IGenshinAssets>>();
-                        _genshinAssets = await genshinAssetsTask.ConfigureAwait(false);
-                        _genshinDataMapper = _serviceProvider.GetRequiredService<DataMapper>();
+                        resolvedAssets = await genshinAssetsTask.ConfigureAwait(false);
+                        _gameServiceHandler = new GenshinServiceHandler((IGenshinAssets)resolvedAssets, _options, _httpHelper, _clientLogger);
                         break;
                     case GameType.HSR:
                         var hsrAssetsTask = _serviceProvider.GetRequiredService<Task<IHSRAssets>>();
-                        _hsrAssets = await hsrAssetsTask.ConfigureAwait(false);
-                        _hsrDataMapper = _serviceProvider.GetRequiredService<HSRDataMapper>();
+                        resolvedAssets = await hsrAssetsTask.ConfigureAwait(false);
+                        _gameServiceHandler = new HSRServiceHandler((IHSRAssets)resolvedAssets, _options, _httpHelper, _clientLogger);
                         break;
                     case GameType.ZZZ:
                         var zzzAssetsTask = _serviceProvider.GetRequiredService<Task<IZZZAssets>>();
-                        _zzzAssets = await zzzAssetsTask.ConfigureAwait(false);
-                        _zzzDataMapper = _serviceProvider.GetRequiredService<ZZZDataMapper>();
+                        resolvedAssets = await zzzAssetsTask.ConfigureAwait(false);
+                        _gameServiceHandler = new ZZZServiceHandler((IZZZAssets)resolvedAssets, _options, _httpHelper, _clientLogger);
                         break;
                     default:
                         throw new UnsupportedGameTypeException(_options.GameType, $"Cannot initialize services for unsupported game type: {_options.GameType}");
@@ -190,33 +181,7 @@ namespace EnkaDotNet
             }
         }
 
-        private async Task<TResponse> InternalGetRawUserResponseAsync<TResponse>(
-            int uid,
-            bool bypassCache,
-            CancellationToken cancellationToken,
-            Func<TResponse, bool> validateResponseContent,
-            string missingInfoErrorMessage)
-            where TResponse : class
-        {
-            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureInitializedAsync().ConfigureAwait(false);
-            if (uid <= 0) throw new ArgumentException("UID must be a positive integer.", nameof(uid));
-
-            string endpoint = string.Format(Constants.GetUserInfoEndpointFormat(_options.GameType), uid);
-            var response = await _httpHelper.Get<TResponse>(endpoint, bypassCache, cancellationToken).ConfigureAwait(false);
-
-            if (response == null)
-            {
-                throw new EnkaNetworkException($"Failed to retrieve data for UID {uid} for game {_options.GameType}. Response was null.");
-            }
-            if (!validateResponseContent(response))
-            {
-                throw new ProfilePrivateException(uid, missingInfoErrorMessage);
-            }
-            return response;
-        }
-
-        private async Task EnsureGameTypeAsync(GameType expectedGameType, string operationDescription)
+        private async Task EnsureGameTypeAndHandlerAsync(GameType expectedGameType, string operationDescription)
         {
             await EnsureInitializedAsync().ConfigureAwait(false);
             if (_options.GameType != expectedGameType)
@@ -225,143 +190,77 @@ namespace EnkaDotNet
                     $"This operation ({operationDescription}) is only available for {expectedGameType}. " +
                     $"Current game type: {_options.GameType}");
             }
-            switch (expectedGameType)
+            if (_gameServiceHandler == null)
             {
-                case GameType.Genshin:
-                    if (_genshinAssets == null || _genshinDataMapper == null)
-                        throw new InvalidOperationException($"Genshin Impact assets or data mapper not initialized for operation: {operationDescription}.");
-                    break;
-                case GameType.HSR:
-                    if (_hsrAssets == null || _hsrDataMapper == null)
-                        throw new InvalidOperationException($"Honkai: Star Rail assets or data mapper not initialized for operation: {operationDescription}.");
-                    break;
-                case GameType.ZZZ:
-                    if (_zzzAssets == null || _zzzDataMapper == null)
-                        throw new InvalidOperationException($"Zenless Zone Zero assets or data mapper not initialized for operation: {operationDescription}.");
-                    break;
+                throw new InvalidOperationException($"Game service handler for {expectedGameType} not initialized for operation: {operationDescription}.");
             }
         }
 
         public async Task<ApiResponse> GetRawUserResponseAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
-            await EnsureGameTypeAsync(GameType.Genshin, nameof(GetRawUserResponseAsync)).ConfigureAwait(false);
-            return await InternalGetRawUserResponseAsync<ApiResponse>(
-                uid, bypassCache, cancellationToken,
-                response => response.PlayerInfo != null,
-                "Profile data retrieved for Genshin Impact, but essential player information is missing. The profile might be private or the UID invalid."
-            ).ConfigureAwait(false);
+            await EnsureGameTypeAndHandlerAsync(GameType.Genshin, nameof(GetRawUserResponseAsync)).ConfigureAwait(false);
+            return await ((GenshinServiceHandler)_gameServiceHandler).GetRawUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<PlayerInfo> GetPlayerInfoAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAsync(GameType.Genshin, nameof(GetPlayerInfoAsync)).ConfigureAwait(false);
-            var rawResponse = await GetRawUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
-            return _genshinDataMapper.MapPlayerInfo(rawResponse.PlayerInfo);
+            await EnsureGameTypeAndHandlerAsync(GameType.Genshin, nameof(GetPlayerInfoAsync)).ConfigureAwait(false);
+            return await ((GenshinServiceHandler)_gameServiceHandler).GetPlayerInfoAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<IReadOnlyList<Character>> GetCharactersAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAsync(GameType.Genshin, nameof(GetCharactersAsync)).ConfigureAwait(false);
-            var rawResponse = await GetRawUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
-            if (rawResponse.PlayerInfo != null && rawResponse.AvatarInfoList == null)
-            {
-                throw new ProfilePrivateException(uid, $"Character details are hidden for Genshin Impact UID {uid}.");
-            }
-            if (rawResponse.AvatarInfoList == null)
-            {
-                return Array.Empty<Character>();
-            }
-            return _genshinDataMapper.MapCharacters(rawResponse.AvatarInfoList).AsReadOnly();
+            await EnsureGameTypeAndHandlerAsync(GameType.Genshin, nameof(GetCharactersAsync)).ConfigureAwait(false);
+            return await ((GenshinServiceHandler)_gameServiceHandler).GetCharactersAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<(PlayerInfo PlayerInfo, IReadOnlyList<Character> Characters)> GetUserProfileAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAsync(GameType.Genshin, nameof(GetUserProfileAsync)).ConfigureAwait(false);
-            var rawResponse = await GetRawUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
-            var playerInfo = _genshinDataMapper.MapPlayerInfo(rawResponse.PlayerInfo);
-            IReadOnlyList<Character> characters = Array.Empty<Character>();
-            if (rawResponse.AvatarInfoList != null)
-            {
-                characters = _genshinDataMapper.MapCharacters(rawResponse.AvatarInfoList).AsReadOnly();
-            }
-            return (playerInfo, characters);
+            await EnsureGameTypeAndHandlerAsync(GameType.Genshin, nameof(GetUserProfileAsync)).ConfigureAwait(false);
+            return await ((GenshinServiceHandler)_gameServiceHandler).GetUserProfileAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<HSRApiResponse> GetRawHSRUserResponseAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
-            await EnsureGameTypeAsync(GameType.HSR, nameof(GetRawHSRUserResponseAsync)).ConfigureAwait(false);
-            return await InternalGetRawUserResponseAsync<HSRApiResponse>(
-                uid, bypassCache, cancellationToken,
-                response => response.DetailInfo != null,
-                "Profile data retrieved for Honkai: Star Rail, but detail info is missing. The profile might be private or UID invalid."
-            ).ConfigureAwait(false);
+            await EnsureGameTypeAndHandlerAsync(GameType.HSR, nameof(GetRawHSRUserResponseAsync)).ConfigureAwait(false);
+            return await ((HSRServiceHandler)_gameServiceHandler).GetRawHSRUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<HSRPlayerInfo> GetHSRPlayerInfoAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAsync(GameType.HSR, nameof(GetHSRPlayerInfoAsync)).ConfigureAwait(false);
-            var rawResponse = await GetRawHSRUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
-            return _hsrDataMapper.MapPlayerInfo(rawResponse);
+            await EnsureGameTypeAndHandlerAsync(GameType.HSR, nameof(GetHSRPlayerInfoAsync)).ConfigureAwait(false);
+            return await ((HSRServiceHandler)_gameServiceHandler).GetHSRPlayerInfoAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<IReadOnlyList<HSRCharacter>> GetHSRCharactersAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAsync(GameType.HSR, nameof(GetHSRCharactersAsync)).ConfigureAwait(false);
-            var rawResponse = await GetRawHSRUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
-            if (rawResponse.DetailInfo?.AvatarDetailList == null)
-            {
-                return Array.Empty<HSRCharacter>();
-            }
-            var characters = new List<HSRCharacter>();
-            foreach (var avatarDetail in rawResponse.DetailInfo.AvatarDetailList)
-            {
-                characters.Add(_hsrDataMapper.MapCharacter(avatarDetail));
-            }
-            return characters.AsReadOnly();
+            await EnsureGameTypeAndHandlerAsync(GameType.HSR, nameof(GetHSRCharactersAsync)).ConfigureAwait(false);
+            return await ((HSRServiceHandler)_gameServiceHandler).GetHSRCharactersAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<ZZZApiResponse> GetRawZZZUserResponseAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
-            await EnsureGameTypeAsync(GameType.ZZZ, nameof(GetRawZZZUserResponseAsync)).ConfigureAwait(false);
-            return await InternalGetRawUserResponseAsync<ZZZApiResponse>(
-                uid, bypassCache, cancellationToken,
-                response => response.PlayerInfo != null,
-                "Profile data retrieved for Zenless Zone Zero, but player info is missing. The profile might be private or UID invalid."
-            ).ConfigureAwait(false);
+            await EnsureGameTypeAndHandlerAsync(GameType.ZZZ, nameof(GetRawZZZUserResponseAsync)).ConfigureAwait(false);
+            return await ((ZZZServiceHandler)_gameServiceHandler).GetRawZZZUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<ZZZPlayerInfo> GetZZZPlayerInfoAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAsync(GameType.ZZZ, nameof(GetZZZPlayerInfoAsync)).ConfigureAwait(false);
-            var rawResponse = await GetRawZZZUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
-            return _zzzDataMapper.MapPlayerInfo(rawResponse);
+            await EnsureGameTypeAndHandlerAsync(GameType.ZZZ, nameof(GetZZZPlayerInfoAsync)).ConfigureAwait(false);
+            return await ((ZZZServiceHandler)_gameServiceHandler).GetZZZPlayerInfoAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<IReadOnlyList<ZZZAgent>> GetZZZAgentsAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAsync(GameType.ZZZ, nameof(GetZZZAgentsAsync)).ConfigureAwait(false);
-            var rawResponse = await GetRawZZZUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
-            if (rawResponse.PlayerInfo?.ShowcaseDetail?.AvatarList == null)
-            {
-                return Array.Empty<ZZZAgent>();
-            }
-            var agents = new List<ZZZAgent>();
-            foreach (var avatarModel in rawResponse.PlayerInfo.ShowcaseDetail.AvatarList)
-            {
-                if (avatarModel != null)
-                {
-                    var agent = _zzzDataMapper.MapAgent(avatarModel);
-                    if (agent != null) agents.Add(agent);
-                }
-            }
-            return agents.AsReadOnly();
+            await EnsureGameTypeAndHandlerAsync(GameType.ZZZ, nameof(GetZZZAgentsAsync)).ConfigureAwait(false);
+            return await ((ZZZServiceHandler)_gameServiceHandler).GetZZZAgentsAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
         public (long CurrentEntryCount, int ExpiredCountNotAvailable) GetCacheStats()
