@@ -12,7 +12,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Collections.Generic;
 using Polly;
 using Polly.Retry;
 
@@ -26,8 +25,9 @@ namespace EnkaDotNet.Utils.Common
         private readonly ILogger<HttpHelper> _logger;
         private bool _disposed = false;
         private readonly ConcurrentDictionary<string, bool> _trackedCacheKeys;
-        private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
+        private readonly ResiliencePipeline<HttpResponseMessage> _resiliencePipeline;
         private static readonly Random _jitterer = new Random();
+        private static readonly ResiliencePropertyKey<string> RelativeUrlKey = new ResiliencePropertyKey<string>("relativeUrl");
 
         public HttpHelper(
             HttpClient httpClient,
@@ -41,29 +41,39 @@ namespace EnkaDotNet.Utils.Common
             _logger = logger ?? NullLogger<HttpHelper>.Instance;
             _trackedCacheKeys = new ConcurrentDictionary<string, bool>();
 
-            _retryPolicy = Policy
-                .Handle<HttpRequestException>()
-                .OrResult<HttpResponseMessage>(r => _options.RetryOnStatusCodes.Contains(r.StatusCode) && r.StatusCode != (HttpStatusCode)429)
-                .WaitAndRetryAsync(
-                    _options.MaxRetries,
-                    retryAttempt =>
+            var retryOptions = new RetryStrategyOptions<HttpResponseMessage>
+            {
+                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                    .Handle<HttpRequestException>()
+                    .HandleResult(r => _options.RetryOnStatusCodes.Contains(r.StatusCode) && r.StatusCode != (HttpStatusCode)429),
+                MaxRetryAttempts = _options.MaxRetries,
+                DelayGenerator = args =>
+                {
+                    TimeSpan delay = TimeSpan.FromMilliseconds(_options.RetryDelayMs);
+                    if (_options.UseExponentialBackoff)
                     {
-                        TimeSpan delay = TimeSpan.FromMilliseconds(_options.RetryDelayMs);
-                        if (_options.UseExponentialBackoff)
-                        {
-                            delay = TimeSpan.FromMilliseconds(Math.Min(Math.Pow(2, retryAttempt) * _options.RetryDelayMs, _options.MaxRetryDelayMs));
-                        }
-                        delay += TimeSpan.FromMilliseconds(_jitterer.Next(0, (int)(delay.TotalMilliseconds * 0.2)));
-                        return delay;
-                    },
-                    (outcome, timespan, retryAttempt, context) =>
-                    {
-                        string urlForLog = context.TryGetValue("relativeUrl", out var urlObj) && urlObj is string url ? url : "Unknown URL";
-                        _logger.LogWarning(outcome.Exception,
-                            "Request to {Url} failed. Delaying for {Timespan}, then making retry {RetryAttempt}/{MaxRetries}. Status: {StatusCode}",
-                            urlForLog, timespan, retryAttempt, _options.MaxRetries, outcome.Result?.StatusCode);
+                        delay = TimeSpan.FromMilliseconds(Math.Min(Math.Pow(2, args.AttemptNumber) * _options.RetryDelayMs, _options.MaxRetryDelayMs));
                     }
-                );
+                    delay += TimeSpan.FromMilliseconds(_jitterer.Next(0, (int)(delay.TotalMilliseconds * 0.2)));
+                    return new ValueTask<TimeSpan?>(delay);
+                },
+                OnRetry = args =>
+                {
+                    string urlForLog = "Unknown URL";
+                    if (args.Context.Properties.TryGetValue(RelativeUrlKey, out var url))
+                    {
+                        urlForLog = url;
+                    }
+                    _logger.LogWarning(args.Outcome.Exception,
+                        "Request to {Url} failed. Delaying for {Delay}, then making retry {AttemptNumber}/{MaxRetries}. Status: {StatusCode}",
+                        urlForLog, args.RetryDelay, args.AttemptNumber + 1, _options.MaxRetries, args.Outcome.Result?.StatusCode);
+                    return new ValueTask();
+                }
+            };
+
+            _resiliencePipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
+                .AddRetry(retryOptions)
+                .Build();
         }
 
         public async Task<T> Get<T>(string relativeUrl, bool bypassCache = false, CancellationToken cancellationToken = default) where T : class
@@ -71,35 +81,58 @@ namespace EnkaDotNet.Utils.Common
             if (_disposed) throw new ObjectDisposedException(nameof(HttpHelper));
 
             string cacheKey = relativeUrl.ToLowerInvariant();
-            CacheEntry cachedEntry = null;
 
             if (_options.EnableCaching && !bypassCache)
             {
-                if (_memoryCache.TryGetValue(cacheKey, out cachedEntry) && cachedEntry != null)
+                if (_memoryCache.TryGetValue(cacheKey, out CacheEntry cachedEntry) && cachedEntry != null && !cachedEntry.IsExpired)
                 {
                     _logger.Log(LogLevel.Trace, "Cache hit for {Url}", relativeUrl);
                     _trackedCacheKeys.TryAdd(cacheKey, true);
-                }
-                else
-                {
-                    cachedEntry = null;
+                    return JsonSerializer.Deserialize<T>(cachedEntry.JsonResponse) ?? throw new EnkaNetworkException($"Failed to deserialize cached JSON response from {relativeUrl} (result was null)");
                 }
             }
 
             HttpResponseMessage response = null;
             string jsonString = null;
+            ResilienceContext resilienceContext = null;
 
             try
             {
-                response = await SendRequestWithPolicyHandlingAsync(relativeUrl, cachedEntry, bypassCache, cancellationToken).ConfigureAwait(false);
+                resilienceContext = ResilienceContextPool.Shared.Get(cancellationToken);
+                resilienceContext.Properties.Set(RelativeUrlKey, relativeUrl);
 
-                if (response.StatusCode == HttpStatusCode.NotModified && cachedEntry != null && _options.EnableCaching && !bypassCache)
-                {
-                    _logger.Log(LogLevel.Trace, "304 Not Modified for {Url}, using cached data and updating expiration.", relativeUrl);
-                    UpdateCacheEntryExpiration(cacheKey, cachedEntry, response);
-                    return JsonSerializer.Deserialize<T>(cachedEntry.JsonResponse) ?? throw new EnkaNetworkException($"Failed to deserialize cached JSON response from {relativeUrl} after 304 (result was null)");
-                }
+                response = await _resiliencePipeline.ExecuteAsync(
+                    async (ctx, ct) =>
+                    {
+                        using (var request = new HttpRequestMessage(HttpMethod.Get, ctx.Properties.GetValue(RelativeUrlKey, "ERROR_NO_URL_IN_CONTEXT")))
+                        {
+                            _logger.Log(LogLevel.Trace, "Sending request via Polly to {BaseAddress}{Url}.", _httpClient.BaseAddress, ctx.Properties.GetValue(RelativeUrlKey, ""));
+                            HttpResponseMessage httpResponse = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
 
+                            if (httpResponse.StatusCode == (HttpStatusCode)429)
+                            {
+                                TimeSpan retryAfterDelay = GetRetryAfterDelay(httpResponse.Headers.RetryAfter, TimeSpan.FromSeconds(_options.RetryDelayMs));
+                                _logger.LogWarning("API returned 429 Too Many Requests for URL: {Url}. Throwing RateLimitException. Retry-After: {Delay}.", ctx.Properties.GetValue(RelativeUrlKey, ""), retryAfterDelay);
+                                throw new RateLimitException($"API rate limit exceeded for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}. Retry-After: {httpResponse.Headers.RetryAfter}", httpResponse.Headers.RetryAfter);
+                            }
+
+                            if (httpResponse.StatusCode == HttpStatusCode.NotFound)
+                            {
+                                int uid = ExtractUidFromUrl(ctx.Properties.GetValue(RelativeUrlKey, ""));
+                                throw new PlayerNotFoundException(uid, $"API returned 404 Not Found for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}");
+                            }
+                            if (httpResponse.StatusCode == HttpStatusCode.Forbidden)
+                            {
+                                int uid = ExtractUidFromUrl(ctx.Properties.GetValue(RelativeUrlKey, ""));
+                                throw new ProfilePrivateException(uid, $"API returned 403 Forbidden for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}. Profile may be private or API access restricted.");
+                            }
+                            return httpResponse;
+                        }
+                    },
+                    resilienceContext
+                ).ConfigureAwait(false);
+
+                cancellationToken.ThrowIfCancellationRequested();
                 response.EnsureSuccessStatusCode();
 
                 jsonString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -110,6 +143,7 @@ namespace EnkaDotNet.Utils.Common
                     _logger.LogWarning("Received empty or whitespace JSON response from {Url}", relativeUrl);
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
                 T deserializedObject = JsonSerializer.Deserialize<T>(jsonString);
                 if (deserializedObject == null && !string.IsNullOrWhiteSpace(jsonString))
                 {
@@ -131,46 +165,11 @@ namespace EnkaDotNet.Utils.Common
             finally
             {
                 response?.Dispose();
-            }
-        }
-
-        private async Task<HttpResponseMessage> SendRequestWithPolicyHandlingAsync(string relativeUrl, CacheEntry cachedEntry, bool bypassCache, CancellationToken cancellationToken)
-        {
-            Context pollyContext = new Context();
-            pollyContext.Add("relativeUrl", relativeUrl);
-
-            return await _retryPolicy.ExecuteAsync(async (ctx, ct) =>
-            {
-                using (var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl))
+                if (resilienceContext != null)
                 {
-                    if (cachedEntry != null && !string.IsNullOrEmpty(cachedEntry.ETag) && _options.EnableCaching && !bypassCache)
-                    {
-                        request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(cachedEntry.ETag));
-                    }
-
-                    _logger.Log(LogLevel.Trace, "Sending request via Polly to {BaseAddress}{Url}.", _httpClient.BaseAddress, relativeUrl);
-                    HttpResponseMessage response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
-
-                    if (response.StatusCode == (HttpStatusCode)429)
-                    {
-                        TimeSpan retryAfterDelay = GetRetryAfterDelay(response.Headers.RetryAfter, TimeSpan.FromSeconds(_options.RetryDelayMs));
-                        _logger.LogWarning("API returned 429 Too Many Requests for URL: {Url}. Will not retry via Polly, throwing RateLimitException. Consider handling Retry-After: {Delay}.", relativeUrl, retryAfterDelay);
-                        throw new RateLimitException($"API rate limit exceeded for URL: {relativeUrl}. Retry-After: {response.Headers.RetryAfter}", response.Headers.RetryAfter);
-                    }
-
-                    if (response.StatusCode == HttpStatusCode.NotFound)
-                    {
-                        int uid = ExtractUidFromUrl(relativeUrl);
-                        throw new PlayerNotFoundException(uid, $"API returned 404 Not Found for URL: {relativeUrl}");
-                    }
-                    if (response.StatusCode == HttpStatusCode.Forbidden)
-                    {
-                        int uid = ExtractUidFromUrl(relativeUrl);
-                        throw new ProfilePrivateException(uid, $"API returned 403 Forbidden for URL: {relativeUrl}. Profile may be private or API access restricted.");
-                    }
-                    return response;
+                    ResilienceContextPool.Shared.Return(resilienceContext);
                 }
-            }, pollyContext, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         private TimeSpan GetRetryAfterDelay(RetryConditionHeaderValue retryAfterHeader, TimeSpan defaultDelay)
@@ -190,29 +189,18 @@ namespace EnkaDotNet.Utils.Common
             return defaultDelay;
         }
 
-        private void UpdateCacheEntryExpiration(string cacheKey, CacheEntry cachedEntry, HttpResponseMessage response)
-        {
-            var newExpiration = CalculateExpiration(response, _options.CacheDurationMinutes);
-            cachedEntry.Expiration = newExpiration.UtcDateTime;
-            var updatedEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(newExpiration);
-            _memoryCache.Set(cacheKey, cachedEntry, updatedEntryOptions);
-            _trackedCacheKeys.TryAdd(cacheKey, true);
-        }
-
         private void CacheSuccessfulResponse(string cacheKey, string jsonString, HttpResponseMessage response, string relativeUrl)
         {
-            string etag = response.Headers.ETag?.Tag;
             DateTimeOffset expiration = CalculateExpiration(response, _options.CacheDurationMinutes);
             var newCacheEntry = new CacheEntry
             {
                 JsonResponse = jsonString,
-                ETag = etag,
                 Expiration = expiration.UtcDateTime
             };
             var entryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(expiration);
             _memoryCache.Set(cacheKey, newCacheEntry, entryOptions);
             _trackedCacheKeys.TryAdd(cacheKey, true);
-            _logger.Log(LogLevel.Trace, "Stored response in cache for {Url} with ETag: {ETag} and expiration: {Expiration}", relativeUrl, etag, expiration);
+            _logger.Log(LogLevel.Trace, "Stored response in cache for {Url} with expiration: {Expiration}", relativeUrl, expiration);
         }
 
         private static DateTimeOffset CalculateExpiration(HttpResponseMessage response, int defaultCacheDurationMinutes)
