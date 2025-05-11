@@ -96,7 +96,6 @@ namespace EnkaDotNet
             (HttpStatusCode)429
         };
 
-        public bool EnableVerboseLogging { get; set; } = false;
         public string Language { get; set; } = "en";
         public GameType GameType { get; set; } = GameType.Genshin;
         public bool Raw { get; set; } = false;
