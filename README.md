@@ -19,20 +19,20 @@ Enka.DotNet is a C# wrapper for accessing and processing character data from the
 
 ## Supported Games (Fetch using UID)
 
-| Game                | Status   |  
-| :------------------ | :------- |  
-| Genshin Impact      | ✅ Ready |  
-| Honkai: Star Rail   | ✅ Ready |  
-| Zenless Zone Zero   | ✅ Ready |  
+| Game              | Status     |
+|-------------------|------------|
+| Genshin Impact    | ✅ Ready   |
+| Honkai: Star Rail | ✅ Ready   |
+| Zenless Zone Zero | ✅ Ready   |
 
 ## Miscellaneous (Fetch using Enka username)
 
-| Feature             | Status   |  
-| :------------------ | :------- |  
-| Fetch Basic Profile | ✅ Ready |  
-| Genshin Impact      | ❌ Not Ready |  
-| Honkai: Star Rail   | ❌ Not Ready |  
-| Zenless Zone Zero   | ❌ Not Ready |
+| Feature             | Status        |
+|---------------------|---------------|
+| Fetch Basic Profile | ✅ Ready      |
+| Genshin Impact      | ❌ Not Ready  |
+| Honkai: Star Rail   | ❌ Not Ready  |
+| Zenless Zone Zero   | ❌ Not Ready  |
 
 ## Installation
 

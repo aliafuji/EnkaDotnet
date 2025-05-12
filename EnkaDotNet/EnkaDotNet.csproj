@@ -11,18 +11,17 @@
        <Product>Enka.DotNet</Product>
        <PackAsTool>False</PackAsTool>
        <PlatformTarget>AnyCPU</PlatformTarget>
-       <Description>A wrapper for the Enka.Network API to retrieve HoYoverse games</Description>
+       <Description>A comprehensive and feature rich .NET wrapper for the Enka.Network API, enabling seamless retrieval of data from HoYoverse games with ease of use.</Description>
        <PackageReadmeFile>README.md</PackageReadmeFile>
        <RepositoryUrl>https://github.com/aliafuji/EnkaDotnet</RepositoryUrl>
        <PackageLicenseFile>LICENSE</PackageLicenseFile>
        <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-       <Version>1.4.4</Version>
+       <Version>1.4.4.1</Version>
        <ApplicationIcon>image.ico</ApplicationIcon>
        <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
        <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
 	   <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
 	   <Copyright>Aliafuji</Copyright>
-	   <PackageIcon>image (1).png</PackageIcon>
    </PropertyGroup>
 
    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -35,10 +34,6 @@
    </ItemGroup>
 
  <ItemGroup>
-   <None Include="..\..\..\..\Downloads\image (1).png">
-     <Pack>True</Pack>
-     <PackagePath>\</PackagePath>
-   </None>
    <None Include="..\LICENSE">
      <Pack>True</Pack>
      <PackagePath>\</PackagePath>
