@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using EnkaDotNet;
-using EnkaDotNet.Enums;
 using EnkaDotNet.DIExtensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,7 +17,7 @@ namespace EnkaDotNet.Examples.GenshinImpact.DI
                 .ConfigureServices((context, services) =>
                 {
                     services.AddEnkaNetClient();
-                    services.AddTransient<GenshinService>();
+                    services.AddTransient<EnkaProfileService>();
                 })
                 .ConfigureLogging(logging =>
                 {
@@ -27,7 +26,7 @@ namespace EnkaDotNet.Examples.GenshinImpact.DI
                 })
                 .Build();
 
-            var genshinService = host.Services.GetRequiredService<GenshinService>();
+            var genshinService = host.Services.GetRequiredService<EnkaProfileService>();
             await genshinService.FetchAndDisplayData();
 
             Console.WriteLine("\nPress any key to exit.");
@@ -35,12 +34,12 @@ namespace EnkaDotNet.Examples.GenshinImpact.DI
         }
     }
 
-    public class GenshinService
+    public class EnkaProfileService
     {
         private readonly IEnkaClient _enkaClient;
-        private readonly ILogger<GenshinService> _logger;
+        private readonly ILogger<EnkaProfileService> _logger;
 
-        public GenshinService(IEnkaClient enkaClient, ILogger<GenshinService> logger)
+        public EnkaProfileService(IEnkaClient enkaClient, ILogger<EnkaProfileService> logger)
         {
             _enkaClient = enkaClient;
             _logger = logger;
@@ -52,26 +51,14 @@ namespace EnkaDotNet.Examples.GenshinImpact.DI
             _logger.LogInformation("Fetching Genshin Impact Data (DI)...");
             try
             {
-                int uid = 800000000; // Replace with a valid Genshin Impact UID
-                _logger.LogInformation($"Fetching profile for UID: {uid}");
+                string username = "username"; // Replace with the actual username
+                _logger.LogInformation($"Fetching profile for username: {username}");
 
-                var userProfile = await _enkaClient.GetGenshinUserProfileAsync(uid, language: "en");
+                var userProfile = await _enkaClient.GetEnkaProfileByUsernameAsync(username);
 
-                _logger.LogInformation($"Nickname: {userProfile.PlayerInfo.Nickname}");
-                _logger.LogInformation($"Level: {userProfile.PlayerInfo.Level}");
-
-                if (userProfile.Characters.Any())
-                {
-                    _logger.LogInformation($"Characters ({userProfile.Characters.Count}):");
-                    foreach (var character in userProfile.Characters)
-                    {
-                        _logger.LogInformation($"  - {character.Name} (Lv. {character.Level})");
-                    }
-                }
-                else
-                {
-                    _logger.LogInformation("No character data found or profile might be private.");
-                }
+                _logger.LogInformation($"ID: {userProfile.UserId}");
+                _logger.LogInformation($"Level:  {userProfile.Level}");
+                _logger.LogInformation($"Username: {userProfile.Username}");
             }
             catch (EnkaDotNet.Exceptions.PlayerNotFoundException ex)
             {

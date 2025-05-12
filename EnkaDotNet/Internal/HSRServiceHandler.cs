@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Components.HSR;
-using EnkaDotNet.Enums;
 using EnkaDotNet.Exceptions;
 using EnkaDotNet.Models.HSR;
 using EnkaDotNet.Utils;
@@ -33,20 +32,22 @@ namespace EnkaDotNet.Internal
 
         public async Task<HSRApiResponse> GetRawHSRUserResponseAsync(int uid, bool bypassCache, CancellationToken cancellationToken)
         {
-            if (uid <= 0) throw new ArgumentException("UID must be a positive integer.", nameof(uid));
+            if (uid <= 0) throw new ArgumentException("UID must be a positive integer", nameof(uid));
 
-            string endpoint = string.Format(Constants.GetUserInfoEndpointFormat(GameType.HSR), uid);
+            string relativePath = string.Format(Constants.DEFAULT_GAME_SPECIFIC_USER_INFO_ENDPOINT_FORMAT, uid);
+            string endpoint = $"hsr/{relativePath}"; // Prepend "hsr/" for the HSR API path
+
             HSRApiResponse response = await _httpHelper.Get<HSRApiResponse>(endpoint, bypassCache, cancellationToken).ConfigureAwait(false);
 
             if (response == null)
             {
-                _logger.LogWarning("API for HSR UID {Uid} returned a successful HTTP status but with empty or null-deserializing content.", uid);
-                throw new PlayerNotFoundException(uid, $"API for HSR UID {uid} returned a successful HTTP status but with no parsable content or essential data structures. The profile may not exist or is not public.");
+                _logger.LogWarning("API for HSR UID {Uid} returned a successful HTTP status but with empty or null-deserializing content", uid);
+                throw new PlayerNotFoundException(uid, $"API for HSR UID {uid} returned a successful HTTP status but with no parsable content or essential data structures The profile may not exist or is not public");
             }
 
             if (response.DetailInfo == null)
             {
-                throw new ProfilePrivateException(uid, $"Profile data retrieved for HSR UID {uid}, but essential detail information (DetailInfo block) is missing. The profile might be private, the UID invalid, or an unexpected API response structure was received.");
+                throw new ProfilePrivateException(uid, $"Profile data retrieved for HSR UID {uid}, but essential detail information (DetailInfo block) is missing The profile might be private, the UID invalid, or an unexpected API response structure was received");
             }
             return response;
         }
@@ -62,7 +63,7 @@ namespace EnkaDotNet.Internal
             var rawResponse = await GetRawHSRUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
             if (rawResponse.DetailInfo?.AvatarDetailList == null)
             {
-                _logger.LogInformation("HSR UID {Uid} has public profile info but no character showcase data (AvatarDetailList is null).", uid);
+                _logger.LogInformation("HSR UID {Uid} has public profile info but no character showcase data (AvatarDetailList is null)", uid);
                 return Array.Empty<HSRCharacter>();
             }
             var characters = new List<HSRCharacter>();

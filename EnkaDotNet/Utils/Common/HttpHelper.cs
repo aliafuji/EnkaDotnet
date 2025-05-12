@@ -116,6 +116,11 @@ namespace EnkaDotNet.Utils.Common
                                 throw new RateLimitException($"API rate limit exceeded for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}. Retry-After: {httpResponse.Headers.RetryAfter}", httpResponse.Headers.RetryAfter);
                             }
 
+                            if (httpResponse.StatusCode == (HttpStatusCode)424)
+                            {
+                                throw new GameMaintenanceException($"API returned 424 Failed Dependency for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}. Game may be under maintenance or API access restricted.");
+                            }
+
                             if (httpResponse.StatusCode == HttpStatusCode.NotFound)
                             {
                                 int uid = ExtractUidFromUrl(ctx.Properties.GetValue(RelativeUrlKey, ""));

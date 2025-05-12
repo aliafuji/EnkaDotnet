@@ -17,11 +17,7 @@ namespace EnkaDotNet.Examples.ZenlessZoneZero.DI
             var host = Host.CreateDefaultBuilder(args)
                 .ConfigureServices((context, services) =>
                 {
-                    services.AddEnkaNetClient(options =>
-                    {
-                        options.GameType = GameType.ZZZ;
-                        options.Language = "en";
-                    });
+                    services.AddEnkaNetClient();
                     services.AddTransient<ZzzService>();
                 })
                 .ConfigureLogging(logging =>
@@ -48,7 +44,7 @@ namespace EnkaDotNet.Examples.ZenlessZoneZero.DI
         {
             _enkaClient = enkaClient;
             _logger = logger;
-            _logger.LogInformation($"EnkaClient initialized for GameType: {_enkaClient.GameType}");
+            _logger.LogInformation($"EnkaClient initialized");
         }
 
         public async Task FetchAndDisplayData()
@@ -59,7 +55,7 @@ namespace EnkaDotNet.Examples.ZenlessZoneZero.DI
                 int uid = 10000000; // Replace with a valid ZZZ UID
                 _logger.LogInformation($"Fetching ZZZ player info for UID: {uid}");
 
-                var playerInfo = await _enkaClient.GetZZZPlayerInfoAsync(uid);
+                var playerInfo = await _enkaClient.GetZZZPlayerInfoAsync(uid, language: "en");
                 _logger.LogInformation($"Nickname: {playerInfo.Nickname}, Level: {playerInfo.Level}");
 
                 if (playerInfo.ShowcaseAgents.Any())
