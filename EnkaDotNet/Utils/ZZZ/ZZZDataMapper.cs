@@ -8,12 +8,20 @@ using EnkaDotNet.Enums.ZZZ;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
+    /// <summary>
+    /// Maps raw API data to Zenless Zone Zero specific component models
+    /// </summary>
     public class ZZZDataMapper
     {
         private readonly IZZZAssets _assets;
         private readonly ZZZStatsCalculator _statsCalculator;
         private readonly EnkaClientOptions _options;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ZZZDataMapper"/> class
+        /// </summary>
+        /// <param name="assets">The ZZZ assets provider</param>
+        /// <param name="options">The client options</param>
         public ZZZDataMapper(IZZZAssets assets, EnkaClientOptions options)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
@@ -21,6 +29,11 @@ namespace EnkaDotNet.Utils.ZZZ
             _statsCalculator = new ZZZStatsCalculator(assets);
         }
 
+        /// <summary>
+        /// Maps the raw API response to ZZZ player information
+        /// </summary>
+        /// <param name="response">The raw API response</param>
+        /// <returns>The mapped <see cref="ZZZPlayerInfo"/> component model</returns>
         public ZZZPlayerInfo MapPlayerInfo(ZZZApiResponse response)
         {
             if (response == null) throw new ArgumentNullException(nameof(response));
@@ -28,7 +41,7 @@ namespace EnkaDotNet.Utils.ZZZ
 
             var profileDetail = response.PlayerInfo.SocialDetail?.ProfileDetail;
             var socialDetail = response.PlayerInfo.SocialDetail;
-            if (profileDetail == null && socialDetail?.ProfileDetail == null) throw new ArgumentException("ProfileDetail and SocialDetail.ProfileDetail are null", nameof(response));
+            if (profileDetail == null && socialDetail?.ProfileDetail == null) throw new ArgumentException("ProfileDetail and SocialDetailProfileDetail are null", nameof(response));
 
             profileDetail = profileDetail ?? socialDetail.ProfileDetail;
 
@@ -87,7 +100,11 @@ namespace EnkaDotNet.Utils.ZZZ
             return playerInfo;
         }
 
-
+        /// <summary>
+        /// Maps a raw avatar model to a ZZZ agent component model
+        /// </summary>
+        /// <param name="model">The raw avatar model</param>
+        /// <returns>The mapped <see cref="ZZZAgent"/> component model</returns>
         public ZZZAgent MapAgent(ZZZAvatarModel model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
@@ -154,6 +171,11 @@ namespace EnkaDotNet.Utils.ZZZ
             return agent;
         }
 
+        /// <summary>
+        /// Maps a raw weapon model to a ZZZ W-Engine component model
+        /// </summary>
+        /// <param name="model">The raw weapon model</param>
+        /// <returns>The mapped <see cref="ZZZWEngine"/> component model</returns>
         public ZZZWEngine MapWeapon(ZZZWeaponModel model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
@@ -181,6 +203,12 @@ namespace EnkaDotNet.Utils.ZZZ
             return weapon;
         }
 
+        /// <summary>
+        /// Maps a raw equipment model to a ZZZ Drive Disc component model
+        /// </summary>
+        /// <param name="model">The raw equipment model</param>
+        /// <param name="slot">The slot the Drive Disc is equipped in</param>
+        /// <returns>The mapped <see cref="ZZZDriveDisc"/> component model</returns>
         public ZZZDriveDisc MapDriveDisc(ZZZEquipmentModel model, int slot)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));

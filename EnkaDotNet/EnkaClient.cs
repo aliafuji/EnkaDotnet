@@ -3,29 +3,35 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using EnkaDotNet.Assets;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Components.Genshin;
 using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Components.ZZZ;
-using EnkaDotNet.Enums;
+using EnkaDotNet.Components.EnkaProfile;
 using EnkaDotNet.Exceptions;
+using EnkaDotNet.Internal;
 using EnkaDotNet.Models.Genshin;
 using EnkaDotNet.Models.HSR;
 using EnkaDotNet.Models.ZZZ;
-using EnkaDotNet.Utils.Common;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.DependencyInjection;
+using EnkaDotNet.Models.EnkaProfile;
 using EnkaDotNet.Utils;
-using EnkaDotNet.Assets;
+using EnkaDotNet.Utils.Common;
+using EnkaDotNet.Utils.Enka;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using EnkaDotNet.Internal;
+using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
 
 namespace EnkaDotNet
 {
+    /// <summary>
+    /// Client for interacting with the Enka.Network API
+    /// </summary>
     public partial class EnkaClient : IEnkaClient
     {
         private readonly IHttpHelper _httpHelper;
@@ -33,246 +39,280 @@ namespace EnkaDotNet
         private readonly IServiceProvider _serviceProvider;
         private bool _disposed = false;
 
-        private object _gameServiceHandler;
+        private readonly EnkaProfileServiceHandler _enkaProfileServiceHandler;
+        private readonly EnkaDataMapper _enkaDataMapper;
 
+        private readonly ConcurrentDictionary<string, IGenshinAssets> _genshinAssetsCache = new ConcurrentDictionary<string, IGenshinAssets>();
+        private readonly ConcurrentDictionary<string, IHSRAssets> _hsrAssetsCache = new ConcurrentDictionary<string, IHSRAssets>();
+        private readonly ConcurrentDictionary<string, IZZZAssets> _zzzAssetsCache = new ConcurrentDictionary<string, IZZZAssets>();
+
+        private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<EnkaClient> _clientLogger;
-        private Task _initializationTask;
 
+        private const string DEFAULT_LANGUAGE = "en";
 
-        public GameType GameType => _options.GameType;
+        /// <inheritdoc/>
         public EnkaClientOptions Options => _options.Clone();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EnkaClient"/> class with the specified options, HTTP helper, service provider, and HTTP client factory
+        /// </summary>
+        /// <param name="options">The options to configure the client</param>
+        /// <param name="httpHelper">The HTTP helper for making requests</param>
+        /// <param name="serviceProvider">The service provider for resolving dependencies</param>
+        /// <param name="httpClientFactory">The HTTP client factory for creating named HTTP clients</param>
+        /// <exception cref="ArgumentNullException">Thrown if any of the required parameters are null</exception>
         public EnkaClient(
             IOptions<EnkaClientOptions> options,
             IHttpHelper httpHelper,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            IHttpClientFactory httpClientFactory)
         {
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
             _httpHelper = httpHelper ?? throw new ArgumentNullException(nameof(httpHelper));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             _clientLogger = _serviceProvider.GetService<ILogger<EnkaClient>>() ?? NullLogger<EnkaClient>.Instance;
 
-            _initializationTask = InitializeGameSpecificServicesAsync();
+            _enkaDataMapper = new EnkaDataMapper(_options);
+
+            HttpClient enkaProfileHttpClient = _httpClientFactory.CreateClient("EnkaProfileClient");
+            if (enkaProfileHttpClient.BaseAddress == null) enkaProfileHttpClient.BaseAddress = new Uri(Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
+
+            _enkaProfileServiceHandler = new EnkaProfileServiceHandler(
+                _options,
+                _httpHelper,
+                _enkaDataMapper,
+                _serviceProvider.GetService<ILogger<EnkaProfileServiceHandler>>() ?? NullLogger<EnkaProfileServiceHandler>.Instance,
+                enkaProfileHttpClient
+            );
         }
 
-        private EnkaClient(EnkaClientOptions options, IHttpHelper httpHelper, IAssets assets, ILogger<EnkaClient> logger)
-        {
-            _options = options;
-            _httpHelper = httpHelper;
-            _clientLogger = logger;
-
-            InitializeServiceHandlerWithAssets(assets);
-            _initializationTask = Task.CompletedTask;
-        }
-
-        private void InitializeServiceHandlerWithAssets(IAssets assets)
-        {
-            switch (_options.GameType)
-            {
-                case GameType.Genshin:
-                    _gameServiceHandler = new GenshinServiceHandler((IGenshinAssets)assets, _options, _httpHelper, _clientLogger);
-                    break;
-                case GameType.HSR:
-                    _gameServiceHandler = new HSRServiceHandler((IHSRAssets)assets, _options, _httpHelper, _clientLogger);
-                    break;
-                case GameType.ZZZ:
-                    _gameServiceHandler = new ZZZServiceHandler((IZZZAssets)assets, _options, _httpHelper, _clientLogger);
-                    break;
-                default:
-                    throw new UnsupportedGameTypeException(_options.GameType, "Unsupported game type during direct service handler initialization.");
-            }
-        }
-
-
-        public static async Task<IEnkaClient> CreateAsync(EnkaClientOptions options = null, ILogger<EnkaClient> logger = null)
+        /// <summary>
+        /// Creates a new instance of the EnkaClient Recommended for scenarios without dependency injection
+        /// Game specific assets will be loaded on demand based on the language specified in properties calls
+        /// </summary>
+        /// <param name="options">The options to configure the client</param>
+        /// <param name="logger">The logger to use for logging</param>
+        /// <param name="httpClientFactory">Optional HTTP client factory If null, a default one will be used</param>
+        /// <returns>A task that represents the asynchronous operation The task result contains the created EnkaClient instance</returns>
+        public static Task<IEnkaClient> CreateAsync(EnkaClientOptions options = null, ILogger<EnkaClient> logger = null, IHttpClientFactory httpClientFactory = null)
         {
             options = options ?? new EnkaClientOptions();
             logger = logger ?? NullLogger<EnkaClient>.Instance;
 
-            if (!Constants.IsGameTypeSupported(options.GameType))
-            {
-                throw new UnsupportedGameTypeException(options.GameType, $"Game type {options.GameType} is not currently supported for direct instantiation.");
-            }
+            httpClientFactory = httpClientFactory ?? new DefaultHttpClientFactory();
 
-            var httpHelperClient = new HttpClient();
-            string baseUrl = options.BaseUrl ?? Constants.GetApiBaseUrl(options.GameType);
-            if (Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUriNet))
-            {
-                httpHelperClient.BaseAddress = baseUriNet;
-            }
-            else
-            {
-                httpHelperClient.BaseAddress = new Uri(new Uri(Constants.GetApiBaseUrl(options.GameType)), baseUrl);
-            }
-            httpHelperClient.DefaultRequestHeaders.UserAgent.ParseAdd(options.UserAgent ?? Constants.DefaultUserAgent);
-            httpHelperClient.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+            var httpHelperHttpClient = httpClientFactory.CreateClient("DefaultEnkaClient");
+            if (httpHelperHttpClient.BaseAddress == null) httpHelperHttpClient.BaseAddress = new Uri(options.BaseUrl);
+            httpHelperHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd(options.UserAgent ?? Constants.DefaultUserAgent);
+            httpHelperHttpClient.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 
-            var httpHelperLogger = (ILogger<HttpHelper>)(logger is ILogger<HttpHelper> lh ? lh : NullLogger<HttpHelper>.Instance);
             var httpHelper = new HttpHelper(
-                httpHelperClient,
+                httpHelperHttpClient,
                 new MemoryCache(new MemoryCacheOptions()),
                 Microsoft.Extensions.Options.Options.Create(options),
-                httpHelperLogger
+                (logger as ILogger<HttpHelper>) ?? NullLogger<HttpHelper>.Instance
             );
 
-            var assetHttpClient = new HttpClient();
-            assetHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd(Constants.DefaultUserAgent);
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton(httpClientFactory);
+            var dummyServiceProvider = serviceCollection.BuildServiceProvider();
 
-            IAssets assets;
-            switch (options.GameType)
-            {
-                case GameType.Genshin:
-                    var genshinLogger = (ILogger<GenshinAssets>)(logger is ILogger<GenshinAssets> lg ? lg : NullLogger<GenshinAssets>.Instance);
-                    assets = await AssetsFactory.CreateGenshinAsync(options.Language, assetHttpClient, genshinLogger).ConfigureAwait(false);
-                    break;
-                case GameType.HSR:
-                    var hsrLogger = (ILogger<HSRAssets>)(logger is ILogger<HSRAssets> lhsr ? lhsr : NullLogger<HSRAssets>.Instance);
-                    assets = await AssetsFactory.CreateHSRAsync(options.Language, assetHttpClient, hsrLogger).ConfigureAwait(false);
-                    break;
-                case GameType.ZZZ:
-                    var zzzLogger = (ILogger<ZZZAssets>)(logger is ILogger<ZZZAssets> lzzz ? lzzz : NullLogger<ZZZAssets>.Instance);
-                    assets = await AssetsFactory.CreateZZZAsync(options.Language, assetHttpClient, zzzLogger).ConfigureAwait(false);
-                    break;
-                default:
-                    throw new UnsupportedGameTypeException(options.GameType);
-            }
-
-            return new EnkaClient(options, httpHelper, assets, logger);
+            return Task.FromResult<IEnkaClient>(new EnkaClient(Microsoft.Extensions.Options.Options.Create(options), httpHelper, dummyServiceProvider, httpClientFactory));
         }
 
-        private async Task InitializeGameSpecificServicesAsync()
+        private async Task<IGenshinAssets> GetGenshinAssetsAsync(string language)
         {
-            try
+            language = language ?? DEFAULT_LANGUAGE;
+            if (!_genshinAssetsCache.TryGetValue(language, out var assets))
             {
-                IAssets resolvedAssets;
-                switch (_options.GameType)
+                var assetsFactoryFunc = _serviceProvider?.GetService<Func<string, Task<IGenshinAssets>>>();
+                if (assetsFactoryFunc != null)
                 {
-                    case GameType.Genshin:
-                        var genshinAssetsTask = _serviceProvider.GetRequiredService<Task<IGenshinAssets>>();
-                        resolvedAssets = await genshinAssetsTask.ConfigureAwait(false);
-                        _gameServiceHandler = new GenshinServiceHandler((IGenshinAssets)resolvedAssets, _options, _httpHelper, _clientLogger);
-                        break;
-                    case GameType.HSR:
-                        var hsrAssetsTask = _serviceProvider.GetRequiredService<Task<IHSRAssets>>();
-                        resolvedAssets = await hsrAssetsTask.ConfigureAwait(false);
-                        _gameServiceHandler = new HSRServiceHandler((IHSRAssets)resolvedAssets, _options, _httpHelper, _clientLogger);
-                        break;
-                    case GameType.ZZZ:
-                        var zzzAssetsTask = _serviceProvider.GetRequiredService<Task<IZZZAssets>>();
-                        resolvedAssets = await zzzAssetsTask.ConfigureAwait(false);
-                        _gameServiceHandler = new ZZZServiceHandler((IZZZAssets)resolvedAssets, _options, _httpHelper, _clientLogger);
-                        break;
-                    default:
-                        throw new UnsupportedGameTypeException(_options.GameType, $"Cannot initialize services for unsupported game type: {_options.GameType}");
+                    assets = await assetsFactoryFunc(language).ConfigureAwait(false);
                 }
+                else
+                {
+                    var logger = _serviceProvider?.GetService<ILogger<GenshinAssets>>() ?? NullLogger<GenshinAssets>.Instance;
+                    var httpClient = _httpClientFactory.CreateClient("GenshinAssetClient");
+                    assets = await AssetsFactory.CreateGenshinAssetsAsync(language, httpClient, logger).ConfigureAwait(false);
+                }
+                _genshinAssetsCache.TryAdd(language, assets);
             }
-            catch (InvalidOperationException ex)
+            return assets;
+        }
+
+        private async Task<GenshinServiceHandler> GetGenshinHandlerAsync(string language)
+        {
+            var langAssets = await GetGenshinAssetsAsync(language ?? DEFAULT_LANGUAGE).ConfigureAwait(false);
+            return new GenshinServiceHandler(langAssets, _options, _httpHelper, _clientLogger);
+        }
+
+        private async Task<IHSRAssets> GetHSRAssetsAsync(string language)
+        {
+            language = language ?? DEFAULT_LANGUAGE;
+            if (!_hsrAssetsCache.TryGetValue(language, out var assets))
             {
-                _clientLogger.LogError(ex, "Failed to resolve game-specific services for GameType '{GameType}'. Ensure services were correctly registered.", _options.GameType);
-                throw new EnkaClientConfigurationException($"Failed to resolve game-specific services for GameType '{_options.GameType}'. Ensure services were correctly registered with AddEnkaNetClient().", ex);
+                var assetsFactoryFunc = _serviceProvider?.GetService<Func<string, Task<IHSRAssets>>>();
+                if (assetsFactoryFunc != null)
+                {
+                    assets = await assetsFactoryFunc(language).ConfigureAwait(false);
+                }
+                else
+                {
+                    var logger = _serviceProvider?.GetService<ILogger<HSRAssets>>() ?? NullLogger<HSRAssets>.Instance;
+                    var httpClient = _httpClientFactory.CreateClient("HSRAssetClient");
+                    assets = await AssetsFactory.CreateHSRAssetsAsync(language, httpClient, logger).ConfigureAwait(false);
+                }
+                _hsrAssetsCache.TryAdd(language, assets);
             }
+            return assets;
         }
 
-        private async Task EnsureInitializedAsync()
+        private async Task<HSRServiceHandler> GetHSRHandlerAsync(string language)
         {
-            if (_initializationTask != null && !_initializationTask.IsCompleted)
+            var langAssets = await GetHSRAssetsAsync(language ?? DEFAULT_LANGUAGE).ConfigureAwait(false);
+            return new HSRServiceHandler(langAssets, _options, _httpHelper, _clientLogger);
+        }
+
+        private async Task<IZZZAssets> GetZZZAssetsAsync(string language)
+        {
+            language = language ?? DEFAULT_LANGUAGE;
+            if (!_zzzAssetsCache.TryGetValue(language, out var assets))
             {
-                await _initializationTask.ConfigureAwait(false);
+                var assetsFactoryFunc = _serviceProvider?.GetService<Func<string, Task<IZZZAssets>>>();
+                if (assetsFactoryFunc != null)
+                {
+                    assets = await assetsFactoryFunc(language).ConfigureAwait(false);
+                }
+                else
+                {
+                    var logger = _serviceProvider?.GetService<ILogger<ZZZAssets>>() ?? NullLogger<ZZZAssets>.Instance;
+                    var httpClient = _httpClientFactory.CreateClient("ZZZAssetClient");
+                    assets = await AssetsFactory.CreateZZZAssetsAsync(language, httpClient, logger).ConfigureAwait(false);
+                }
+                _zzzAssetsCache.TryAdd(language, assets);
             }
+            return assets;
         }
 
-        private async Task EnsureGameTypeAndHandlerAsync(GameType expectedGameType, string operationDescription)
+        private async Task<ZZZServiceHandler> GetZZZHandlerAsync(string language)
         {
-            await EnsureInitializedAsync().ConfigureAwait(false);
-            if (_options.GameType != expectedGameType)
-            {
-                throw new NotSupportedException(
-                    $"This operation ({operationDescription}) is only available for {expectedGameType}. " +
-                    $"Current game type: {_options.GameType}");
-            }
-            if (_gameServiceHandler == null)
-            {
-                throw new InvalidOperationException($"Game service handler for {expectedGameType} not initialized for operation: {operationDescription}.");
-            }
+            var langAssets = await GetZZZAssetsAsync(language ?? DEFAULT_LANGUAGE).ConfigureAwait(false);
+            return new ZZZServiceHandler(langAssets, _options, _httpHelper, _clientLogger);
         }
 
-        public async Task<ApiResponse> GetRawUserResponseAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
-        {
-            await EnsureGameTypeAndHandlerAsync(GameType.Genshin, nameof(GetRawUserResponseAsync)).ConfigureAwait(false);
-            return await ((GenshinServiceHandler)_gameServiceHandler).GetRawUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
-        }
-
-        public async Task<PlayerInfo> GetPlayerInfoAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
+        /// <inheritdoc/>
+        public async Task<EnkaProfileResponse> GetRawEnkaProfileByUsernameAsync(string username, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAndHandlerAsync(GameType.Genshin, nameof(GetPlayerInfoAsync)).ConfigureAwait(false);
-            return await ((GenshinServiceHandler)_gameServiceHandler).GetPlayerInfoAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+            return await _enkaProfileServiceHandler.GetRawEnkaProfileByUsernameAsync(username, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<IReadOnlyList<Character>> GetCharactersAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
+        /// <inheritdoc/>
+        public async Task<EnkaUserProfile> GetEnkaProfileByUsernameAsync(string username, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAndHandlerAsync(GameType.Genshin, nameof(GetCharactersAsync)).ConfigureAwait(false);
-            return await ((GenshinServiceHandler)_gameServiceHandler).GetCharactersAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+            return await _enkaProfileServiceHandler.GetEnkaProfileByUsernameAsync(username, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<(PlayerInfo PlayerInfo, IReadOnlyList<Character> Characters)> GetUserProfileAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
+        /// <inheritdoc/>
+        public async Task<ApiResponse> GetGenshinRawUserResponseAsync(int uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAndHandlerAsync(GameType.Genshin, nameof(GetUserProfileAsync)).ConfigureAwait(false);
-            return await ((GenshinServiceHandler)_gameServiceHandler).GetUserProfileAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+            var handler = await GetGenshinHandlerAsync(language).ConfigureAwait(false);
+            return await handler.GetRawUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<HSRApiResponse> GetRawHSRUserResponseAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
-        {
-            await EnsureGameTypeAndHandlerAsync(GameType.HSR, nameof(GetRawHSRUserResponseAsync)).ConfigureAwait(false);
-            return await ((HSRServiceHandler)_gameServiceHandler).GetRawHSRUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
-        }
-
-        public async Task<HSRPlayerInfo> GetHSRPlayerInfoAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
+        /// <inheritdoc/>
+        public async Task<PlayerInfo> GetGenshinPlayerInfoAsync(int uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAndHandlerAsync(GameType.HSR, nameof(GetHSRPlayerInfoAsync)).ConfigureAwait(false);
-            return await ((HSRServiceHandler)_gameServiceHandler).GetHSRPlayerInfoAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+            var handler = await GetGenshinHandlerAsync(language).ConfigureAwait(false);
+            return await handler.GetPlayerInfoAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<IReadOnlyList<HSRCharacter>> GetHSRCharactersAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
+        /// <inheritdoc/>
+        public async Task<IReadOnlyList<Character>> GetGenshinCharactersAsync(int uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAndHandlerAsync(GameType.HSR, nameof(GetHSRCharactersAsync)).ConfigureAwait(false);
-            return await ((HSRServiceHandler)_gameServiceHandler).GetHSRCharactersAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+            var handler = await GetGenshinHandlerAsync(language).ConfigureAwait(false);
+            return await handler.GetCharactersAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<ZZZApiResponse> GetRawZZZUserResponseAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
-        {
-            await EnsureGameTypeAndHandlerAsync(GameType.ZZZ, nameof(GetRawZZZUserResponseAsync)).ConfigureAwait(false);
-            return await ((ZZZServiceHandler)_gameServiceHandler).GetRawZZZUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
-        }
-
-        public async Task<ZZZPlayerInfo> GetZZZPlayerInfoAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
+        /// <inheritdoc/>
+        public async Task<(PlayerInfo PlayerInfo, IReadOnlyList<Character> Characters)> GetGenshinUserProfileAsync(int uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAndHandlerAsync(GameType.ZZZ, nameof(GetZZZPlayerInfoAsync)).ConfigureAwait(false);
-            return await ((ZZZServiceHandler)_gameServiceHandler).GetZZZPlayerInfoAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+            var handler = await GetGenshinHandlerAsync(language).ConfigureAwait(false);
+            return await handler.GetUserProfileAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<IReadOnlyList<ZZZAgent>> GetZZZAgentsAsync(int uid, bool bypassCache = false, CancellationToken cancellationToken = default)
+        /// <inheritdoc/>
+        public async Task<HSRApiResponse> GetHSRRawUserResponseAsync(int uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            await EnsureGameTypeAndHandlerAsync(GameType.ZZZ, nameof(GetZZZAgentsAsync)).ConfigureAwait(false);
-            return await ((ZZZServiceHandler)_gameServiceHandler).GetZZZAgentsAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+            var handler = await GetHSRHandlerAsync(language).ConfigureAwait(false);
+            return await handler.GetRawHSRUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
         }
 
+        /// <inheritdoc/>
+        public async Task<HSRPlayerInfo> GetHSRPlayerInfoAsync(int uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default)
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
+            var handler = await GetHSRHandlerAsync(language).ConfigureAwait(false);
+            return await handler.GetHSRPlayerInfoAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        public async Task<IReadOnlyList<HSRCharacter>> GetHSRCharactersAsync(int uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default)
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
+            var handler = await GetHSRHandlerAsync(language).ConfigureAwait(false);
+            return await handler.GetHSRCharactersAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        public async Task<ZZZApiResponse> GetZZZRawUserResponseAsync(int uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default)
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
+            var handler = await GetZZZHandlerAsync(language).ConfigureAwait(false);
+            return await handler.GetRawZZZUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        public async Task<ZZZPlayerInfo> GetZZZPlayerInfoAsync(int uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default)
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
+            var handler = await GetZZZHandlerAsync(language).ConfigureAwait(false);
+            return await handler.GetZZZPlayerInfoAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        public async Task<IReadOnlyList<ZZZAgent>> GetZZZAgentsAsync(int uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default)
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
+            var handler = await GetZZZHandlerAsync(language).ConfigureAwait(false);
+            return await handler.GetZZZAgentsAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
         public (long CurrentEntryCount, int ExpiredCountNotAvailable) GetCacheStats()
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
             return _httpHelper.GetCacheStats();
         }
 
+        /// <inheritdoc/>
         public void ClearCache()
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
             _httpHelper.ClearCache();
+            _genshinAssetsCache.Clear();
+            _hsrAssetsCache.Clear();
+            _zzzAssetsCache.Clear();
+            _clientLogger.LogInformation("Cleared EnkaClient language asset caches");
         }
 
         protected virtual void Dispose(bool disposing)
@@ -287,10 +327,32 @@ namespace EnkaDotNet
             }
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
+        }
+
+        private class DefaultHttpClientFactory : IHttpClientFactory
+        {
+            public HttpClient CreateClient(string name)
+            {
+                var client = new HttpClient();
+                if (name == "EnkaProfileClient")
+                {
+                    client.BaseAddress = new Uri(Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
+                }
+                else if (name == "GenshinAssetClient" || name == "HSRAssetClient" || name == "ZZZAssetClient")
+                {
+                }
+                else if (name == "DefaultEnkaClient")
+                {
+                    client.BaseAddress = new Uri(Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
+                }
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(Constants.DefaultUserAgent);
+                return client;
+            }
         }
     }
 }

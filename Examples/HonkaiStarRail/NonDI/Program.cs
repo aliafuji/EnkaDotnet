@@ -21,8 +21,6 @@ namespace HSRStatsViewer
 
                 var options = new EnkaClientOptions
                 {
-                    GameType = GameType.HSR,
-                    Language = "en",
                     UserAgent = "HSRStatsViewer/1.0",
                     Raw = false
                 };
@@ -36,7 +34,7 @@ namespace HSRStatsViewer
                 int uid = args.Length > 0 && int.TryParse(args[0], out int parsedUid) ? parsedUid : 80000000;
 
                 Console.WriteLine($"Fetching player data for UID: {uid}...");
-                var playerInfo = await client.GetHSRPlayerInfoAsync(uid);
+                var playerInfo = await client.GetHSRPlayerInfoAsync(uid, language: "en");
 
                 Console.WriteLine($"Player: {playerInfo.Nickname} (Lv.{playerInfo.Level}, World Level: {playerInfo.WorldLevel})");
                 Console.WriteLine($"Signature: {playerInfo.Signature}");

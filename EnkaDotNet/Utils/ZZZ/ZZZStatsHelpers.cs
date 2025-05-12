@@ -553,8 +553,8 @@ namespace EnkaDotNet.Utils.ZZZ
                         break;
 
                     case "Energy Regen":
-                        double weaponRegenBonus = catBreakdown["Weapon_Percent"] != 0 ? catBreakdown["Weapon_Percent"] / 100.0 : 0;
-                        double discRegenBonus = catBreakdown["Discs_Percent"] != 0 ? catBreakdown["Discs_Percent"] / 100.0 : 0;
+                        double weaponRegenBonus = catBreakdown["Weapon_Percent"] != 0 ? catBreakdown["Weapon_Percent"] : 0;
+                        double discRegenBonus = catBreakdown["Discs_Percent"] != 0 ? catBreakdown["Discs_Percent"]: 0;
                         double setBonusRegenBonus = catBreakdown["SetBonus_Percent"] != 0 ? catBreakdown["SetBonus_Percent"] * 10 : 0;
                         double combinedPercentBonus = weaponRegenBonus + discRegenBonus + setBonusRegenBonus;
                         double totalPercentBonusEnergy = 0;

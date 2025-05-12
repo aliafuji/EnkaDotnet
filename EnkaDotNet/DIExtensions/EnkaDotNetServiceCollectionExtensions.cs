@@ -1,12 +1,9 @@
 ﻿using System;
-using EnkaDotNet.Assets;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Assets.ZZZ;
-using EnkaDotNet.Enums;
 using EnkaDotNet.Utils.Common;
 using EnkaDotNet.Utils;
-using EnkaDotNet.Exceptions;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -16,6 +13,7 @@ using System.Net.Http;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
+using EnkaDotNet.Assets;
 
 namespace EnkaDotNet.DIExtensions
 {
@@ -30,71 +28,72 @@ namespace EnkaDotNet.DIExtensions
 
             services.AddSingleton(Options.Create(optionsInstance));
             services.TryAddSingleton<IMemoryCache>(sp => new MemoryCache(new MemoryCacheOptions()));
+            services.AddHttpClient();
 
             services.AddHttpClient<IHttpHelper, HttpHelper>((serviceProvider, client) =>
             {
                 var opts = serviceProvider.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
-                string baseUrl = opts.BaseUrl ?? Constants.GetApiBaseUrl(opts.GameType);
-
-                if (Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
-                {
-                    client.BaseAddress = baseUri;
-                }
-                else
-                {
-                    client.BaseAddress = new Uri(new Uri(Constants.GetApiBaseUrl(opts.GameType)), baseUrl);
-                }
+                client.BaseAddress = new Uri(opts.BaseUrl ?? Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(opts.UserAgent ?? Constants.DefaultUserAgent);
                 client.Timeout = TimeSpan.FromSeconds(opts.TimeoutSeconds);
-            });
+            }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate });
+
+            services.AddHttpClient("EnkaProfileClient", client =>
+            {
+                var tempOptions = new EnkaClientOptions();
+                configureOptionsAction?.Invoke(tempOptions);
+                client.BaseAddress = new Uri(Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(tempOptions.UserAgent ?? Constants.DefaultUserAgent);
+                client.Timeout = TimeSpan.FromSeconds(tempOptions.TimeoutSeconds);
+            }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate });
 
             Action<HttpClient> configureAssetClient = client =>
             {
-                client.DefaultRequestHeaders.UserAgent.ParseAdd(Constants.DefaultUserAgent);
+                var tempOptions = new EnkaClientOptions();
+                configureOptionsAction?.Invoke(tempOptions);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(tempOptions.UserAgent ?? Constants.DefaultUserAgent);
+                client.Timeout = TimeSpan.FromSeconds(tempOptions.TimeoutSeconds);
             };
 
-            services.AddHttpClient(nameof(GenshinAssets), configureAssetClient)
+            services.AddHttpClient("GenshinAssetClient", configureAssetClient)
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate });
-            services.AddHttpClient(nameof(HSRAssets), configureAssetClient)
+            services.AddHttpClient("HSRAssetClient", configureAssetClient)
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate });
-            services.AddHttpClient(nameof(ZZZAssets), configureAssetClient)
+            services.AddHttpClient("ZZZAssetClient", configureAssetClient)
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate });
 
-            switch (optionsInstance.GameType)
+            services.TryAddSingleton<Func<string, Task<IGenshinAssets>>>(sp =>
             {
-                case GameType.Genshin:
-                    services.TryAddSingleton<Task<IGenshinAssets>>(async sp =>
-                    {
-                        var opts = sp.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
-                        var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-                        var httpClient = httpClientFactory.CreateClient(nameof(GenshinAssets));
-                        var logger = sp.GetService<ILogger<GenshinAssets>>() ?? NullLogger<GenshinAssets>.Instance;
-                        return await AssetsFactory.CreateGenshinAsync(opts.Language, httpClient, logger).ConfigureAwait(false);
-                    });
-                    break;
-                case GameType.HSR:
-                    services.TryAddSingleton<Task<IHSRAssets>>(async sp =>
-                    {
-                        var opts = sp.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
-                        var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-                        var httpClient = httpClientFactory.CreateClient(nameof(HSRAssets));
-                        var logger = sp.GetService<ILogger<HSRAssets>>() ?? NullLogger<HSRAssets>.Instance;
-                        return await AssetsFactory.CreateHSRAsync(opts.Language, httpClient, logger).ConfigureAwait(false);
-                    });
-                    break;
-                case GameType.ZZZ:
-                    services.TryAddSingleton<Task<IZZZAssets>>(async sp =>
-                    {
-                        var opts = sp.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
-                        var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-                        var httpClient = httpClientFactory.CreateClient(nameof(ZZZAssets));
-                        var logger = sp.GetService<ILogger<ZZZAssets>>() ?? NullLogger<ZZZAssets>.Instance;
-                        return await AssetsFactory.CreateZZZAsync(opts.Language, httpClient, logger).ConfigureAwait(false);
-                    });
-                    break;
-                default:
-                    throw new UnsupportedGameTypeException(optionsInstance.GameType, $"Game type {optionsInstance.GameType} is not supported for DI registration.");
-            }
+                return async (language) =>
+                {
+                    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                    var httpClient = httpClientFactory.CreateClient("GenshinAssetClient");
+                    var logger = sp.GetService<ILogger<GenshinAssets>>() ?? NullLogger<GenshinAssets>.Instance;
+                    return await AssetsFactory.CreateGenshinAssetsAsync(language, httpClient, logger).ConfigureAwait(false);
+                };
+            });
+
+            services.TryAddSingleton<Func<string, Task<IHSRAssets>>>(sp =>
+            {
+                return async (language) =>
+                {
+                    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                    var httpClient = httpClientFactory.CreateClient("HSRAssetClient");
+                    var logger = sp.GetService<ILogger<HSRAssets>>() ?? NullLogger<HSRAssets>.Instance;
+                    return await AssetsFactory.CreateHSRAssetsAsync(language, httpClient, logger).ConfigureAwait(false);
+                };
+            });
+
+            services.TryAddSingleton<Func<string, Task<IZZZAssets>>>(sp =>
+            {
+                return async (language) =>
+                {
+                    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                    var httpClient = httpClientFactory.CreateClient("ZZZAssetClient");
+                    var logger = sp.GetService<ILogger<ZZZAssets>>() ?? NullLogger<ZZZAssets>.Instance;
+                    return await AssetsFactory.CreateZZZAssetsAsync(language, httpClient, logger).ConfigureAwait(false);
+                };
+            });
 
             services.TryAddScoped<IEnkaClient, EnkaClient>();
             return services;

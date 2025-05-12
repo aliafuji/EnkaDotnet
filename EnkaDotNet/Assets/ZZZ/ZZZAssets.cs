@@ -4,14 +4,15 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using EnkaDotNet.Assets.ZZZ.Models;
-using EnkaDotNet.Enums;
 using EnkaDotNet.Enums.ZZZ;
 using EnkaDotNet.Utils;
-using EnkaDotNet.Utils.ZZZ;
 using Microsoft.Extensions.Logging;
 
 namespace EnkaDotNet.Assets.ZZZ
 {
+    /// <summary>
+    /// Provides access to Zenless Zone Zero specific game assets
+    /// </summary>
     public class ZZZAssets : BaseAssets, IZZZAssets
     {
         private readonly Dictionary<string, ZZZAvatarAssetInfo> _avatars = new Dictionary<string, ZZZAvatarAssetInfo>();
@@ -28,9 +29,18 @@ namespace EnkaDotNet.Assets.ZZZ
         private List<ZZZWeaponLevelItem> _weaponLevelData;
         private List<ZZZWeaponStarItem> _weaponStarData;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ZZZAssets"/> class
+        /// </summary>
         public ZZZAssets(string language, HttpClient httpClient, ILogger<ZZZAssets> logger)
-            : base(language, GameType.ZZZ, httpClient, logger)
+            : base(language, "zzz", httpClient, logger)
         {
+        }
+
+        /// <inheritdoc/>
+        protected override IReadOnlyDictionary<string, string> GetAssetFileUrls()
+        {
+            return Constants.ZZZAssetFileUrls;
         }
 
         protected override async Task LoadAssetsInternalAsync()
@@ -59,12 +69,12 @@ namespace EnkaDotNet.Assets.ZZZ
                 var data = await FetchAndDeserializeAssetAsync<ZZZEquipmentLevelData>("equipment_level.json").ConfigureAwait(false);
                 _equipmentLevelData = data?.Items ?? new List<ZZZEquipmentLevelItem>();
                 if (_equipmentLevelData == null || !_equipmentLevelData.Any())
-                    throw new InvalidOperationException("ZZZ equipment_level.json data is null or empty after deserialization.");
+                    throw new InvalidOperationException("ZZZ equipment_leveljson data is null or empty after deserialization");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Zenless Zone Zero equipment_level.json asset.");
-                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero equipment level data.", ex);
+                _logger.LogError(ex, "Error loading Zenless Zone Zero equipment_leveljson asset");
+                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero equipment level data", ex);
             }
         }
 
@@ -75,12 +85,12 @@ namespace EnkaDotNet.Assets.ZZZ
                 var data = await FetchAndDeserializeAssetAsync<ZZZWeaponLevelData>("weapon_level.json").ConfigureAwait(false);
                 _weaponLevelData = data?.Items ?? new List<ZZZWeaponLevelItem>();
                 if (_weaponLevelData == null || !_weaponLevelData.Any())
-                    throw new InvalidOperationException("ZZZ weapon_level.json data is null or empty after deserialization.");
+                    throw new InvalidOperationException("ZZZ weapon_leveljson data is null or empty after deserialization");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Zenless Zone Zero weapon_level.json asset.");
-                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero weapon level data.", ex);
+                _logger.LogError(ex, "Error loading Zenless Zone Zero weapon_leveljson asset");
+                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero weapon level data", ex);
             }
         }
 
@@ -91,12 +101,12 @@ namespace EnkaDotNet.Assets.ZZZ
                 var data = await FetchAndDeserializeAssetAsync<ZZZWeaponStarData>("weapon_star.json").ConfigureAwait(false);
                 _weaponStarData = data?.Items ?? new List<ZZZWeaponStarItem>();
                 if (_weaponStarData == null || !_weaponStarData.Any())
-                    throw new InvalidOperationException("ZZZ weapon_star.json data is null or empty after deserialization.");
+                    throw new InvalidOperationException("ZZZ weapon_starjson data is null or empty after deserialization");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Zenless Zone Zero weapon_star.json asset.");
-                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero weapon star data.", ex);
+                _logger.LogError(ex, "Error loading Zenless Zone Zero weapon_starjson asset");
+                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero weapon star data", ex);
             }
         }
 
@@ -107,12 +117,12 @@ namespace EnkaDotNet.Assets.ZZZ
             {
                 var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, ZZZAvatarAssetInfo>>("avatars.json").ConfigureAwait(false);
                 if (deserializedMap != null) foreach (var kvp in deserializedMap) _avatars[kvp.Key] = kvp.Value;
-                else throw new InvalidOperationException("ZZZ avatars.json data is null after deserialization.");
+                else throw new InvalidOperationException("ZZZ avatarsjson data is null after deserialization");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Zenless Zone Zero avatars.json asset.");
-                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero avatar data.", ex);
+                _logger.LogError(ex, "Error loading Zenless Zone Zero avatarsjson asset");
+                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero avatar data", ex);
             }
         }
 
@@ -123,12 +133,12 @@ namespace EnkaDotNet.Assets.ZZZ
             {
                 var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, ZZZWeaponAssetInfo>>("weapons.json").ConfigureAwait(false);
                 if (deserializedMap != null) foreach (var kvp in deserializedMap) _weapons[kvp.Key] = kvp.Value;
-                else throw new InvalidOperationException("ZZZ weapons.json data is null after deserialization.");
+                else throw new InvalidOperationException("ZZZ weaponsjson data is null after deserialization");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Zenless Zone Zero weapons.json asset.");
-                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero weapon data.", ex);
+                _logger.LogError(ex, "Error loading Zenless Zone Zero weaponsjson asset");
+                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero weapon data", ex);
             }
         }
 
@@ -139,14 +149,14 @@ namespace EnkaDotNet.Assets.ZZZ
             {
                 var deserializedData = await FetchAndDeserializeAssetAsync<ZZZEquipmentData>("equipments.json").ConfigureAwait(false);
                 if (deserializedData?.Items != null) foreach (var kvp in deserializedData.Items) _equipmentItems[kvp.Key] = kvp.Value;
-                else throw new InvalidOperationException("ZZZ equipments.json Items data is null after deserialization.");
+                else throw new InvalidOperationException("ZZZ equipmentsjson Items data is null after deserialization");
                 if (deserializedData?.Suits != null) foreach (var kvp in deserializedData.Suits) _equipmentSuits[kvp.Key] = kvp.Value;
-                else throw new InvalidOperationException("ZZZ equipments.json Suits data is null after deserialization.");
+                else throw new InvalidOperationException("ZZZ equipmentsjson Suits data is null after deserialization");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Zenless Zone Zero equipments.json asset.");
-                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero equipment data.", ex);
+                _logger.LogError(ex, "Error loading Zenless Zone Zero equipmentsjson asset");
+                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero equipment data", ex);
             }
         }
 
@@ -157,12 +167,12 @@ namespace EnkaDotNet.Assets.ZZZ
             {
                 var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, ZZZPfpAssetInfo>>("pfps.json").ConfigureAwait(false);
                 if (deserializedMap != null) foreach (var kvp in deserializedMap) _pfps[kvp.Key] = kvp.Value;
-                else throw new InvalidOperationException("ZZZ pfps.json data is null after deserialization.");
+                else throw new InvalidOperationException("ZZZ pfpsjson data is null after deserialization");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Zenless Zone Zero pfps.json asset.");
-                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero profile picture data.", ex);
+                _logger.LogError(ex, "Error loading Zenless Zone Zero pfpsjson asset");
+                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero profile picture data", ex);
             }
         }
 
@@ -173,12 +183,12 @@ namespace EnkaDotNet.Assets.ZZZ
             {
                 var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, ZZZNameCardAssetInfo>>("namecards.json").ConfigureAwait(false);
                 if (deserializedMap != null) foreach (var kvp in deserializedMap) _namecards[kvp.Key] = kvp.Value;
-                else throw new InvalidOperationException("ZZZ namecards.json data is null after deserialization.");
+                else throw new InvalidOperationException("ZZZ namecardsjson data is null after deserialization");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Zenless Zone Zero namecards.json asset.");
-                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero namecard data.", ex);
+                _logger.LogError(ex, "Error loading Zenless Zone Zero namecardsjson asset");
+                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero namecard data", ex);
             }
         }
 
@@ -189,12 +199,12 @@ namespace EnkaDotNet.Assets.ZZZ
             {
                 var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, ZZZMedalAssetInfo>>("medals.json").ConfigureAwait(false);
                 if (deserializedMap != null) foreach (var kvp in deserializedMap) _medals[kvp.Key] = kvp.Value;
-                else throw new InvalidOperationException("ZZZ medals.json data is null after deserialization.");
+                else throw new InvalidOperationException("ZZZ medalsjson data is null after deserialization");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Zenless Zone Zero medals.json asset.");
-                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero medal data.", ex);
+                _logger.LogError(ex, "Error loading Zenless Zone Zero medalsjson asset");
+                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero medal data", ex);
             }
         }
 
@@ -205,12 +215,12 @@ namespace EnkaDotNet.Assets.ZZZ
             {
                 var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, ZZZTitleAssetInfo>>("titles.json").ConfigureAwait(false);
                 if (deserializedMap != null) foreach (var kvp in deserializedMap) _titles[kvp.Key] = kvp.Value;
-                else throw new InvalidOperationException("ZZZ titles.json data is null after deserialization.");
+                else throw new InvalidOperationException("ZZZ titlesjson data is null after deserialization");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Zenless Zone Zero titles.json asset.");
-                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero title data.", ex);
+                _logger.LogError(ex, "Error loading Zenless Zone Zero titlesjson asset");
+                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero title data", ex);
             }
         }
 
@@ -221,24 +231,30 @@ namespace EnkaDotNet.Assets.ZZZ
             {
                 var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, ZZZPropertyAssetInfo>>("property.json").ConfigureAwait(false);
                 if (deserializedMap != null) foreach (var kvp in deserializedMap) _properties[kvp.Key] = kvp.Value;
-                else throw new InvalidOperationException("ZZZ property.json data is null after deserialization.");
+                else throw new InvalidOperationException("ZZZ propertyjson data is null after deserialization");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Zenless Zone Zero property.json asset.");
-                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero property data.", ex);
+                _logger.LogError(ex, "Error loading Zenless Zone Zero propertyjson asset");
+                throw new InvalidOperationException("Failed to load essential Zenless Zone Zero property data", ex);
             }
         }
+
+        /// <inheritdoc/>
         public string GetLocalizedText(string key) => GetText(key);
+        /// <inheritdoc/>
         public ZZZAvatarAssetInfo GetAvatarInfo(string agentId) { _avatars.TryGetValue(agentId, out var info); return info; }
+        /// <inheritdoc/>
         public ZZZWeaponAssetInfo GetWeaponInfo(string weaponId) { _weapons.TryGetValue(weaponId, out var info); return info; }
 
+        /// <inheritdoc/>
         public List<ZZZAvatarColors> GetAvatarColors(int agentId)
         {
             if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && avatarInfo.Colors != null)
                 return new List<ZZZAvatarColors> { avatarInfo.Colors };
             return new List<ZZZAvatarColors>();
         }
+        /// <inheritdoc/>
         public string GetAgentName(int agentId)
         {
             string agentIdStr = agentId.ToString();
@@ -255,18 +271,21 @@ namespace EnkaDotNet.Assets.ZZZ
             }
             return $"Agent_{agentId}";
         }
+        /// <inheritdoc/>
         public string GetAgentIconUrl(int agentId)
         {
             if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.Image))
-                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{avatarInfo.Image}";
+                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{avatarInfo.Image}";
             return string.Empty;
         }
+        /// <inheritdoc/>
         public string GetAgentCircleIconUrl(int agentId)
         {
             if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.CircleIcon))
-                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{avatarInfo.CircleIcon}";
+                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{avatarInfo.CircleIcon}";
             return string.Empty;
         }
+        /// <inheritdoc/>
         public List<ElementType> GetAgentElements(int agentId)
         {
             var elements = new List<ElementType>();
@@ -276,54 +295,68 @@ namespace EnkaDotNet.Assets.ZZZ
             }
             return elements;
         }
+        /// <inheritdoc/>
         public ProfessionType GetAgentProfessionType(int agentId)
         {
             if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.ProfessionType))
                 return MapProfessionNameToEnum(avatarInfo.ProfessionType);
             return ProfessionType.Unknown;
         }
+        /// <inheritdoc/>
         public int GetAgentRarity(int agentId) { _avatars.TryGetValue(agentId.ToString(), out var info); return info?.Rarity ?? 0; }
+        /// <inheritdoc/>
         public ZZZEquipmentSuitInfo GetDiscSetInfo(string suitId) { _equipmentSuits.TryGetValue(suitId, out var info); return info; }
+        /// <inheritdoc/>
         public Dictionary<string, ZZZEquipmentSuitInfo> GetAllDiscSets() => _equipmentSuits;
+        /// <inheritdoc/>
         public string GetWeaponName(int weaponId)
         {
             if (_weapons.TryGetValue(weaponId.ToString(), out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.ItemName))
                 return GetText(weaponInfo.ItemName);
             return $"Weapon_{weaponId}";
         }
+        /// <inheritdoc/>
         public string GetWeaponIconUrl(int weaponId)
         {
             if (_weapons.TryGetValue(weaponId.ToString(), out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.ImagePath))
-                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{weaponInfo.ImagePath}";
+                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{weaponInfo.ImagePath}";
             return string.Empty;
         }
+        /// <inheritdoc/>
         public ProfessionType GetWeaponType(int weaponId)
         {
             if (_weapons.TryGetValue(weaponId.ToString(), out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.ProfessionType))
                 return MapProfessionNameToEnum(weaponInfo.ProfessionType);
             return ProfessionType.Unknown;
         }
+        /// <inheritdoc/>
         public int GetWeaponRarity(int weaponId) { _weapons.TryGetValue(weaponId.ToString(), out var info); return info?.Rarity ?? 0; }
+        /// <inheritdoc/>
         public string GetDriveDiscSuitName(int suitId)
         {
             if (_equipmentSuits.TryGetValue(suitId.ToString(), out var suitInfo) && !string.IsNullOrEmpty(suitInfo.Name))
                 return GetText(suitInfo.Name);
             return $"Suit_{suitId}";
         }
+        /// <inheritdoc/>
         public string GetDriveDiscSuitIconUrl(int suitId)
         {
             if (_equipmentSuits.TryGetValue(suitId.ToString(), out var suitInfo) && !string.IsNullOrEmpty(suitInfo.Icon))
-                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{suitInfo.Icon}";
+                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{suitInfo.Icon}";
             return string.Empty;
         }
+        /// <inheritdoc/>
         public int GetDriveDiscRarity(int discId) { _equipmentItems.TryGetValue(discId.ToString(), out var info); return info?.Rarity ?? 0; }
+        /// <inheritdoc/>
         public int GetDriveDiscSuitId(int discId) { _equipmentItems.TryGetValue(discId.ToString(), out var info); return info?.SuitId ?? 0; }
+        /// <inheritdoc/>
         public string GetPropertyName(int propertyId)
         {
             if (_properties.TryGetValue(propertyId.ToString(), out var propertyInfo) && !string.IsNullOrEmpty(propertyInfo.Name))
                 return GetText(propertyInfo.Name);
             return $"Property_{propertyId}";
         }
+        /// <inheritdoc/>
         public string FormatPropertyValue(int propertyId, double value)
         {
             if (_properties.TryGetValue(propertyId.ToString(), out var propertyInfo) && !string.IsNullOrEmpty(propertyInfo.Format))
@@ -337,47 +370,56 @@ namespace EnkaDotNet.Assets.ZZZ
                 }
                 catch (FormatException ex)
                 {
-                    _logger.LogWarning(ex, "Error formatting ZZZ property {PropertyId}.", propertyId);
-                    bool isPercent = ZZZStatsHelpers.IsDisplayPercentageStat((StatType)propertyId);
+                    _logger.LogWarning(ex, "Error formatting ZZZ property {PropertyId}", propertyId);
+                    bool isPercent = EnkaDotNet.Utils.ZZZ.ZZZStatsHelpers.IsDisplayPercentageStat((StatType)propertyId);
                     return isPercent ? $"{value:F1}%" : $"{Math.Floor(value)}";
                 }
             }
-            bool isPercentage = ZZZStatsHelpers.IsDisplayPercentageStat((StatType)propertyId);
+            bool isPercentage = EnkaDotNet.Utils.ZZZ.ZZZStatsHelpers.IsDisplayPercentageStat((StatType)propertyId);
             return isPercentage ? $"{value:F1}%" : $"{Math.Floor(value)}";
         }
+        /// <inheritdoc/>
         public string GetTitleText(int titleId)
         {
             if (_titles.TryGetValue(titleId.ToString(), out var titleInfo) && !string.IsNullOrEmpty(titleInfo.TitleText))
                 return GetText(titleInfo.TitleText);
             return $"Title_{titleId}";
         }
+        /// <inheritdoc/>
         public string GetMedalName(int medalId)
         {
             if (_medals.TryGetValue(medalId.ToString(), out var medalInfo) && !string.IsNullOrEmpty(medalInfo.Name))
                 return GetText(medalInfo.Name);
             return $"Medal_{medalId}";
         }
+        /// <inheritdoc/>
         public string GetMedalIconUrl(int medalId)
         {
             if (_medals.TryGetValue(medalId.ToString(), out var medalInfo) && !string.IsNullOrEmpty(medalInfo.Icon))
-                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{medalInfo.Icon}";
+                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{medalInfo.Icon}";
             return string.Empty;
         }
+        /// <inheritdoc/>
         public string GetNameCardIconUrl(int nameCardId)
         {
             if (_namecards.TryGetValue(nameCardId.ToString(), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon))
-                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{nameCardInfo.Icon}";
+                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{nameCardInfo.Icon}";
             return string.Empty;
         }
+        /// <inheritdoc/>
         public string GetProfilePictureIconUrl(int profilePictureId)
         {
             if (_pfps.TryGetValue(profilePictureId.ToString(), out var pfpInfo) && !string.IsNullOrEmpty(pfpInfo.Icon))
-                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{pfpInfo.Icon}";
+                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{pfpInfo.Icon}";
             return string.Empty;
         }
+        /// <inheritdoc/>
         public string GetSkillIconUrl(int agentId, SkillType skillType) => string.Empty;
+        /// <inheritdoc/>
         public List<ZZZEquipmentLevelItem> GetEquipmentLevelData() => _equipmentLevelData;
+        /// <inheritdoc/>
         public List<ZZZWeaponLevelItem> GetWeaponLevelData() => _weaponLevelData;
+        /// <inheritdoc/>
         public List<ZZZWeaponStarItem> GetWeaponStarData() => _weaponStarData;
 
         private ElementType MapElementNameToEnum(string elementName)

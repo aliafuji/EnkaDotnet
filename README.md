@@ -4,29 +4,35 @@ Enka.DotNet is a C# wrapper for accessing and processing character data from the
 
 [![NuGet](https://img.shields.io/nuget/v/EnkaDotNet.svg)](https://www.nuget.org/packages/EnkaDotNet/)
 
-## Features
+## Features  
 
-  * **Comprehensive Data Retrieval (DI friendly design):**
-      * Fetch detailed Genshin Impact character builds including artifacts, weapons, stats, and constellations.
-      * Access Genshin Impact player profile information, including namecards and achievements.
-      * Retrieve comprehensive Zenless Zone Zero agent details, including stats, W-Engines (weapons), and Drive Discs.
-      * View detailed Honkai: Star Rail character stats, Relics, Light Cones, Traces (Skill Trees), and Eidolons.
-  * **Multi Game Support:** Switch between Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero by configuring the client.
-  * **Strongly Typed Models:** Provides clear and easy to use C# models for all game entities.
-  * **Flexible Client Instantiation:**
-      * **Direct Instantiation:** Easy setup using the `EnkaClient.CreateAsync()` factory method.
-      * **Dependency Injection:** Full support for .NET Dependency Injection via `AddEnkaNetClient()` for integration into ASP.NET Core, Worker Services, etc.
-  * **Asset Management:** Handles fetching and caching of necessary game assets (text maps, item details).
-  * **Configurable Caching:** Built-in support for caching API responses with options to control duration, bypass, and clear the cache.
-  * **Customizable Options:** Control aspects like language, user agent, and API request behavior.
+ * **Comprehensive Data Retrieval:**  
+     * Fetch detailed character builds, player profiles, and stats for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero
+ * **Multi-Game Support:** Easily switch between supported games.  
+ * **Strongly Typed Models:** Clear and user-friendly C# models for all entities
+ * **Flexible Client Setup:**  
+     * **Direct Instantiation:** Use `EnkaClient.CreateAsync()` for quick setup
+     * **Dependency Injection:** Integrate with .NET DI using `AddEnkaNetClient()`
+ * **Asset Management:** Automatically fetches and caches game assets
+ * **Configurable Caching:** Control cache duration, bypass, and clearing
+ * **Customizable Options:** Adjust language, user agent, and API behavior
 
-## Supported Games
+## Supported Games  
 
-| Game                | Status   | API Support |
-| :------------------ | :------- | :---------- |
-| Genshin Impact      | ✅ Ready | Full        |
-| Honkai: Star Rail   | ✅ Ready | Full        |
-| Zenless Zone Zero   | ✅ Ready | Full        |
+| Game                | Status   |  
+| :------------------ | :------- |  
+| Genshin Impact      | ✅ Ready |  
+| Honkai: Star Rail   | ✅ Ready |  
+| Zenless Zone Zero   | ✅ Ready |  
+
+## Miscellaneous  
+
+| Feature             | Status   |  
+| :------------------ | :------- |  
+| Fetch Basic Profile | ✅ Ready |  
+| Genshin Impact      | ❌ Not Ready |  
+| Honkai: Star Rail   | ❌ Not Ready |  
+| Zenless Zone Zero   | ❌ Not Ready |
 
 ## Installation
 
@@ -44,11 +50,11 @@ dotnet add package EnkaDotNet
 
 ## Usage & Examples
 
-Enka.DotNet supports both direct instantiation (Non DI) for simpler applications and Dependency Injection (DI) for more complex setups like ASP.NET Core or Worker Services.
+Enka.DotNet supports both direct instantiation (Non DI) for simpler applications and Dependency Injection (DI) for more complex setups like ASP.NET Core or Worker Services
 
 ### Key Concepts:
 
-  * **`EnkaClientOptions`**: Use this class to configure the `GameType` (Genshin, HSR, ZZZ), `Language`, caching behavior, and other settings.
+  * **`EnkaClientOptions`**: Use this class to configure caching behavior and other settings.
   * **Direct Instantiation Usage**: Instantiate the client using the static factory method `await EnkaClient.CreateAsync(options)`. This method handles asynchronous initialization of game assets.
   * **Dependency Injection Usage**: Register the client in your service collection using the `services.AddEnkaNetClient(options => { ... });` extension method. Then, inject `IEnkaClient` into your services.
 
@@ -79,8 +85,6 @@ When creating an `EnkaClient` instance (either directly or via DI configuration)
 ```csharp
 var options = new EnkaClientOptions
 {
-    GameType = GameType.Genshin,
-    Language = "en",
     EnableCaching = true,                 // Default is true
     CacheDurationMinutes = 10,            // Cache responses for 10 minutes
     UserAgent = "MyApp/1.0"
@@ -93,8 +97,6 @@ await using IEnkaClient client = await EnkaClient.CreateAsync(options);
 ```csharp
 builder.Services.AddEnkaNetClient(options =>
 {
-    options.GameType = GameType.Genshin;
-    options.Language = "en";
     options.EnableCaching = false; // Disable caching
     // options.CacheDurationMinutes will be ignored if EnableCaching is false
 });
@@ -113,10 +115,10 @@ All data fetching methods on `IEnkaClient` (e.g., `GetUserProfileAsync`, `GetHSR
 int uid = 8000000;
 
 // This call will use the cache if available and not expired
-var (playerInfoCached, charactersCached) = await client.GetUserProfileAsync(uid);
+var (playerInfoCached, charactersCached) = await client.GetUserProfileAsync(uid, language: "en");
 
 // This call will always fetch fresh data from the API
-var (playerInfoFresh, charactersFresh) = await client.GetUserProfileAsync(uid, bypassCache: true);
+var (playerInfoFresh, charactersFresh) = await client.GetUserProfileAsync(uid, language: "en", bypassCache: true);
 ```
 
 #### Clearing the Entire Cache
