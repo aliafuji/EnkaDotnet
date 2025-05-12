@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using EnkaDotNet.Enums;
 using EnkaDotNet.Utils;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace EnkaDotNet.Assets
 {
+    /// <summary>
+    /// Base class for handling game assets
+    /// </summary>
     public abstract class BaseAssets : IAssets
     {
         private readonly HttpClient _httpClient;
@@ -21,26 +22,31 @@ namespace EnkaDotNet.Assets
         protected readonly ILogger _logger;
         private volatile bool _isInitialized = false;
 
-        public GameType GameType { get; }
+        /// <inheritdoc/>
         public string Language { get; }
 
-        protected BaseAssets(string language, GameType gameType, HttpClient httpClient, ILogger logger)
+        /// <inheritdoc/>
+        public string GameIdentifier { get; }
+
+
+        protected BaseAssets(string language, string gameIdentifier, HttpClient httpClient, ILogger logger)
         {
             Language = language ?? throw new ArgumentNullException(nameof(language));
-            GameType = gameType;
+            GameIdentifier = gameIdentifier ?? throw new ArgumentNullException(nameof(gameIdentifier));
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _logger = logger ?? NullLogger.Instance;
         }
 
+        /// <summary>
+        /// Ensures that the assets are initialized This method is thread-safe
+        /// </summary>
         public async Task EnsureInitializedAsync()
         {
             if (_isInitialized) return;
-
             await _initializationSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
                 if (_isInitialized) return;
-
                 await LoadTextMapInternalAsync(Language).ConfigureAwait(false);
                 await LoadAssetsInternalAsync().ConfigureAwait(false);
                 _isInitialized = true;
@@ -52,6 +58,12 @@ namespace EnkaDotNet.Assets
         }
 
         protected abstract Task LoadAssetsInternalAsync();
+
+        /// <summary>
+        /// Gets the dictionary of asset file keys to their respective URLs for the specific game
+        /// </summary>
+        /// <returns>A read-only dictionary of asset file URLs</returns>
+        protected abstract IReadOnlyDictionary<string, string> GetAssetFileUrls();
 
         protected virtual async Task LoadTextMapInternalAsync(string language)
         {
@@ -66,37 +78,39 @@ namespace EnkaDotNet.Assets
                 }
                 else
                 {
-                    _logger.LogWarning("Language code '{Language}' not found in the TextMap file for {GameType}. Available: {AvailableLanguages}", language, this.GameType, string.Join(", ", allLanguageMaps.Keys));
+                    _logger.LogWarning("Language code '{Language}' not found in the TextMap file for {GameIdentifier}. Available: {AvailableLanguages}", language, this.GameIdentifier, string.Join(", ", allLanguageMaps.Keys));
                     string fallbackLanguage = "en";
-                    if (this.GameType == GameType.ZZZ && language != "en" && !allLanguageMaps.ContainsKey("en"))
+
+                    if (this.GameIdentifier == "zzz" && language != "en" && !allLanguageMaps.ContainsKey("en"))
                     {
                         fallbackLanguage = System.Linq.Enumerable.FirstOrDefault(allLanguageMaps.Keys);
-                        if (fallbackLanguage == null) throw new InvalidOperationException($"No languages found in ZZZ TextMap data.");
+                        if (fallbackLanguage == null) throw new InvalidOperationException($"No languages found in ZZZ TextMap data for {this.GameIdentifier}");
                     }
 
                     if (allLanguageMaps.TryGetValue(fallbackLanguage, out var fallbackMap))
                     {
-                        _logger.LogInformation("Falling back to '{FallbackLanguage}' language for {GameType}.", fallbackLanguage, this.GameType);
+                        _logger.LogInformation("Falling back to '{FallbackLanguage}' language for {GameIdentifier}", fallbackLanguage, this.GameIdentifier);
                         _textMap = fallbackMap;
                     }
                     else
                     {
-                        throw new InvalidOperationException($"Fallback language '{fallbackLanguage}' also not found for {GameType}.");
+                        throw new InvalidOperationException($"Fallback language '{fallbackLanguage}' also not found for {this.GameIdentifier}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading TextMap for {GameType}.", this.GameType);
-                throw new InvalidOperationException($"Failed to load essential TextMap for {this.GameType}", ex);
+                _logger.LogError(ex, "Error loading TextMap for {GameIdentifier}", this.GameIdentifier);
+                throw new InvalidOperationException($"Failed to load essential TextMap for {this.GameIdentifier}", ex);
             }
         }
 
+        /// <inheritdoc/>
         public string GetText(string hash)
         {
             if (!_isInitialized)
             {
-                _logger.LogError("GetText called before assets were initialized. Call EnsureInitializedAsync() first. Returning hash or empty string as fallback.");
+                _logger.LogWarning("GetText called before assets for {GameIdentifier} were initialized Call EnsureInitializedAsync() first Returning hash or empty string as fallback", GameIdentifier);
                 return hash ?? string.Empty;
             }
             return hash != null && _textMap != null && _textMap.TryGetValue(hash, out var text) ? text ?? string.Empty : hash ?? string.Empty;
@@ -107,10 +121,9 @@ namespace EnkaDotNet.Assets
             var assetFileUrls = GetAssetFileUrls();
             if (!assetFileUrls.TryGetValue(assetKey, out var url))
             {
-                _logger.LogError("No URL defined for asset '{AssetKey}' in game type {GameType}.", assetKey, GameType);
-                throw new InvalidOperationException($"No URL defined for asset '{assetKey}' in game type {GameType}.");
+                _logger.LogError("No URL defined for asset '{AssetKey}' in game {GameIdentifier}", assetKey, GameIdentifier);
+                throw new InvalidOperationException($"No URL defined for asset '{assetKey}' in game {GameIdentifier}");
             }
-
             try
             {
                 using (var request = new HttpRequestMessage(HttpMethod.Get, url))
@@ -123,19 +136,20 @@ namespace EnkaDotNet.Assets
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "FAILED to fetch '{AssetKey}' (Network Error). URL: {Url}", assetKey, url);
+                _logger.LogError(ex, "FAILED to fetch '{AssetKey}' for {GameIdentifier} (Network Error) URL: {Url}", assetKey, GameIdentifier, url);
                 throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error fetching '{AssetKey}'. URL: {Url}", assetKey, url);
+                _logger.LogError(ex, "Unexpected error fetching '{AssetKey}' for {GameIdentifier} URL: {Url}", assetKey, GameIdentifier, url);
                 throw;
             }
         }
 
         protected async Task<T> FetchAndDeserializeAssetAsync<T>(string assetKey)
         {
-            if (_assetCache.TryGetValue(assetKey, out var cachedAsset) && cachedAsset is T typedAsset)
+            string cacheKey = $"{GameIdentifier}_{assetKey}";
+            if (_assetCache.TryGetValue(cacheKey, out var cachedAsset) && cachedAsset is T typedAsset)
             {
                 return typedAsset;
             }
@@ -146,21 +160,16 @@ namespace EnkaDotNet.Assets
                 var result = JsonSerializer.Deserialize<T>(jsonContent);
                 if (result == null)
                 {
-                    throw new JsonException($"Failed to deserialize {assetKey} - result was null");
+                    throw new JsonException($"Failed to deserialize {assetKey} for {GameIdentifier} - result was null");
                 }
-                _assetCache[assetKey] = result;
+                _assetCache[cacheKey] = result;
                 return result;
             }
             catch (JsonException ex)
             {
-                _logger.LogError(ex, "Error parsing {AssetKey} JSON.", assetKey);
+                _logger.LogError(ex, "Error parsing {AssetKey} JSON for {GameIdentifier}", assetKey, GameIdentifier);
                 throw;
             }
-        }
-
-        protected virtual IReadOnlyDictionary<string, string> GetAssetFileUrls()
-        {
-            return Constants.GetGameAssetFileUrls(this.GameType);
         }
     }
 }

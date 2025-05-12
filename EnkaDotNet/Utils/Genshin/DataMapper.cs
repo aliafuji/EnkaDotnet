@@ -8,17 +8,30 @@ using EnkaDotNet.Models.Genshin;
 
 namespace EnkaDotNet.Utils.Genshin
 {
+    /// <summary>
+    /// Maps raw API data to Genshin Impact specific component models
+    /// </summary>
     public class DataMapper
     {
         private readonly IGenshinAssets _assets;
         private readonly EnkaClientOptions _options;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DataMapper"/> class
+        /// </summary>
+        /// <param name="assets">The Genshin assets provider</param>
+        /// <param name="options">The client options</param>
         public DataMapper(IGenshinAssets assets, EnkaClientOptions options)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
             _options = options ?? throw new ArgumentNullException(nameof(options));
         }
 
+        /// <summary>
+        /// Maps raw player information model to the component model
+        /// </summary>
+        /// <param name="model">The raw player info model from the API</param>
+        /// <returns>The mapped <see cref="PlayerInfo"/> component model</returns>
         public PlayerInfo MapPlayerInfo(PlayerInfoModel model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
@@ -28,15 +41,15 @@ namespace EnkaDotNet.Utils.Genshin
                 Nickname = model.Nickname ?? "Unknown",
                 Level = model.Level,
                 Signature = model.Signature ?? "",
-                IconUrl = _assets.GetProfilePictureIconUrl(model.ProfilePicture?.Id ?? 0),
+                IconUrl = _assets?.GetProfilePictureIconUrl(model.ProfilePicture?.Id ?? 0) ?? string.Empty,
                 WorldLevel = model.WorldLevel,
                 NameCardId = model.NameCardId,
                 FinishedAchievements = model.FinishAchievementNum,
                 ShowcaseCharacterIds = model.ShowAvatarInfoList?.Select(a => a.AvatarId).ToList() ?? new List<int>(),
                 ShowcaseNameCardIds = model.ShowNameCardIdList ?? new List<int>(),
                 ProfilePictureCharacterId = model.ProfilePicture?.Id ?? 0,
-                ShowcaseNameCardIcons = model.ShowNameCardIdList?.Select(id => _assets.GetNameCardIconUrl(id)).ToList() ?? new List<string>(),
-                NameCardIcon = _assets.GetNameCardIconUrl(model.NameCardId)
+                ShowcaseNameCardIcons = model.ShowNameCardIdList?.Select(id => _assets?.GetNameCardIconUrl(id) ?? string.Empty).ToList() ?? new List<string>(),
+                NameCardIcon = _assets?.GetNameCardIconUrl(model.NameCardId) ?? string.Empty
             };
 
             playerInfo.Challenge = new ChallengeData();
@@ -55,18 +68,28 @@ namespace EnkaDotNet.Utils.Genshin
             return playerInfo;
         }
 
+        /// <summary>
+        /// Maps a list of raw avatar info models to a list of character component models
+        /// </summary>
+        /// <param name="modelList">The list of raw avatar info models</param>
+        /// <returns>A list of mapped <see cref="Character"/> component models</returns>
         public List<Character> MapCharacters(List<AvatarInfoModel> modelList)
         {
             if (modelList == null) return new List<Character>();
             return modelList.Select(model => MapCharacter(model)).ToList();
         }
 
+        /// <summary>
+        /// Maps a single raw avatar info model to a character component model
+        /// </summary>
+        /// <param name="model">The raw avatar info model</param>
+        /// <returns>The mapped <see cref="Character"/> component model</returns>
         public Character MapCharacter(AvatarInfoModel model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
-            ElementType element = _assets.GetCharacterElement(model.AvatarId);
-            if (element == ElementType.Unknown)
+            ElementType element = _assets?.GetCharacterElement(model.AvatarId) ?? ElementType.Unknown;
+            if (element == ElementType.Unknown && _assets != null)
             {
                 element = MapElementFallback(model.SkillDepotId, model.AvatarId);
             }
@@ -84,8 +107,8 @@ namespace EnkaDotNet.Utils.Genshin
                 Talents = MapTalents(model.SkillLevelMap, model.ProudSkillExtraLevelMap, model.SkillDepotId, model.AvatarId),
                 Weapon = model.EquipList?.Select(equipModel => MapEquipment(equipModel)).OfType<Weapon>().FirstOrDefault(),
                 Artifacts = model.EquipList?.Select(equipModel => MapEquipment(equipModel)).OfType<Artifact>().ToList() ?? new List<Artifact>(),
-                Name = _assets.GetCharacterName(model.AvatarId),
-                IconUrl = _assets.GetCharacterIconUrl(model.AvatarId),
+                Name = _assets?.GetCharacterName(model.AvatarId) ?? $"Character_{model.AvatarId}",
+                IconUrl = _assets?.GetCharacterIconUrl(model.AvatarId) ?? string.Empty,
                 Options = this._options
             };
 
@@ -94,8 +117,8 @@ namespace EnkaDotNet.Utils.Genshin
                .Select((id, index) => new Constellation
                {
                    Id = id,
-                   Name = _assets.GetConstellationName(id),
-                   IconUrl = _assets.GetConstellationIconUrl(id),
+                   Name = _assets?.GetConstellationName(id) ?? $"Constellation_{id}",
+                   IconUrl = _assets?.GetConstellationIconUrl(id) ?? string.Empty,
                    Position = index + 1,
                    Options = this._options
                })
@@ -105,10 +128,14 @@ namespace EnkaDotNet.Utils.Genshin
             foreach (var artifact in character.Artifacts) artifact.Options = this._options;
             foreach (var talent in character.Talents) talent.Options = this._options;
 
-
             return character;
         }
 
+        /// <summary>
+        /// Maps a raw equipment model to its corresponding component model base type
+        /// </summary>
+        /// <param name="model">The raw equipment model</param>
+        /// <returns>The mapped <see cref="EquipmentBase"/> component model, or null if not applicable</returns>
         public EquipmentBase MapEquipment(EquipModel model)
         {
             if (model?.Flat == null) return null;
@@ -132,14 +159,9 @@ namespace EnkaDotNet.Utils.Genshin
             var secondaryStat = secondaryStatPropModel != null ? MapStatProperty(secondaryStatPropModel) : null;
             if (secondaryStat != null) secondaryStat.Options = this._options;
 
-
             int refinementRank = (weapon.AffixMap?.Values.FirstOrDefault() ?? -1) + 1;
 
-            WeaponType weaponType = _assets.GetWeaponType(equip.ItemId);
-            if (weaponType == WeaponType.Unknown)
-            {
-                weaponType = MapWeaponTypeFromIcon(flat.Icon);
-            }
+            WeaponType weaponType = MapWeaponTypeFromIcon(flat.Icon);
 
             return new Weapon
             {
@@ -151,8 +173,8 @@ namespace EnkaDotNet.Utils.Genshin
                 BaseAttack = baseAtkProp?.StatValue ?? 0,
                 SecondaryStat = secondaryStat,
                 Type = weaponType,
-                Name = _assets.GetWeaponNameFromHash(flat.NameTextMapHash) ?? $"Weapon_{equip.ItemId}",
-                IconUrl = _assets.GetWeaponIconUrlFromIconName(flat.Icon),
+                Name = _assets?.GetWeaponNameFromHash(flat.NameTextMapHash) ?? $"Weapon_{equip.ItemId}",
+                IconUrl = _assets?.GetWeaponIconUrlFromIconName(flat.Icon) ?? string.Empty,
                 Options = this._options
             };
         }
@@ -168,7 +190,6 @@ namespace EnkaDotNet.Utils.Genshin
                              .ToList() ?? new List<StatProperty>();
             foreach (var subStat in subStats) subStat.Options = this._options;
 
-
             return new Artifact
             {
                 Id = equip.ItemId,
@@ -177,9 +198,9 @@ namespace EnkaDotNet.Utils.Genshin
                 Slot = MapArtifactSlot(flat.EquipType),
                 MainStat = mainStat,
                 SubStats = subStats,
-                SetName = _assets.GetArtifactSetNameFromHash(flat.SetNameTextMapHash) ?? "Unknown Set",
-                Name = _assets.GetArtifactNameFromHash(flat.NameTextMapHash) ?? $"Artifact_{equip.ItemId}",
-                IconUrl = _assets.GetArtifactIconUrlFromIconName(flat.Icon),
+                SetName = _assets?.GetArtifactSetNameFromHash(flat.SetNameTextMapHash) ?? "Unknown Set",
+                Name = _assets?.GetArtifactNameFromHash(flat.NameTextMapHash) ?? $"Artifact_{equip.ItemId}",
+                IconUrl = _assets?.GetArtifactIconUrlFromIconName(flat.Icon) ?? string.Empty,
                 Options = this._options
             };
         }
@@ -220,18 +241,12 @@ namespace EnkaDotNet.Utils.Genshin
         {
             switch (equipType)
             {
-                case "EQUIP_BRACER":
-                    return ArtifactSlot.Flower;
-                case "EQUIP_NECKLACE":
-                    return ArtifactSlot.Plume;
-                case "EQUIP_SHOES":
-                    return ArtifactSlot.Sands;
-                case "EQUIP_RING":
-                    return ArtifactSlot.Goblet;
-                case "EQUIP_DRESS":
-                    return ArtifactSlot.Circlet;
-                default:
-                    return ArtifactSlot.Unknown;
+                case "EQUIP_BRACER": return ArtifactSlot.Flower;
+                case "EQUIP_NECKLACE": return ArtifactSlot.Plume;
+                case "EQUIP_SHOES": return ArtifactSlot.Sands;
+                case "EQUIP_RING": return ArtifactSlot.Goblet;
+                case "EQUIP_DRESS": return ArtifactSlot.Circlet;
+                default: return ArtifactSlot.Unknown;
             }
         }
 
@@ -273,8 +288,8 @@ namespace EnkaDotNet.Utils.Genshin
                     BaseLevel = baseLevel,
                     ExtraLevel = extraLevel,
                     Level = baseLevel + extraLevel,
-                    Name = _assets.GetTalentName(skillId),
-                    IconUrl = _assets.GetTalentIconUrl(skillId),
+                    Name = _assets?.GetTalentName(skillId) ?? $"Talent_{skillId}",
+                    IconUrl = _assets?.GetTalentIconUrl(skillId) ?? string.Empty,
                     Options = this._options
                 });
             }
@@ -284,14 +299,10 @@ namespace EnkaDotNet.Utils.Genshin
         private StatProperty MapStatProperty(StatPropertyModel model)
         {
             if (model == null) return null;
-
             string propIdString = model.MainPropId ?? model.AppendPropId;
-
             if (string.IsNullOrEmpty(propIdString)) return null;
-
             StatType type = MapStatTypeValue(propIdString);
             if (type == StatType.None) return null;
-
             return new StatProperty { Type = type, Value = model.StatValue, Options = this._options };
         }
 
@@ -406,12 +417,9 @@ namespace EnkaDotNet.Utils.Genshin
         {
             switch (itemTypeString)
             {
-                case "ITEM_WEAPON":
-                    return ItemType.Weapon;
-                case "ITEM_RELIQUARY":
-                    return ItemType.Artifact;
-                default:
-                    return ItemType.Unknown;
+                case "ITEM_WEAPON": return ItemType.Weapon;
+                case "ITEM_RELIQUARY": return ItemType.Artifact;
+                default: return ItemType.Unknown;
             }
         }
 

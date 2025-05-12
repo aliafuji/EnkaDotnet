@@ -9,17 +9,26 @@ using EnkaDotNet.Enums.ZZZ;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
+    /// <summary>
+    /// Calculates character, weapon, and drive disc stats for Zenless Zone Zero
+    /// </summary>
     public class ZZZStatsCalculator
     {
-        private readonly Task<IZZZAssets> _assetsTask;
-        private IZZZAssets _assets;
-        private Dictionary<string, object> _calculationCache = new Dictionary<string, object>();
+        private readonly IZZZAssets _assets;
+        private readonly Dictionary<string, object> _calculationCache = new Dictionary<string, object>();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ZZZStatsCalculator"/> class
+        /// </summary>
+        /// <param name="assets">The ZZZ assets provider</param>
         public ZZZStatsCalculator(IZZZAssets assets)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
         }
 
+        /// <summary>
+        /// Calculates the base stats for an agent
+        /// </summary>
         public Dictionary<StatType, double> CalculateAgentBaseStats(int agentId, int level, int promotionLevel, int coreSkillEnhancement)
         {
             string cacheKey = $"agent_{agentId}_{level}_{promotionLevel}_{coreSkillEnhancement}";
@@ -71,6 +80,9 @@ namespace EnkaDotNet.Utils.ZZZ
             return stats;
         }
 
+        /// <summary>
+        /// Calculates the main and secondary stats for a W-Engine (weapon)
+        /// </summary>
         public (ZZZStat MainStat, ZZZStat SecondaryStat) CalculateWeaponStats(int weaponId, int level, int breakLevel)
         {
             string cacheKey = $"weapon_{weaponId}_{level}_{breakLevel}";
@@ -120,6 +132,9 @@ namespace EnkaDotNet.Utils.ZZZ
             return result;
         }
 
+        /// <summary>
+        /// Calculates the main stat for a Drive Disc
+        /// </summary>
         public ZZZStat CalculateDriveDiscMainStat(int propertyId, double baseValue, int discLevel, int propertyLevel, Rarity rarity)
         {
             string cacheKey = $"disc_main_{propertyId}_{baseValue}_{discLevel}_{propertyLevel}_{rarity}";
@@ -147,6 +162,9 @@ namespace EnkaDotNet.Utils.ZZZ
             return resultStat;
         }
 
+        /// <summary>
+        /// Creates a ZZZStat object with appropriate scaling and percentage flags
+        /// </summary>
         public ZZZStat CreateStatWithProperScaling(int propertyId, double rawValue, int level = 0)
         {
             if (!Enum.IsDefined(typeof(StatType), propertyId))
@@ -155,13 +173,13 @@ namespace EnkaDotNet.Utils.ZZZ
             }
             StatType statType = (StatType)propertyId;
             double calculationValue = rawValue;
-            bool isPercentage = ZZZStatsHelpers.IsDisplayPercentageStat(statType);
+            bool isPercentageDisplay = ZZZStatsHelpers.IsDisplayPercentageStat(statType);
+            bool isEnergyRegenType = statType == StatType.EnergyRegenBase || statType == StatType.EnergyRegenPercent || statType == StatType.EnergyRegenFlat;
+
 
             if (ZZZStatsHelpers.IsCalculationPercentageStat(statType) &&
                 statType != StatType.CritRateBase &&
-                statType != StatType.CritDMGBase &&
-                statType != StatType.EnergyRegenBase &&
-                 statType != StatType.EnergyRegenPercent)
+                statType != StatType.CritDMGBase)
             {
                 calculationValue = rawValue / 100.0;
             }
@@ -171,11 +189,14 @@ namespace EnkaDotNet.Utils.ZZZ
                 Type = statType,
                 Value = calculationValue,
                 Level = level,
-                IsPercentage = isPercentage,
-                IsEnergyRegen = statType == StatType.EnergyRegenBase || statType == StatType.EnergyRegenPercent
+                IsPercentage = isPercentageDisplay,
+                IsEnergyRegen = isEnergyRegenType
             };
         }
 
+        /// <summary>
+        /// Clears the internal calculation cache
+        /// </summary>
         public void ClearCache()
         {
             _calculationCache.Clear();

@@ -16,8 +16,6 @@ namespace GenshinStatsViewer
             {
                 var options = new EnkaClientOptions
                 {
-                    Language = "en",
-                    GameType = GameType.Genshin,
                     UserAgent = "GenshinStatsViewer/1.0",
                     Raw = false
                 };
@@ -28,11 +26,11 @@ namespace GenshinStatsViewer
 
                 IEnkaClient client = await EnkaClient.CreateAsync(options, clientLogger);
 
-                int uid = args.Length > 0 && int.TryParse(args[0], out int parsedUid) ? parsedUid : 800000000;
+                int uid = args.Length > 0 && int.TryParse(args[0], out int parsedUid) ? parsedUid : 80000000;
 
                 Console.WriteLine($"Fetching data for UID: {uid}...");
 
-                var (playerInfo, characters) = await client.GetUserProfileAsync(uid);
+                var (playerInfo, characters) = await client.GetGenshinUserProfileAsync(uid, language: "en");
 
                 Console.WriteLine($"\nPlayer: {playerInfo.Nickname} (Lv.{playerInfo.Level}, WL{playerInfo.WorldLevel})");
                 Console.WriteLine($"Signature: {playerInfo.Signature}");

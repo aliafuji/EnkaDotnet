@@ -1,56 +1,62 @@
-﻿using EnkaDotNet.Enums;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace EnkaDotNet.Utils
 {
+    /// <summary>
+    /// Provides constant values used throughout the library
+    /// </summary>
     public static class Constants
     {
-        private const string DEFAULT_GENSHIN_API_URL = "https://enka.network/api/";
-        private const string DEFAULT_GENSHIN_ASSET_CDN_URL = "https://enka.network/ui/";
+        /// <summary>
+        /// Default API base URL for Genshin Impact data
+        /// </summary>
+        public const string DEFAULT_GENSHIN_API_URL = "https://enka.network/api/";
+        /// <summary>
+        /// Default CDN base URL for Genshin Impact assets
+        /// </summary>
+        public const string DEFAULT_GENSHIN_ASSET_CDN_URL = "https://enka.network/ui/";
 
-        private const string DEFAULT_ZZZ_API_URL = "https://enka.network/api/zzz/";
-        private const string DEFAULT_ZZZ_ASSET_CDN_URL = "https://enka.network";
+        /// <summary>
+        /// Default API base URL for Zenless Zone Zero data
+        /// </summary>
+        public const string DEFAULT_ZZZ_API_URL = "https://enka.network/api/zzz/";
+        /// <summary>
+        /// Default CDN base URL for Zenless Zone Zero assets
+        /// </summary>
+        public const string DEFAULT_ZZZ_ASSET_CDN_URL = "https://enka.network";
 
-        private const string DEFAULT_HSR_API_URL = "https://enka.network/api/hsr/";
-        private const string DEFAULT_HSR_ASSET_CDN_URL = "https://enka.network/ui/hsr/";
+        /// <summary>
+        /// Default API base URL for Honkai: Star Rail data
+        /// </summary>
+        public const string DEFAULT_HSR_API_URL = "https://enka.network/api/hsr/";
+        /// <summary>
+        /// Default CDN base URL for Honkai: Star Rail assets
+        /// </summary>
+        public const string DEFAULT_HSR_ASSET_CDN_URL = "https://enka.network/ui/hsr/";
 
+        /// <summary>
+        /// Default API base URL for Enka.Network user profiles
+        /// </summary>
+        public const string DEFAULT_ENKA_PROFILE_API_BASE_URL = "https://enka.network/api/";
+        /// <summary>
+        /// Endpoint format for Enka.Network user profiles
+        /// </summary>
+        public const string ENKA_PROFILE_ENDPOINT_FORMAT = "profile/{0}/?format=json";
+
+        /// <summary>
+        /// Default endpoint format for game-specific user information, typically by UID
+        /// </summary>
+        public const string DEFAULT_GAME_SPECIFIC_USER_INFO_ENDPOINT_FORMAT = "uid/{0}";
+
+        /// <summary>
+        /// Default User-Agent string for HTTP requests
+        /// </summary>
         public const string DefaultUserAgent = "EnkaDotNet/1.0";
 
-        public static string GetApiBaseUrl(GameType gameType)
-        {
-            switch (gameType)
-            {
-                case GameType.Genshin: return DEFAULT_GENSHIN_API_URL;
-                case GameType.ZZZ: return DEFAULT_ZZZ_API_URL;
-                case GameType.HSR: return DEFAULT_HSR_API_URL;
-                default: throw new NotSupportedException($"API base URL for game type {gameType} is not supported.");
-            }
-        }
-
-        public static string GetAssetCdnBaseUrl(GameType gameType)
-        {
-            switch (gameType)
-            {
-                case GameType.Genshin: return DEFAULT_GENSHIN_ASSET_CDN_URL;
-                case GameType.ZZZ: return DEFAULT_ZZZ_ASSET_CDN_URL;
-                case GameType.HSR: return DEFAULT_HSR_ASSET_CDN_URL;
-                default: throw new NotSupportedException($"Asset CDN base URL for game type {gameType} is not supported.");
-            }
-        }
-
-        public static string GetUserInfoEndpointFormat(GameType gameType)
-        {
-            return "uid/{0}";
-        }
-
-        public static bool IsGameTypeSupported(GameType gameType)
-        {
-            return gameType == GameType.Genshin ||
-                   gameType == GameType.ZZZ ||
-                   gameType == GameType.HSR;
-        }
-
+        /// <summary>
+        /// URLs for Genshin Impact asset files
+        /// </summary>
         public static readonly IReadOnlyDictionary<string, string> GenshinAssetFileUrls = new Dictionary<string, string>()
         {
             { "text_map.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/text_map.json" },
@@ -61,6 +67,9 @@ namespace EnkaDotNet.Utils
             { "pfps.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/pfps.json" }
         };
 
+        /// <summary>
+        /// URLs for Honkai: Star Rail asset files
+        /// </summary>
         public static readonly IReadOnlyDictionary<string, string> HSRAssetFileUrls = new Dictionary<string, string>()
         {
             { "text_map.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/hsr/hsr.json" },
@@ -74,6 +83,9 @@ namespace EnkaDotNet.Utils
             { "meta.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/hsr/honker_meta.json" }
         };
 
+        /// <summary>
+        /// URLs for Zenless Zone Zero asset files
+        /// </summary>
         public static readonly IReadOnlyDictionary<string, string> ZZZAssetFileUrls = new Dictionary<string, string>()
         {
             { "text_map.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/locs.json" },
@@ -89,16 +101,5 @@ namespace EnkaDotNet.Utils
             { "weapon_level.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/zzz/weapon_level.json" },
             { "weapon_star.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/zzz/weapon_star.json" }
         };
-
-        public static IReadOnlyDictionary<string, string> GetGameAssetFileUrls(GameType gameType)
-        {
-            switch (gameType)
-            {
-                case GameType.Genshin: return GenshinAssetFileUrls;
-                case GameType.HSR: return HSRAssetFileUrls;
-                case GameType.ZZZ: return ZZZAssetFileUrls;
-                default: throw new NotSupportedException($"Asset file URLs for game type {gameType} are not supported.");
-            }
-        }
     }
 }

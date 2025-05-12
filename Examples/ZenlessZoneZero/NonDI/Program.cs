@@ -18,8 +18,6 @@ namespace ZZZStatsViewer
 
                 var options = new EnkaClientOptions
                 {
-                    GameType = GameType.ZZZ,
-                    Language = "en",
                     UserAgent = "ZZZStatsViewer/1.0",
                     Raw = false,
                 };
@@ -30,10 +28,10 @@ namespace ZZZStatsViewer
 
                 IEnkaClient client = await EnkaClient.CreateAsync(options, clientLogger);
 
-                int uid = args.Length > 0 && int.TryParse(args[0], out int parsedUid) ? parsedUid : 10000000;
+                int uid = args.Length > 0 && int.TryParse(args[0], out int parsedUid) ? parsedUid : 100000000;
 
                 Console.WriteLine($"Fetching player data for UID: {uid}...");
-                var playerInfo = await client.GetZZZPlayerInfoAsync(uid);
+                var playerInfo = await client.GetZZZPlayerInfoAsync(uid, language: "en");
 
                 Console.WriteLine($"Player: {playerInfo.Nickname} (Lv.{playerInfo.Level})");
                 Console.WriteLine($"Title: {playerInfo.TitleText}");

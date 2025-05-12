@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using EnkaDotNet.Assets.Genshin.Models;
-using EnkaDotNet.Enums;
 using EnkaDotNet.Enums.Genshin;
 using EnkaDotNet.Utils;
 using Microsoft.Extensions.Logging;
@@ -11,19 +10,29 @@ using System.Text.Json;
 
 namespace EnkaDotNet.Assets.Genshin
 {
+    /// <summary>
+    /// Provides access to Genshin Impact specific game assets
+    /// </summary>
     public class GenshinAssets : BaseAssets, IGenshinAssets
     {
         private readonly Dictionary<int, CharacterAssetInfo> _characters = new Dictionary<int, CharacterAssetInfo>();
-        private readonly Dictionary<int, WeaponAssetInfo> _weapons = new Dictionary<int, WeaponAssetInfo>();
-        private readonly Dictionary<int, ArtifactAssetInfo> _artifacts = new Dictionary<int, ArtifactAssetInfo>();
         private readonly Dictionary<int, TalentAssetInfo> _talents = new Dictionary<int, TalentAssetInfo>();
         private readonly Dictionary<string, ConstellationAssetInfo> _constellations = new Dictionary<string, ConstellationAssetInfo>();
         private readonly Dictionary<string, NameCardAssetInfo> _namecards = new Dictionary<string, NameCardAssetInfo>();
         private readonly Dictionary<string, PfpAssetInfo> _pfps = new Dictionary<string, PfpAssetInfo>();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GenshinAssets"/> class
+        /// </summary>
         public GenshinAssets(string language, HttpClient httpClient, ILogger<GenshinAssets> logger)
-            : base(language, GameType.Genshin, httpClient, logger)
+            : base(language, "genshin", httpClient, logger)
         {
+        }
+
+        /// <inheritdoc/>
+        protected override IReadOnlyDictionary<string, string> GetAssetFileUrls()
+        {
+            return Constants.GenshinAssetFileUrls;
         }
 
         protected override async Task LoadAssetsInternalAsync()
@@ -31,8 +40,6 @@ namespace EnkaDotNet.Assets.Genshin
             var tasks = new List<Task>
             {
                 LoadCharacters(),
-                LoadWeapons(),
-                LoadArtifacts(),
                 LoadTalents(),
                 LoadConstellations(),
                 LoadNamecards(),
@@ -43,22 +50,13 @@ namespace EnkaDotNet.Assets.Genshin
 
         private string GetStringFromHashJsonElement(JsonElement element)
         {
-            if (element.ValueKind == JsonValueKind.String)
-            {
-                return element.GetString();
-            }
+            if (element.ValueKind == JsonValueKind.String) return element.GetString();
             if (element.ValueKind == JsonValueKind.Number)
             {
-                if (element.TryGetInt64(out long longValue))
-                {
-                    return longValue.ToString();
-                }
+                if (element.TryGetInt64(out long longValue)) return longValue.ToString();
                 return element.GetRawText();
             }
-            if (element.ValueKind == JsonValueKind.Undefined || element.ValueKind == JsonValueKind.Null)
-            {
-                return null;
-            }
+            if (element.ValueKind == JsonValueKind.Undefined || element.ValueKind == JsonValueKind.Null) return null;
             return element.ToString();
         }
 
@@ -79,50 +77,8 @@ namespace EnkaDotNet.Assets.Genshin
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Genshin Impact characters.json asset.");
-                throw new InvalidOperationException("Failed to load essential Genshin Impact character data.", ex);
-            }
-        }
-
-        private async Task LoadWeapons()
-        {
-            _weapons.Clear();
-            try
-            {
-                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, WeaponAssetInfo>>("weapons.json").ConfigureAwait(false);
-                if (deserializedMap != null)
-                {
-                    foreach (var kvp in deserializedMap)
-                    {
-                        if (int.TryParse(kvp.Key, out int weaponId))
-                            _weapons[weaponId] = kvp.Value;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading Genshin Impact weapons.json asset.");
-            }
-        }
-
-        private async Task LoadArtifacts()
-        {
-            _artifacts.Clear();
-            try
-            {
-                var deserializedMap = await FetchAndDeserializeAssetAsync<Dictionary<string, ArtifactAssetInfo>>("artifacts.json").ConfigureAwait(false);
-                if (deserializedMap != null)
-                {
-                    foreach (var kvp in deserializedMap)
-                    {
-                        if (int.TryParse(kvp.Key, out int artifactId))
-                            _artifacts[artifactId] = kvp.Value;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading Genshin Impact artifacts.json asset.");
+                _logger.LogError(ex, "Error loading Genshin Impact charactersjson asset");
+                throw new InvalidOperationException("Failed to load essential Genshin Impact character data", ex);
             }
         }
 
@@ -143,8 +99,8 @@ namespace EnkaDotNet.Assets.Genshin
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Genshin Impact pfps.json asset.");
-                throw new InvalidOperationException("Failed to load essential Genshin Impact profile picture data.", ex);
+                _logger.LogError(ex, "Error loading Genshin Impact pfpsjson asset");
+                throw new InvalidOperationException("Failed to load essential Genshin Impact profile picture data", ex);
             }
         }
 
@@ -158,14 +114,15 @@ namespace EnkaDotNet.Assets.Genshin
                 {
                     foreach (var kvp in deserializedMap)
                     {
-                        _talents[int.Parse(kvp.Key)] = kvp.Value;
+                        if (int.TryParse(kvp.Key, out int talentId))
+                            _talents[talentId] = kvp.Value;
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Genshin Impact talents.json asset.");
-                throw new InvalidOperationException("Failed to load essential Genshin Impact talent data.", ex);
+                _logger.LogError(ex, "Error loading Genshin Impact talentsjson asset");
+                throw new InvalidOperationException("Failed to load essential Genshin Impact talent data", ex);
             }
         }
 
@@ -186,15 +143,15 @@ namespace EnkaDotNet.Assets.Genshin
                         else if (kvp.Value != null)
                         {
                             _constellations[kvp.Key] = kvp.Value;
-                            _logger.LogWarning($"Constellation '{kvp.Key}' has a null or undefined NameTextMapHash.");
+                            _logger.LogWarning("Constellation '{Key}' has a null or undefined NameTextMapHash", kvp.Key);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Genshin Impact consts.json asset.");
-                throw new InvalidOperationException("Failed to load essential Genshin Impact constellation data.", ex);
+                _logger.LogError(ex, "Error loading Genshin Impact constsjson asset");
+                throw new InvalidOperationException("Failed to load essential Genshin Impact constellation data", ex);
             }
         }
 
@@ -214,11 +171,12 @@ namespace EnkaDotNet.Assets.Genshin
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Genshin Impact namecards.json asset.");
-                throw new InvalidOperationException("Failed to load essential Genshin Impact namecard data.", ex);
+                _logger.LogError(ex, "Error loading Genshin Impact namecardsjson asset");
+                throw new InvalidOperationException("Failed to load essential Genshin Impact namecard data", ex);
             }
         }
 
+        /// <inheritdoc/>
         public string GetCharacterName(int characterId)
         {
             if (_characters.TryGetValue(characterId, out var charInfo))
@@ -230,6 +188,7 @@ namespace EnkaDotNet.Assets.Genshin
             return $"Character_{characterId}";
         }
 
+        /// <inheritdoc/>
         public string GetCharacterIconUrl(int characterId)
         {
             if (_characters.TryGetValue(characterId, out var charInfo))
@@ -237,45 +196,31 @@ namespace EnkaDotNet.Assets.Genshin
                 if (!string.IsNullOrEmpty(charInfo.SideIconName))
                 {
                     string iconName = charInfo.SideIconName.Replace("UI_AvatarIcon_Side_", "UI_AvatarIcon_");
-                    return $"{Constants.GetAssetCdnBaseUrl(GameType)}{iconName}.png";
+                    return $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{iconName}.png";
                 }
             }
             return string.Empty;
         }
 
+        /// <inheritdoc/>
         public ElementType GetCharacterElement(int characterId) => _characters.TryGetValue(characterId, out var charInfo) && charInfo.Element != null ? MapElementNameToEnum(charInfo.Element) : ElementType.Unknown;
 
-        public string GetWeaponName(int weaponId)
-        {
-            if (_weapons.TryGetValue(weaponId, out var weaponInfo))
-            {
-                string hashValue = GetStringFromHashJsonElement(weaponInfo.NameTextMapHash);
-                if (hashValue != null)
-                    return GetText(hashValue);
-            }
-            return $"Weapon_{weaponId}";
-        }
-
+        /// <inheritdoc/>
         public string GetWeaponNameFromHash(string nameHash) => GetText(nameHash);
-        public string GetWeaponIconUrl(int weaponId) => _weapons.TryGetValue(weaponId, out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.Icon) ? $"{Constants.GetAssetCdnBaseUrl(GameType)}{weaponInfo.Icon}.png" : string.Empty;
-        public string GetWeaponIconUrlFromIconName(string iconName) => !string.IsNullOrEmpty(iconName) ? $"{Constants.GetAssetCdnBaseUrl(GameType)}{iconName}.png" : string.Empty;
-        public WeaponType GetWeaponType(int weaponId) => _weapons.TryGetValue(weaponId, out var weaponInfo) && weaponInfo.WeaponType != null ? MapWeaponTypeNameToEnum(weaponInfo.WeaponType) : WeaponType.Unknown;
 
-        public string GetArtifactName(int artifactId)
-        {
-            if (_artifacts.TryGetValue(artifactId, out var artifactInfo))
-            {
-                string hashValue = GetStringFromHashJsonElement(artifactInfo.NameTextMapHash);
-                if (hashValue != null)
-                    return GetText(hashValue);
-            }
-            return $"Artifact_{artifactId}";
-        }
+        /// <inheritdoc/>
+        public string GetWeaponIconUrlFromIconName(string iconName) => !string.IsNullOrEmpty(iconName) ? $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{iconName}.png" : string.Empty;
+
+        /// <inheritdoc/>
         public string GetArtifactNameFromHash(string nameHash) => GetText(nameHash);
-        public string GetArtifactSetNameFromHash(string setNameHash) => GetText(setNameHash);
-        public string GetArtifactIconUrl(int artifactId) => _artifacts.TryGetValue(artifactId, out var artifactInfo) && !string.IsNullOrEmpty(artifactInfo.Icon) ? $"{Constants.GetAssetCdnBaseUrl(GameType)}{artifactInfo.Icon}.png" : string.Empty;
-        public string GetArtifactIconUrlFromIconName(string iconName) => !string.IsNullOrEmpty(iconName) ? $"{Constants.GetAssetCdnBaseUrl(GameType)}{iconName}.png" : string.Empty;
 
+        /// <inheritdoc/>
+        public string GetArtifactSetNameFromHash(string setNameHash) => GetText(setNameHash);
+
+        /// <inheritdoc/>
+        public string GetArtifactIconUrlFromIconName(string iconName) => !string.IsNullOrEmpty(iconName) ? $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{iconName}.png" : string.Empty;
+
+        /// <inheritdoc/>
         public string GetTalentName(int talentId)
         {
             if (_talents.TryGetValue(talentId, out var talentInfo))
@@ -302,7 +247,7 @@ namespace EnkaDotNet.Assets.Genshin
             return $"Talent_{talentId}";
         }
 
-
+        /// <inheritdoc/>
         public string GetProfilePictureIconUrl(int characterId)
         {
             string key = characterId.ToString();
@@ -311,14 +256,16 @@ namespace EnkaDotNet.Assets.Genshin
                 if (!string.IsNullOrEmpty(pfpInfo.IconPath))
                 {
                     string adjustedIconPath = pfpInfo.IconPath.Replace("_Circle", "");
-                    return $"{Constants.GetAssetCdnBaseUrl(GameType)}{adjustedIconPath}.png";
+                    return $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{adjustedIconPath}.png";
                 }
             }
             return GetCharacterIconUrl(characterId);
         }
 
-        public string GetNameCardIconUrl(int nameCardId) => _namecards.TryGetValue(nameCardId.ToString(), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon) ? $"{Constants.GetAssetCdnBaseUrl(GameType)}{nameCardInfo.Icon}.png" : string.Empty;
+        /// <inheritdoc/>
+        public string GetNameCardIconUrl(int nameCardId) => _namecards.TryGetValue(nameCardId.ToString(), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon) ? $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{nameCardInfo.Icon}.png" : string.Empty;
 
+        /// <inheritdoc/>
         public string GetConstellationName(int constellationId)
         {
             if (_constellations.TryGetValue(constellationId.ToString(), out var constellationInfo))
@@ -330,19 +277,18 @@ namespace EnkaDotNet.Assets.Genshin
             return $"Constellation_{constellationId}";
         }
 
+        /// <inheritdoc/>
         public string GetTalentIconUrl(int talentId)
         {
-            _talents.TryGetValue(talentId, out var talentInfo);
-            if (talentInfo != null && !string.IsNullOrEmpty(talentInfo.Icon))
+            if (_talents.TryGetValue(talentId, out var talentInfo) && talentInfo != null && !string.IsNullOrEmpty(talentInfo.Icon))
             {
-                return $"{Constants.GetAssetCdnBaseUrl(GameType)}{talentInfo.Icon}.png";
+                return $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{talentInfo.Icon}.png";
             }
-
             return string.Empty;
         }
 
-        public string GetConstellationIconUrl(int constellationId) => _constellations.TryGetValue(constellationId.ToString(), out var constellationInfo) && !string.IsNullOrEmpty(constellationInfo.Icon) ? $"{Constants.GetAssetCdnBaseUrl(GameType)}{constellationInfo.Icon}.png" : string.Empty;
-
+        /// <inheritdoc/>
+        public string GetConstellationIconUrl(int constellationId) => _constellations.TryGetValue(constellationId.ToString(), out var constellationInfo) && !string.IsNullOrEmpty(constellationInfo.Icon) ? $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{constellationInfo.Icon}.png" : string.Empty;
 
         private ElementType MapElementNameToEnum(string elementName)
         {
@@ -357,20 +303,6 @@ namespace EnkaDotNet.Assets.Genshin
                 case "ICE": return ElementType.Cryo;
                 case "ROCK": return ElementType.Geo;
                 default: return ElementType.Unknown;
-            }
-        }
-
-        private WeaponType MapWeaponTypeNameToEnum(string weaponTypeName)
-        {
-            if (weaponTypeName == null) return WeaponType.Unknown;
-            switch (weaponTypeName.ToUpperInvariant())
-            {
-                case "WEAPON_SWORD_ONE_HAND": return WeaponType.Sword;
-                case "WEAPON_CLAYMORE": return WeaponType.Claymore;
-                case "WEAPON_POLE": return WeaponType.Polearm;
-                case "WEAPON_BOW": return WeaponType.Bow;
-                case "WEAPON_CATALYST": return WeaponType.Catalyst;
-                default: return WeaponType.Unknown;
             }
         }
     }

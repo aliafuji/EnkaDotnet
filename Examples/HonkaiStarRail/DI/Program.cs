@@ -17,11 +17,7 @@ namespace EnkaDotNet.Examples.HonkaiStarRail.DI
             var host = Host.CreateDefaultBuilder(args)
                 .ConfigureServices((context, services) =>
                 {
-                    services.AddEnkaNetClient(options =>
-                    {
-                        options.GameType = GameType.HSR;
-                        options.Language = "en";
-                    });
+                    services.AddEnkaNetClient();
                     services.AddTransient<HsrService>();
                 })
                 .ConfigureLogging(logging =>
@@ -48,7 +44,7 @@ namespace EnkaDotNet.Examples.HonkaiStarRail.DI
         {
             _enkaClient = enkaClient;
             _logger = logger;
-            _logger.LogInformation($"EnkaClient initialized for GameType: {_enkaClient.GameType}");
+            _logger.LogInformation($"EnkaClient initialized");
         }
 
         public async Task FetchAndDisplayData()
@@ -59,7 +55,7 @@ namespace EnkaDotNet.Examples.HonkaiStarRail.DI
                 int uid = 800000000; // Replace with a valid HSR UID
                 _logger.LogInformation($"Fetching HSR player info for UID: {uid}");
 
-                var playerInfo = await _enkaClient.GetHSRPlayerInfoAsync(uid);
+                var playerInfo = await _enkaClient.GetHSRPlayerInfoAsync(uid, language: "en");
                 _logger.LogInformation($"Nickname: {playerInfo.Nickname}, Level: {playerInfo.Level}");
 
                 if (playerInfo.DisplayedCharacters.Any())

@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Components.ZZZ;
-using EnkaDotNet.Enums;
 using EnkaDotNet.Exceptions;
 using EnkaDotNet.Models.ZZZ;
 using EnkaDotNet.Utils;
@@ -33,20 +32,22 @@ namespace EnkaDotNet.Internal
 
         public async Task<ZZZApiResponse> GetRawZZZUserResponseAsync(int uid, bool bypassCache, CancellationToken cancellationToken)
         {
-            if (uid <= 0) throw new ArgumentException("UID must be a positive integer.", nameof(uid));
+            if (uid <= 0) throw new ArgumentException("UID must be a positive integer", nameof(uid));
 
-            string endpoint = string.Format(Constants.GetUserInfoEndpointFormat(GameType.ZZZ), uid);
+            string relativePath = string.Format(Constants.DEFAULT_GAME_SPECIFIC_USER_INFO_ENDPOINT_FORMAT, uid);
+            string endpoint = $"zzz/{relativePath}";
+
             ZZZApiResponse response = await _httpHelper.Get<ZZZApiResponse>(endpoint, bypassCache, cancellationToken).ConfigureAwait(false);
 
             if (response == null)
             {
-                _logger.LogWarning("API for ZZZ UID {Uid} returned a successful HTTP status but with empty or null-deserializing content.", uid);
-                throw new PlayerNotFoundException(uid, $"API for ZZZ UID {uid} returned a successful HTTP status but with no parsable content or essential data structures. The profile may not exist or is not public.");
+                _logger.LogWarning("API for ZZZ UID {Uid} returned a successful HTTP status but with empty or null-deserializing content", uid);
+                throw new PlayerNotFoundException(uid, $"API for ZZZ UID {uid} returned a successful HTTP status but with no parsable content or essential data structures The profile may not exist or is not public");
             }
 
             if (response.PlayerInfo == null)
             {
-                throw new ProfilePrivateException(uid, $"Profile data retrieved for ZZZ UID {uid}, but essential player information (PlayerInfo block) is missing. The profile might be private, the UID invalid, or an unexpected API response structure was received.");
+                throw new ProfilePrivateException(uid, $"Profile data retrieved for ZZZ UID {uid}, but essential player information (PlayerInfo block) is missing The profile might be private, the UID invalid, or an unexpected API response structure was received");
             }
             return response;
         }
@@ -62,7 +63,7 @@ namespace EnkaDotNet.Internal
             var rawResponse = await GetRawZZZUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
             if (rawResponse.PlayerInfo?.ShowcaseDetail?.AvatarList == null)
             {
-                _logger.LogInformation("ZZZ UID {Uid} has public profile info but no agent showcase data (AvatarList is null).", uid);
+                _logger.LogInformation("ZZZ UID {Uid} has public profile info but no agent showcase data (AvatarList is null)", uid);
                 return Array.Empty<ZZZAgent>();
             }
             var agents = new List<ZZZAgent>();
