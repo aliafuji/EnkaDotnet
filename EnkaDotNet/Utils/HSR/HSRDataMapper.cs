@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using EnkaDotNet.Models.HSR;
 using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Enums.HSR;
-using EnkaDotNet.Components.HSR.EnkaDotNet.Enums.HSR; // For TraceType
+using EnkaDotNet.Components.HSR.EnkaDotNet.Enums.HSR;
 
 namespace EnkaDotNet.Utils.HSR
 {
