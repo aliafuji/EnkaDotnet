@@ -40,6 +40,7 @@ namespace EnkaDotNet.Utils.Common
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
             _logger = logger ?? NullLogger<HttpHelper>.Instance;
             _trackedCacheKeys = new ConcurrentDictionary<string, bool>();
+            _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
 
             var retryOptions = new RetryStrategyOptions<HttpResponseMessage>
             {
