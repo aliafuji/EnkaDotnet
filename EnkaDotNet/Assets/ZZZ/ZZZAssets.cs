@@ -427,10 +427,12 @@ namespace EnkaDotNet.Assets.ZZZ
             switch (elementName?.ToUpperInvariant())
             {
                 case "FIRE": return ElementType.Fire;
-                case "ICE": case "FIREFROST": return ElementType.Ice;
+                case "ICE": return ElementType.Ice;
+                case "FIREFROST": return ElementType.FireFrost;
                 case "ELEC": return ElementType.Electric;
                 case "ETHER": return ElementType.Ether;
                 case "PHYSICS": return ElementType.Physical;
+                case "AURICETHER": return ElementType.AuricEther;
                 default: return ElementType.Unknown;
             }
         }
@@ -438,6 +440,7 @@ namespace EnkaDotNet.Assets.ZZZ
         {
             switch (professionName?.ToUpperInvariant())
             {
+                case "RUPTURE": return ProfessionType.Rupture;
                 case "ATTACK": return ProfessionType.Attack;
                 case "STUN": return ProfessionType.Stun;
                 case "ANOMALY": return ProfessionType.Anomaly;
