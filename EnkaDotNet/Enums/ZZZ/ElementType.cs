@@ -14,7 +14,9 @@ namespace EnkaDotNet.Enums.ZZZ
         Physical,
         Fire,
         Ice,
+        FireFrost,
         Electric,
-        Ether
+        Ether,
+        AuricEther
     }
 }
