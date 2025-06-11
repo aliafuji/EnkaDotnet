@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Assets.HSR.Models;
 using EnkaDotNet.Enums.HSR;
@@ -23,8 +24,24 @@ namespace EnkaDotNet.Assets.HSR
         private readonly Dictionary<string, HSRRelicSetInfo> _relicSets = new Dictionary<string, HSRRelicSetInfo>();
         private readonly Dictionary<string, HSRSkillAssetInfo> _skills = new Dictionary<string, HSRSkillAssetInfo>();
         private readonly Dictionary<string, HSREidolonAssetInfo> _eidolons = new Dictionary<string, HSREidolonAssetInfo>();
+
         private HSRMetaData _metaData;
         private Dictionary<string, HSRSkillTreePointInfo> _skillTreeData;
+
+        private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(3, 3);
+
+        private async Task LoadWithSemaphore(Func<Task> loadFunction)
+        {
+            await _loadingSemaphore.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await loadFunction().ConfigureAwait(false);
+            }
+            finally
+            {
+                _loadingSemaphore.Release();
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HSRAssets"/> class
@@ -44,14 +61,14 @@ namespace EnkaDotNet.Assets.HSR
         {
             var tasks = new List<Task>
             {
-                LoadMetaData(),
-                LoadCharacters(),
-                LoadLightCones(),
-                LoadRelics(),
-                LoadSkills(),
-                LoadAvatars(),
-                LoadEidolons(),
-                LoadSkillTree()
+                LoadWithSemaphore(LoadMetaData),
+                LoadWithSemaphore(LoadCharacters),
+                LoadWithSemaphore(LoadLightCones),
+                LoadWithSemaphore(LoadRelics),
+                LoadWithSemaphore(LoadSkills),
+                LoadWithSemaphore(LoadAvatars),
+                LoadWithSemaphore(LoadEidolons),
+                LoadWithSemaphore(LoadSkillTree)
             };
             await Task.WhenAll(tasks).ConfigureAwait(false);
         }

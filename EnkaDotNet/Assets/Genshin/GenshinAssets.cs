@@ -7,6 +7,7 @@ using EnkaDotNet.Enums.Genshin;
 using EnkaDotNet.Utils;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Threading;
 
 namespace EnkaDotNet.Assets.Genshin
 {
@@ -20,6 +21,21 @@ namespace EnkaDotNet.Assets.Genshin
         private readonly Dictionary<string, ConstellationAssetInfo> _constellations = new Dictionary<string, ConstellationAssetInfo>();
         private readonly Dictionary<string, NameCardAssetInfo> _namecards = new Dictionary<string, NameCardAssetInfo>();
         private readonly Dictionary<string, PfpAssetInfo> _pfps = new Dictionary<string, PfpAssetInfo>();
+
+        private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(3, 3);
+
+        private async Task LoadWithSemaphore(Func<Task> loadFunction)
+        {
+            await _loadingSemaphore.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await loadFunction().ConfigureAwait(false);
+            }
+            finally
+            {
+                _loadingSemaphore.Release();
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GenshinAssets"/> class
@@ -39,11 +55,11 @@ namespace EnkaDotNet.Assets.Genshin
         {
             var tasks = new List<Task>
             {
-                LoadCharacters(),
-                LoadTalents(),
-                LoadConstellations(),
-                LoadNamecards(),
-                LoadPfps()
+                LoadWithSemaphore(LoadCharacters),
+                LoadWithSemaphore(LoadTalents),
+                LoadWithSemaphore(LoadConstellations),
+                LoadWithSemaphore(LoadNamecards),
+                LoadWithSemaphore(LoadPfps)
             };
             await Task.WhenAll(tasks).ConfigureAwait(false);
         }
