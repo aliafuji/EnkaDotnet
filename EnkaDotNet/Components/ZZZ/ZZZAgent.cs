@@ -15,7 +15,6 @@ namespace EnkaDotNet.Components.ZZZ
         public int Level { get; internal set; }
         public int PromotionLevel { get; internal set; }
         public int TalentLevel { get; internal set; }
-        public int SkinId { get; internal set; }
         public List<int> CoreSkillEnhancements { get; internal set; } = new List<int>();
         public int CoreSkillEnhancement { get; internal set; }
         public List<int> TalentToggles { get; internal set; } = new List<int>();
@@ -38,6 +37,7 @@ namespace EnkaDotNet.Components.ZZZ
 
         internal EnkaClientOptions Options { get; set; }
         internal IZZZAssets Assets { get; set; }
+        public Dictionary<string, Skin> Skins { get; internal set; } = new Dictionary<string, Skin>();
 
         public Dictionary<string, FormattedStatValues> GetAllStats()
         {
@@ -219,5 +219,11 @@ public class FormattedDriveDiscSetInfo
     public string SuitName { get; set; } = string.Empty;
     public int PieceCount { get; set; }
     public List<KeyValuePair<string, string>> BonusStats { get; set; } = new List<KeyValuePair<string, string>>();
+    }
+
+    public class SkinInfo
+    {
+        public string Image { get; set; } = string.Empty;
+        public string CircleIcon { get; set; } = string.Empty;
     }
 }

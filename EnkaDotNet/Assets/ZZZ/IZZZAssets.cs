@@ -142,5 +142,15 @@ namespace EnkaDotNet.Assets.ZZZ
         /// Gets the star/ascension data for W-Engines (weapons)
         /// </summary>
         List<ZZZWeaponStarItem> GetWeaponStarData();
+
+        /// <summary>
+        /// Gets the skin asset information for an agent
+        /// </summary>
+        Skin GetAgentSkin(string agentId, string skinId);
+
+        /// <summary>
+        /// Gets the skin data for an agent
+        /// </summary>
+        IReadOnlyDictionary<string, Skin> GetAgentSkins(string agentId);
     }
 }

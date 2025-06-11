@@ -108,7 +108,6 @@ namespace EnkaDotNet.Utils.ZZZ
         public ZZZAgent MapAgent(ZZZAvatarModel model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
-
             var agent = new ZZZAgent
             {
                 Id = model.Id,
@@ -117,7 +116,12 @@ namespace EnkaDotNet.Utils.ZZZ
                 PromotionLevel = model.PromotionLevel,
                 TalentLevel = model.TalentLevel,
                 CoreSkillEnhancement = model.CoreSkillEnhancement,
-                SkinId = model.SkinId,
+                Skins = (model.SkinId != 0)
+                    ? new Dictionary<string, Skin>
+                        {
+                            { model.SkinId.ToString(), _assets.GetAgentSkin(model.Id.ToString(), model.SkinId.ToString()) }
+                        }
+                    : null,
                 WeaponEffectState = (WEngineEffectState)model.WeaponEffectState,
                 IsHidden = model.IsHidden,
                 ObtainmentTimestamp = DateTimeOffset.FromUnixTimeSeconds(model.ObtainmentTimestamp),
@@ -149,7 +153,6 @@ namespace EnkaDotNet.Utils.ZZZ
                 agent.Weapon = MapWeapon(model.Weapon);
                 if (agent.Weapon != null) agent.Weapon.Options = this._options;
             }
-
 
             agent.SkillLevels.Clear();
             if (model.SkillLevelList != null) foreach (var skillLevel in model.SkillLevelList) if (Enum.IsDefined(typeof(SkillType), skillLevel.Index)) agent.SkillLevels[(SkillType)skillLevel.Index] = skillLevel.Level;

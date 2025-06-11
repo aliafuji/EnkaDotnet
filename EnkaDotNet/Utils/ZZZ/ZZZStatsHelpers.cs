@@ -589,20 +589,29 @@ namespace EnkaDotNet.Utils.ZZZ
                         break;
 
                     case "Sheer Force":
-                        double sheerForceEquipmentBonus = catBreakdown["Agent_Flat"] + catBreakdown["Weapon_Flat"] +
+                        if (agent.ProfessionType == ProfessionType.Rupture)
+                        {
+                            double sheerForceEquipmentBonus = catBreakdown["Agent_Flat"] + catBreakdown["Weapon_Flat"] +
                                                         catBreakdown["Discs_Flat"] + catBreakdown["SetBonus_Flat"];
 
-                        if (agent.Id == 1371)
-                        {
-                            finalValue = Math.Floor((calculatedATK * 0.30) + (calculatedHP * 0.1) + sheerForceEquipmentBonus);
+                            if (agent.Id == 1371)
+                            {
+                                finalValue = Math.Floor(calculatedATK * 0.30) + Math.Floor(calculatedHP * 0.1) + sheerForceEquipmentBonus;
+                            }
+                            else
+                            {
+                                finalValue = Math.Floor((calculatedATK * 0.30) + sheerForceEquipmentBonus);
+                            }
+
+                            catBreakdown["BaseDisplay"] = 0;
+                            catBreakdown["AddedDisplay"] = finalValue;
                         }
                         else
                         {
-                            finalValue = Math.Floor((calculatedATK * 0.30) + sheerForceEquipmentBonus);
+                            finalValue = 0;
+                            catBreakdown["BaseDisplay"] = 0;
+                            catBreakdown["AddedDisplay"] = 0;
                         }
-
-                        catBreakdown["BaseDisplay"] = 0;
-                        catBreakdown["AddedDisplay"] = finalValue;
                         break;
                     case "Automatic Adrenaline Accumulation":
                         finalValue = agentBase / 100.0;
