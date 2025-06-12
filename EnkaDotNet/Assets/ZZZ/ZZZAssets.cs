@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -39,7 +40,7 @@ namespace EnkaDotNet.Assets.ZZZ
                 _loadingSemaphore.Release();
             }
         }
-
+        
         public ZZZAssets(string language, HttpClient httpClient, ILogger<ZZZAssets> logger)
             : base(language, "zzz", httpClient, logger)
         {
@@ -441,6 +442,74 @@ namespace EnkaDotNet.Assets.ZZZ
             }
         }
 
+        public Skin GetAgentSkin(string agentId, string skinId)
+        {
+            if (string.IsNullOrWhiteSpace(skinId))
+            {
+                _logger?.LogWarning("Invalid skin ID provided for agent {AgentId}", agentId);
+                return null;
+            }
+
+            var skins = GetAgentSkins(agentId);
+            return skins.TryGetValue(skinId, out var skin) ? skin : null;
+        }
+
+
+        /// <summary>
+        /// Gets the skin asset information for an agent.
+        /// </summary>
+        /// <param name="agentId"></param>
+        /// <returns></returns>
+        public IReadOnlyDictionary<string, Skin> GetAgentSkins(string agentId)
+        {
+            if (string.IsNullOrWhiteSpace(agentId))
+            {
+                _logger?.LogWarning("Invalid agent ID provided: {AgentId}", agentId);
+                return new Dictionary<string, Skin>();
+            }
+
+            _logger?.LogDebug("Fetching skins for agent ID: {AgentId}", agentId);
+
+            if (!_avatars.TryGetValue(agentId, out var avatarInfo))
+            {
+                _logger?.LogInformation("No avatar found for agent ID: {AgentId}", agentId);
+                return new Dictionary<string, Skin>();
+            }
+
+            if (avatarInfo.Skins == null || !avatarInfo.Skins.Any())
+            {
+                _logger?.LogInformation("No skins available for agent ID: {AgentId}", agentId);
+                return new Dictionary<string, Skin>();
+            }
+
+            _logger?.LogDebug("Found {SkinCount} skins for agent ID: {AgentId}",
+                avatarInfo.Skins.Count, agentId);
+
+            try
+            {
+                var result = avatarInfo.Skins.ToDictionary(
+                    skinEntry => skinEntry.Key,
+                    skinEntry => new Skin
+                    {
+                        Image = $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{skinEntry.Value.Image}",
+                        CircleIcon = $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{skinEntry.Value.CircleIcon}"
+                    });
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error processing skins for agent ID: {AgentId}", agentId);
+                return new Dictionary<string, Skin>();
+            }
+        }
+
+        /// <summary>
+        /// Gets a specific skin for an agent by skin ID.
+        /// </summary>
+        /// <param name="agentId">The agent ID</param>
+        /// <param name="skinId">The specific skin ID to retrieve</param>
+        /// <returns>The skin data if found, null otherwise</returns>
         public Skin GetAgentSkin(string agentId, string skinId)
         {
             if (string.IsNullOrWhiteSpace(skinId))

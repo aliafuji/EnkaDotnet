@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using EnkaDotNet.Models.HSR;
 using EnkaDotNet.Components.HSR;
