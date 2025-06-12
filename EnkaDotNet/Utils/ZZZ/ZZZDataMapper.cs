@@ -5,6 +5,7 @@ using EnkaDotNet.Models.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
+using System.Collections.Concurrent;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
@@ -117,10 +118,10 @@ namespace EnkaDotNet.Utils.ZZZ
                 TalentLevel = model.TalentLevel,
                 CoreSkillEnhancement = model.CoreSkillEnhancement,
                 Skins = (model.SkinId != 0)
-                    ? new Dictionary<string, Skin>
+                    ? new ConcurrentDictionary<string, Skin>(new Dictionary<string, Skin>
                         {
                             { model.SkinId.ToString(), _assets.GetAgentSkin(model.Id.ToString(), model.SkinId.ToString()) }
-                        }
+                        })
                     : null,
                 WeaponEffectState = (WEngineEffectState)model.WeaponEffectState,
                 IsHidden = model.IsHidden,
@@ -129,15 +130,15 @@ namespace EnkaDotNet.Utils.ZZZ
                 CircleIconUrl = _assets.GetAgentCircleIconUrl(model.Id),
                 Rarity = (Rarity)_assets.GetAgentRarity(model.Id),
                 ProfessionType = _assets.GetAgentProfessionType(model.Id),
-                ElementTypes = FilterUnknownElements(_assets.GetAgentElements(model.Id)),
+                ElementTypes = FilterUnknownElements(_assets.GetAgentElements(model.Id).ToList()),
                 Colors = _assets.GetAvatarColors(model.Id),
                 Options = this._options,
                 Assets = this._assets
             };
 
-            agent.Stats = _statsCalculator.CalculateAgentBaseStats(
+            agent.Stats = new ConcurrentDictionary<StatType, double>(_statsCalculator.CalculateAgentBaseStats(
                 model.Id, model.Level, model.PromotionLevel, model.CoreSkillEnhancement
-            );
+            ));
 
             agent.CoreSkillEnhancements.Clear();
             if (model.CoreSkillEnhancement > 0) for (int i = 0; i < model.CoreSkillEnhancement; i++) agent.CoreSkillEnhancements.Add(i);

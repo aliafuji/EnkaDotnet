@@ -4,9 +4,6 @@ using EnkaDotNet.Enums.HSR;
 
 namespace EnkaDotNet.Assets.HSR
 {
-    /// <summary>
-    /// Interface for accessing Honkai: Star Rail specific game assets
-    /// </summary>
     public interface IHSRAssets : IAssets
     {
         /// <summary>

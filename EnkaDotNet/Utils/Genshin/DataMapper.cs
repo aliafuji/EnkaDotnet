@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using EnkaDotNet.Assets.Genshin;
@@ -102,7 +103,7 @@ namespace EnkaDotNet.Utils.Genshin
                 Friendship = model.FetterInfo?.ExpLevel ?? 0,
                 CostumeId = model.CostumeId,
                 Element = element,
-                Stats = MapStats(model.FightPropMap),
+                Stats = new ConcurrentDictionary<StatType, double>(MapStats(model.FightPropMap)),
                 UnlockedConstellationIds = model.TalentIdList ?? new List<int>(),
                 Talents = MapTalents(model.SkillLevelMap, model.ProudSkillExtraLevelMap, model.SkillDepotId, model.AvatarId),
                 Weapon = model.EquipList?.Select(equipModel => MapEquipment(equipModel)).OfType<Weapon>().FirstOrDefault(),

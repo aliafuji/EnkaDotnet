@@ -1,33 +1,27 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Utils;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace EnkaDotNet.Assets
 {
-    /// <summary>
-    /// Base class for handling game assets
-    /// </summary>
     public abstract class BaseAssets : IAssets
     {
         private readonly HttpClient _httpClient;
-        protected readonly Dictionary<string, object> _assetCache = new Dictionary<string, object>();
+        protected readonly ConcurrentDictionary<string, object> _assetCache = new ConcurrentDictionary<string, object>();
         private static readonly SemaphoreSlim _initializationSemaphore = new SemaphoreSlim(1, 1);
-        protected Dictionary<string, string> _textMap;
+        protected ConcurrentDictionary<string, string> _textMap;
         protected readonly ILogger _logger;
         private volatile bool _isInitialized = false;
 
-        /// <inheritdoc/>
         public string Language { get; }
-
-        /// <inheritdoc/>
         public string GameIdentifier { get; }
-
 
         protected BaseAssets(string language, string gameIdentifier, HttpClient httpClient, ILogger logger)
         {
@@ -37,9 +31,6 @@ namespace EnkaDotNet.Assets
             _logger = logger ?? NullLogger.Instance;
         }
 
-        /// <summary>
-        /// Ensures that the assets are initialized This method is thread-safe
-        /// </summary>
         public async Task EnsureInitializedAsync()
         {
             if (_isInitialized) return;
@@ -58,23 +49,17 @@ namespace EnkaDotNet.Assets
         }
 
         protected abstract Task LoadAssetsInternalAsync();
-
-        /// <summary>
-        /// Gets the dictionary of asset file keys to their respective URLs for the specific game
-        /// </summary>
-        /// <returns>A read-only dictionary of asset file URLs</returns>
         protected abstract IReadOnlyDictionary<string, string> GetAssetFileUrls();
 
         protected virtual async Task LoadTextMapInternalAsync(string language)
         {
             try
             {
-                _textMap = new Dictionary<string, string>();
                 var allLanguageMaps = await FetchAndDeserializeAssetAsync<Dictionary<string, Dictionary<string, string>>>("text_map.json").ConfigureAwait(false);
 
                 if (allLanguageMaps.TryGetValue(language, out var languageSpecificMap))
                 {
-                    _textMap = languageSpecificMap;
+                    _textMap = new ConcurrentDictionary<string, string>(languageSpecificMap);
                 }
                 else
                 {
@@ -90,7 +75,7 @@ namespace EnkaDotNet.Assets
                     if (allLanguageMaps.TryGetValue(fallbackLanguage, out var fallbackMap))
                     {
                         _logger.LogInformation("Falling back to '{FallbackLanguage}' language for {GameIdentifier}", fallbackLanguage, this.GameIdentifier);
-                        _textMap = fallbackMap;
+                        _textMap = new ConcurrentDictionary<string, string>(fallbackMap);
                     }
                     else
                     {
@@ -105,7 +90,6 @@ namespace EnkaDotNet.Assets
             }
         }
 
-        /// <inheritdoc/>
         public string GetText(string hash)
         {
             if (!_isInitialized)

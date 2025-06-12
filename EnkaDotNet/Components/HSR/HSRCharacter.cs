@@ -1,15 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using EnkaDotNet.Enums.HSR;
-using EnkaDotNet.Assets.HSR;
-using EnkaDotNet.Utils.HSR;
 using System.Globalization;
-
+using System.Linq;
+using EnkaDotNet.Assets.HSR;
+using EnkaDotNet.Enums.HSR;
+using EnkaDotNet.Utils.HSR;
 
 namespace EnkaDotNet.Components.HSR
 {
@@ -25,7 +21,6 @@ namespace EnkaDotNet.Components.HSR
     {
         private IHSRAssets _assets;
         internal EnkaClientOptions Options { get; set; }
-
 
         internal void SetAssets(IHSRAssets assets)
         {
@@ -48,8 +43,7 @@ namespace EnkaDotNet.Components.HSR
         public HSRLightCone Equipment { get; internal set; }
         public List<HSRRelic> RelicList { get; internal set; } = new List<HSRRelic>();
         public List<Eidolon> Eidolons { get; internal set; } = new List<Eidolon>();
-        public Dictionary<string, HSRStatValue> Stats { get; internal set; } = new Dictionary<string, HSRStatValue>();
-
+        public ConcurrentDictionary<string, HSRStatValue> Stats { get; internal set; } = new ConcurrentDictionary<string, HSRStatValue>();
         public HSRStatValue HP => GetStat("HP");
         public HSRStatValue Attack => GetStat("Attack");
         public HSRStatValue Defense => GetStat("Defense");
@@ -68,7 +62,6 @@ namespace EnkaDotNet.Components.HSR
         public HSRStatValue WindDamageBoost => GetStat("WindDamageBoost");
         public HSRStatValue QuantumDamageBoost => GetStat("QuantumDamageBoost");
         public HSRStatValue ImaginaryDamageBoost => GetStat("ImaginaryDamageBoost");
-
 
         public HSRStatValue GetStat(string statName)
         {
@@ -143,7 +136,6 @@ namespace EnkaDotNet.Components.HSR
                             double rawValue = kvp.Value;
                             string displayName = raw ? propertyType : HSRStatPropertyUtils.GetDisplayName(propertyType);
                             string formattedValue = raw ? rawValue.ToString(CultureInfo.InvariantCulture) : HSRStatPropertyUtils.FormatPropertyValue(propertyType, rawValue);
-
 
                             currentSetBonus.Effects.Add(new SetBonusEffectDetail
                             {

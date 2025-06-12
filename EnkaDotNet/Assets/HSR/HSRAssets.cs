@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -12,22 +13,18 @@ using Microsoft.Extensions.Logging;
 
 namespace EnkaDotNet.Assets.HSR
 {
-    /// <summary>
-    /// Provides access to Honkai: Star Rail specific game assets
-    /// </summary>
     public class HSRAssets : BaseAssets, IHSRAssets
     {
-        private readonly Dictionary<string, HSRCharacterAssetInfo> _characters = new Dictionary<string, HSRCharacterAssetInfo>();
-        private readonly Dictionary<string, HSRLightConeAssetInfo> _lightCones = new Dictionary<string, HSRLightConeAssetInfo>();
-        private readonly Dictionary<string, HSRPfpAssetInfo> _pfps = new Dictionary<string, HSRPfpAssetInfo>();
-        private readonly Dictionary<string, HSRRelicItemInfo> _relicItems = new Dictionary<string, HSRRelicItemInfo>();
-        private readonly Dictionary<string, HSRRelicSetInfo> _relicSets = new Dictionary<string, HSRRelicSetInfo>();
-        private readonly Dictionary<string, HSRSkillAssetInfo> _skills = new Dictionary<string, HSRSkillAssetInfo>();
-        private readonly Dictionary<string, HSREidolonAssetInfo> _eidolons = new Dictionary<string, HSREidolonAssetInfo>();
+        private readonly ConcurrentDictionary<string, HSRCharacterAssetInfo> _characters = new ConcurrentDictionary<string, HSRCharacterAssetInfo>();
+        private readonly ConcurrentDictionary<string, HSRLightConeAssetInfo> _lightCones = new ConcurrentDictionary<string, HSRLightConeAssetInfo>();
+        private readonly ConcurrentDictionary<string, HSRPfpAssetInfo> _pfps = new ConcurrentDictionary<string, HSRPfpAssetInfo>();
+        private readonly ConcurrentDictionary<string, HSRRelicItemInfo> _relicItems = new ConcurrentDictionary<string, HSRRelicItemInfo>();
+        private readonly ConcurrentDictionary<string, HSRRelicSetInfo> _relicSets = new ConcurrentDictionary<string, HSRRelicSetInfo>();
+        private readonly ConcurrentDictionary<string, HSRSkillAssetInfo> _skills = new ConcurrentDictionary<string, HSRSkillAssetInfo>();
+        private readonly ConcurrentDictionary<string, HSREidolonAssetInfo> _eidolons = new ConcurrentDictionary<string, HSREidolonAssetInfo>();
 
         private HSRMetaData _metaData;
-        private Dictionary<string, HSRSkillTreePointInfo> _skillTreeData;
-
+        private ConcurrentDictionary<string, HSRSkillTreePointInfo> _skillTreeData;
         private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(3, 3);
 
         private async Task LoadWithSemaphore(Func<Task> loadFunction)
@@ -43,15 +40,11 @@ namespace EnkaDotNet.Assets.HSR
             }
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="HSRAssets"/> class
-        /// </summary>
         public HSRAssets(string language, HttpClient httpClient, ILogger<HSRAssets> logger)
             : base(language, "hsr", httpClient, logger)
         {
         }
 
-        /// <inheritdoc/>
         protected override IReadOnlyDictionary<string, string> GetAssetFileUrls()
         {
             return Constants.HSRAssetFileUrls;
@@ -215,11 +208,8 @@ namespace EnkaDotNet.Assets.HSR
         {
             try
             {
-                _skillTreeData = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRSkillTreePointInfo>>("skill_tree.json").ConfigureAwait(false);
-                if (_skillTreeData == null)
-                {
-                    _skillTreeData = new Dictionary<string, HSRSkillTreePointInfo>();
-                }
+                var data = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRSkillTreePointInfo>>("skill_tree.json").ConfigureAwait(false);
+                _skillTreeData = data != null ? new ConcurrentDictionary<string, HSRSkillTreePointInfo>(data) : new ConcurrentDictionary<string, HSRSkillTreePointInfo>();
             }
             catch (Exception ex)
             {
@@ -228,10 +218,7 @@ namespace EnkaDotNet.Assets.HSR
             }
         }
 
-        /// <inheritdoc/>
         public string GetLocalizedText(string key) => GetText(key);
-
-        /// <inheritdoc/>
         public string GetEidolonIconUrl(int eidolonId)
         {
             string eidolonIdStr = eidolonId.ToString();
@@ -241,14 +228,12 @@ namespace EnkaDotNet.Assets.HSR
             }
             return string.Empty;
         }
-        /// <inheritdoc/>
         public HSREidolonAssetInfo GetEidolonInfo(string eidolonId)
         {
             _eidolons.TryGetValue(eidolonId, out var info);
             return info;
         }
 
-        /// <inheritdoc/>
         public string GetCharacterName(int characterId)
         {
             string characterIdStr = characterId.ToString();
@@ -260,7 +245,6 @@ namespace EnkaDotNet.Assets.HSR
             return $"Character_{characterId}";
         }
 
-        /// <inheritdoc/>
         public string GetCharacterIconUrl(int characterId)
         {
             string characterIdStr = characterId.ToString();
@@ -271,7 +255,6 @@ namespace EnkaDotNet.Assets.HSR
             return string.Empty;
         }
 
-        /// <inheritdoc/>
         public string GetCharacterAvatarIconUrl(int characterId)
         {
             string characterIdStr = characterId.ToString();
@@ -282,7 +265,6 @@ namespace EnkaDotNet.Assets.HSR
             return string.Empty;
         }
 
-        /// <inheritdoc/>
         public ElementType GetCharacterElement(int characterId)
         {
             string characterIdStr = characterId.ToString();
@@ -293,7 +275,6 @@ namespace EnkaDotNet.Assets.HSR
             return ElementType.Unknown;
         }
 
-        /// <inheritdoc/>
         public PathType GetCharacterPath(int characterId)
         {
             string characterIdStr = characterId.ToString();
@@ -304,26 +285,22 @@ namespace EnkaDotNet.Assets.HSR
             return PathType.Unknown;
         }
 
-        /// <inheritdoc/>
         public int GetCharacterRarity(int characterId)
         {
             string characterIdStr = characterId.ToString();
             _characters.TryGetValue(characterIdStr, out var characterInfo);
             return characterInfo?.Rarity ?? 0;
         }
-        /// <inheritdoc/>
         public HSRCharacterAssetInfo GetCharacterInfo(string characterId)
         {
             _characters.TryGetValue(characterId, out var info);
             return info;
         }
-        /// <inheritdoc/>
         public HSRLightConeAssetInfo GetLightConeInfo(string lightConeId)
         {
             _lightCones.TryGetValue(lightConeId, out var info);
             return info;
         }
-        /// <inheritdoc/>
         public HSRRelicSetInfo GetRelicSetInfo(string setId)
         {
             if (_relicSets.TryGetValue(setId, out var info))
@@ -337,10 +314,7 @@ namespace EnkaDotNet.Assets.HSR
             }
             return null;
         }
-        /// <inheritdoc/>
-        public Dictionary<string, HSRRelicSetInfo> GetAllRelicSets() => _relicSets;
-
-        /// <inheritdoc/>
+        public Dictionary<string, HSRRelicSetInfo> GetAllRelicSets() => new Dictionary<string, HSRRelicSetInfo>(_relicSets);
         public string GetLightConeName(int lightConeId)
         {
             string lightConeIdStr = lightConeId.ToString();
@@ -351,7 +325,6 @@ namespace EnkaDotNet.Assets.HSR
             return $"LightCone_{lightConeId}";
         }
 
-        /// <inheritdoc/>
         public string GetLightConeIconUrl(int lightConeId)
         {
             string lightConeIdStr = lightConeId.ToString();
@@ -362,7 +335,6 @@ namespace EnkaDotNet.Assets.HSR
             return string.Empty;
         }
 
-        /// <inheritdoc/>
         public PathType GetLightConePath(int lightConeId)
         {
             string lightConeIdStr = lightConeId.ToString();
@@ -373,7 +345,6 @@ namespace EnkaDotNet.Assets.HSR
             return PathType.Unknown;
         }
 
-        /// <inheritdoc/>
         public int GetLightConeRarity(int lightConeId)
         {
             string lightConeIdStr = lightConeId.ToString();
@@ -381,7 +352,6 @@ namespace EnkaDotNet.Assets.HSR
             return lightConeInfo?.Rarity ?? 0;
         }
 
-        /// <inheritdoc/>
         public string GetRelicSetName(int setId)
         {
             string setIdStr = setId.ToString();
@@ -389,7 +359,6 @@ namespace EnkaDotNet.Assets.HSR
             return setInfo?.SetName ?? $"RelicSet_{setId}";
         }
 
-        /// <inheritdoc/>
         public string GetRelicIconUrl(int relicId)
         {
             string relicIdStr = relicId.ToString();
@@ -400,7 +369,6 @@ namespace EnkaDotNet.Assets.HSR
             return string.Empty;
         }
 
-        /// <inheritdoc/>
         public int GetRelicRarity(int relicId)
         {
             string relicIdStr = relicId.ToString();
@@ -408,7 +376,6 @@ namespace EnkaDotNet.Assets.HSR
             return relicInfo?.Rarity ?? 0;
         }
 
-        /// <inheritdoc/>
         public int GetRelicSetId(int relicId)
         {
             string relicIdStr = relicId.ToString();
@@ -416,7 +383,6 @@ namespace EnkaDotNet.Assets.HSR
             return relicInfo?.SetID ?? 0;
         }
 
-        /// <inheritdoc/>
         public RelicType GetRelicType(int relicId)
         {
             string relicIdStr = relicId.ToString();
@@ -427,7 +393,6 @@ namespace EnkaDotNet.Assets.HSR
             return RelicType.Unknown;
         }
 
-        /// <inheritdoc/>
         public string GetPropertyName(int propertyId)
         {
             return Enum.IsDefined(typeof(StatPropertyType), propertyId)
@@ -435,7 +400,6 @@ namespace EnkaDotNet.Assets.HSR
                 : $"Property_{propertyId}";
         }
 
-        /// <inheritdoc/>
         public string FormatPropertyValue(int propertyId, double value)
         {
             if (Enum.IsDefined(typeof(StatPropertyType), propertyId))
@@ -449,7 +413,6 @@ namespace EnkaDotNet.Assets.HSR
             return value.ToString();
         }
 
-        /// <inheritdoc/>
         public string GetProfilePictureIconUrl(int profilePictureId)
         {
             string profilePictureIdstr = profilePictureId.ToString();
@@ -460,7 +423,6 @@ namespace EnkaDotNet.Assets.HSR
             return string.Empty;
         }
 
-        /// <inheritdoc/>
         public string GetSkillIconUrl(int skillId)
         {
             string skillIdStr = skillId.ToString();
@@ -471,7 +433,6 @@ namespace EnkaDotNet.Assets.HSR
             return string.Empty;
         }
 
-        /// <inheritdoc/>
         public HSRAvatarMetaStats GetAvatarStats(string avatarId, int promotion)
         {
             if (_metaData?.AvatarStats != null && _metaData.AvatarStats.TryGetValue(avatarId, out var promoDict))
@@ -481,7 +442,6 @@ namespace EnkaDotNet.Assets.HSR
             return null;
         }
 
-        /// <inheritdoc/>
         public HSREquipmentMetaStats GetEquipmentStats(string equipmentId, int promotion)
         {
             if (_metaData?.EquipmentStats != null && _metaData.EquipmentStats.TryGetValue(equipmentId, out var promoDict))
@@ -491,7 +451,6 @@ namespace EnkaDotNet.Assets.HSR
             return null;
         }
 
-        /// <inheritdoc/>
         public Dictionary<string, double> GetEquipmentSkillProps(string skillId, int rank)
         {
             if (_metaData?.EquipmentSkills != null && _metaData.EquipmentSkills.TryGetValue(skillId, out var rankDict))
@@ -504,7 +463,6 @@ namespace EnkaDotNet.Assets.HSR
             return new Dictionary<string, double>();
         }
 
-        /// <inheritdoc/>
         public HSRRelicMainAffixInfo GetRelicMainAffixInfo(int groupId, int affixId)
         {
             if (_metaData?.RelicInfo?.MainAffix != null &&
@@ -516,7 +474,6 @@ namespace EnkaDotNet.Assets.HSR
             return null;
         }
 
-        /// <inheritdoc/>
         public HSRRelicSubAffixInfo GetRelicSubAffixInfo(int groupId, int affixId)
         {
             if (_metaData?.RelicInfo?.SubAffix != null && _metaData.RelicInfo.SubAffix.TryGetValue(groupId.ToString(), out var groupDict))
@@ -527,7 +484,6 @@ namespace EnkaDotNet.Assets.HSR
             return null;
         }
 
-        /// <inheritdoc/>
         public Dictionary<string, double> GetSkillTreeProps(string pointId, int level)
         {
             if (_metaData?.SkillTreeInfo != null && _metaData.SkillTreeInfo.TryGetValue(pointId, out var levelDict))
@@ -538,14 +494,12 @@ namespace EnkaDotNet.Assets.HSR
             return new Dictionary<string, double>();
         }
 
-        /// <inheritdoc/>
         public HSRSkillTreePointInfo GetSkillTreePointInfo(string pointId)
         {
             if (_skillTreeData != null && _skillTreeData.TryGetValue(pointId, out var info)) return info;
             return null;
         }
 
-        /// <inheritdoc/>
         public string GetSkillTreePointName(string pointId)
         {
             var pointInfo = GetSkillTreePointInfo(pointId);
@@ -563,7 +517,6 @@ namespace EnkaDotNet.Assets.HSR
             return $"Trace_{pointId}";
         }
 
-        /// <inheritdoc/>
         public string GetSkillTreePointDescription(string pointId)
         {
             var pointInfo = GetSkillTreePointInfo(pointId);
@@ -581,7 +534,6 @@ namespace EnkaDotNet.Assets.HSR
             return $"Description for Trace_{pointId}";
         }
 
-        /// <inheritdoc/>
         public string GetSkillTreeIconUrl(int pointId)
         {
             var pointInfo = GetSkillTreePointInfo(pointId.ToString());
@@ -592,7 +544,6 @@ namespace EnkaDotNet.Assets.HSR
             return string.Empty;
         }
 
-        /// <inheritdoc/>
         public Dictionary<string, double> GetRelicSetEffects(int setId, int pieceCount)
         {
             if (_metaData?.RelicInfo?.SetSkill == null) return new Dictionary<string, double>();
@@ -608,7 +559,6 @@ namespace EnkaDotNet.Assets.HSR
             }
             return new Dictionary<string, double>();
         }
-
         private ElementType MapElementNameToEnum(string elementName)
         {
             switch (elementName?.ToUpperInvariant())
@@ -623,7 +573,6 @@ namespace EnkaDotNet.Assets.HSR
                 default: return ElementType.Unknown;
             }
         }
-
         private PathType MapPathNameToEnum(string pathName)
         {
             switch (pathName?.ToUpperInvariant())
@@ -639,7 +588,6 @@ namespace EnkaDotNet.Assets.HSR
                 default: return PathType.Unknown;
             }
         }
-
         private RelicType MapRelicTypeToEnum(string relicType)
         {
             switch (relicType?.ToUpperInvariant())
