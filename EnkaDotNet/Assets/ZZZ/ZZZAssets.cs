@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Assets.ZZZ.Models;
 using EnkaDotNet.Enums.ZZZ;
@@ -10,34 +12,39 @@ using Microsoft.Extensions.Logging;
 
 namespace EnkaDotNet.Assets.ZZZ
 {
-    /// <summary>
-    /// Provides access to Zenless Zone Zero specific game assets
-    /// </summary>
     public class ZZZAssets : BaseAssets, IZZZAssets
     {
-        private readonly Dictionary<string, ZZZAvatarAssetInfo> _avatars = new Dictionary<string, ZZZAvatarAssetInfo>();
-        private readonly Dictionary<string, ZZZWeaponAssetInfo> _weapons = new Dictionary<string, ZZZWeaponAssetInfo>();
-        private readonly Dictionary<string, ZZZPfpAssetInfo> _pfps = new Dictionary<string, ZZZPfpAssetInfo>();
-        private readonly Dictionary<string, ZZZNameCardAssetInfo> _namecards = new Dictionary<string, ZZZNameCardAssetInfo>();
-        private readonly Dictionary<string, ZZZTitleAssetInfo> _titles = new Dictionary<string, ZZZTitleAssetInfo>();
-        private readonly Dictionary<string, ZZZMedalAssetInfo> _medals = new Dictionary<string, ZZZMedalAssetInfo>();
-        private readonly Dictionary<string, ZZZPropertyAssetInfo> _properties = new Dictionary<string, ZZZPropertyAssetInfo>();
-        private readonly Dictionary<string, ZZZEquipmentItemInfo> _equipmentItems = new Dictionary<string, ZZZEquipmentItemInfo>();
-        private readonly Dictionary<string, ZZZEquipmentSuitInfo> _equipmentSuits = new Dictionary<string, ZZZEquipmentSuitInfo>();
+        private readonly ConcurrentDictionary<string, ZZZAvatarAssetInfo> _avatars = new ConcurrentDictionary<string, ZZZAvatarAssetInfo>();
+        private readonly ConcurrentDictionary<string, ZZZWeaponAssetInfo> _weapons = new ConcurrentDictionary<string, ZZZWeaponAssetInfo>();
+        private readonly ConcurrentDictionary<string, ZZZPfpAssetInfo> _pfps = new ConcurrentDictionary<string, ZZZPfpAssetInfo>();
+        private readonly ConcurrentDictionary<string, ZZZNameCardAssetInfo> _namecards = new ConcurrentDictionary<string, ZZZNameCardAssetInfo>();
+        private readonly ConcurrentDictionary<string, ZZZTitleAssetInfo> _titles = new ConcurrentDictionary<string, ZZZTitleAssetInfo>();
+        private readonly ConcurrentDictionary<string, ZZZMedalAssetInfo> _medals = new ConcurrentDictionary<string, ZZZMedalAssetInfo>();
+        private readonly ConcurrentDictionary<string, ZZZPropertyAssetInfo> _properties = new ConcurrentDictionary<string, ZZZPropertyAssetInfo>();
+        private readonly ConcurrentDictionary<string, ZZZEquipmentItemInfo> _equipmentItems = new ConcurrentDictionary<string, ZZZEquipmentItemInfo>();
+        private readonly ConcurrentDictionary<string, ZZZEquipmentSuitInfo> _equipmentSuits = new ConcurrentDictionary<string, ZZZEquipmentSuitInfo>();
+        private IReadOnlyList<ZZZEquipmentLevelItem> _equipmentLevelData;
+        private IReadOnlyList<ZZZWeaponLevelItem> _weaponLevelData;
+        private IReadOnlyList<ZZZWeaponStarItem> _weaponStarData;
+        private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(3, 3);
+        private async Task LoadWithSemaphore(Func<Task> loadFunction)
+        {
+            await _loadingSemaphore.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await loadFunction().ConfigureAwait(false);
+            }
+            finally
+            {
+                _loadingSemaphore.Release();
+            }
+        }
 
-        private List<ZZZEquipmentLevelItem> _equipmentLevelData;
-        private List<ZZZWeaponLevelItem> _weaponLevelData;
-        private List<ZZZWeaponStarItem> _weaponStarData;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ZZZAssets"/> class
-        /// </summary>
         public ZZZAssets(string language, HttpClient httpClient, ILogger<ZZZAssets> logger)
             : base(language, "zzz", httpClient, logger)
         {
         }
 
-        /// <inheritdoc/>
         protected override IReadOnlyDictionary<string, string> GetAssetFileUrls()
         {
             return Constants.ZZZAssetFileUrls;
@@ -47,18 +54,19 @@ namespace EnkaDotNet.Assets.ZZZ
         {
             var tasks = new List<Task>
             {
-                LoadAvatars(),
-                LoadWeapons(),
-                LoadEquipments(),
-                LoadPfps(),
-                LoadNamecards(),
-                LoadMedals(),
-                LoadTitles(),
-                LoadProperties(),
-                LoadEquipmentLevel(),
-                LoadWeaponLevel(),
-                LoadWeaponStar()
+                LoadWithSemaphore(LoadAvatars),
+                LoadWithSemaphore(LoadWeapons),
+                LoadWithSemaphore(LoadEquipments),
+                LoadWithSemaphore(LoadPfps),
+                LoadWithSemaphore(LoadNamecards),
+                LoadWithSemaphore(LoadMedals),
+                LoadWithSemaphore(LoadTitles),
+                LoadWithSemaphore(LoadProperties),
+                LoadWithSemaphore(LoadEquipmentLevel),
+                LoadWithSemaphore(LoadWeaponLevel),
+                LoadWithSemaphore(LoadWeaponStar)
             };
+
             await Task.WhenAll(tasks).ConfigureAwait(false);
         }
 
@@ -240,21 +248,15 @@ namespace EnkaDotNet.Assets.ZZZ
             }
         }
 
-        /// <inheritdoc/>
         public string GetLocalizedText(string key) => GetText(key);
-        /// <inheritdoc/>
         public ZZZAvatarAssetInfo GetAvatarInfo(string agentId) { _avatars.TryGetValue(agentId, out var info); return info; }
-        /// <inheritdoc/>
         public ZZZWeaponAssetInfo GetWeaponInfo(string weaponId) { _weapons.TryGetValue(weaponId, out var info); return info; }
-
-        /// <inheritdoc/>
-        public List<ZZZAvatarColors> GetAvatarColors(int agentId)
+        public IReadOnlyList<ZZZAvatarColors> GetAvatarColors(int agentId)
         {
             if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && avatarInfo.Colors != null)
                 return new List<ZZZAvatarColors> { avatarInfo.Colors };
             return new List<ZZZAvatarColors>();
         }
-        /// <inheritdoc/>
         public string GetAgentName(int agentId)
         {
             string agentIdStr = agentId.ToString();
@@ -271,22 +273,19 @@ namespace EnkaDotNet.Assets.ZZZ
             }
             return $"Agent_{agentId}";
         }
-        /// <inheritdoc/>
         public string GetAgentIconUrl(int agentId)
         {
             if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.Image))
                 return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{avatarInfo.Image}";
             return string.Empty;
         }
-        /// <inheritdoc/>
         public string GetAgentCircleIconUrl(int agentId)
         {
             if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.CircleIcon))
                 return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{avatarInfo.CircleIcon}";
             return string.Empty;
         }
-        /// <inheritdoc/>
-        public List<ElementType> GetAgentElements(int agentId)
+        public IReadOnlyList<ElementType> GetAgentElements(int agentId)
         {
             var elements = new List<ElementType>();
             if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && avatarInfo.ElementTypes != null)
@@ -295,68 +294,54 @@ namespace EnkaDotNet.Assets.ZZZ
             }
             return elements;
         }
-        /// <inheritdoc/>
         public ProfessionType GetAgentProfessionType(int agentId)
         {
             if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.ProfessionType))
                 return MapProfessionNameToEnum(avatarInfo.ProfessionType);
             return ProfessionType.Unknown;
         }
-        /// <inheritdoc/>
         public int GetAgentRarity(int agentId) { _avatars.TryGetValue(agentId.ToString(), out var info); return info?.Rarity ?? 0; }
-        /// <inheritdoc/>
         public ZZZEquipmentSuitInfo GetDiscSetInfo(string suitId) { _equipmentSuits.TryGetValue(suitId, out var info); return info; }
-        /// <inheritdoc/>
-        public Dictionary<string, ZZZEquipmentSuitInfo> GetAllDiscSets() => _equipmentSuits;
-        /// <inheritdoc/>
+        public Dictionary<string, ZZZEquipmentSuitInfo> GetAllDiscSets() => new Dictionary<string, ZZZEquipmentSuitInfo>(_equipmentSuits);
         public string GetWeaponName(int weaponId)
         {
             if (_weapons.TryGetValue(weaponId.ToString(), out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.ItemName))
                 return GetText(weaponInfo.ItemName);
             return $"Weapon_{weaponId}";
         }
-        /// <inheritdoc/>
         public string GetWeaponIconUrl(int weaponId)
         {
             if (_weapons.TryGetValue(weaponId.ToString(), out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.ImagePath))
                 return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{weaponInfo.ImagePath}";
             return string.Empty;
         }
-        /// <inheritdoc/>
         public ProfessionType GetWeaponType(int weaponId)
         {
             if (_weapons.TryGetValue(weaponId.ToString(), out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.ProfessionType))
                 return MapProfessionNameToEnum(weaponInfo.ProfessionType);
             return ProfessionType.Unknown;
         }
-        /// <inheritdoc/>
         public int GetWeaponRarity(int weaponId) { _weapons.TryGetValue(weaponId.ToString(), out var info); return info?.Rarity ?? 0; }
-        /// <inheritdoc/>
         public string GetDriveDiscSuitName(int suitId)
         {
             if (_equipmentSuits.TryGetValue(suitId.ToString(), out var suitInfo) && !string.IsNullOrEmpty(suitInfo.Name))
                 return GetText(suitInfo.Name);
             return $"Suit_{suitId}";
         }
-        /// <inheritdoc/>
         public string GetDriveDiscSuitIconUrl(int suitId)
         {
             if (_equipmentSuits.TryGetValue(suitId.ToString(), out var suitInfo) && !string.IsNullOrEmpty(suitInfo.Icon))
                 return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{suitInfo.Icon}";
             return string.Empty;
         }
-        /// <inheritdoc/>
         public int GetDriveDiscRarity(int discId) { _equipmentItems.TryGetValue(discId.ToString(), out var info); return info?.Rarity ?? 0; }
-        /// <inheritdoc/>
         public int GetDriveDiscSuitId(int discId) { _equipmentItems.TryGetValue(discId.ToString(), out var info); return info?.SuitId ?? 0; }
-        /// <inheritdoc/>
         public string GetPropertyName(int propertyId)
         {
             if (_properties.TryGetValue(propertyId.ToString(), out var propertyInfo) && !string.IsNullOrEmpty(propertyInfo.Name))
                 return GetText(propertyInfo.Name);
             return $"Property_{propertyId}";
         }
-        /// <inheritdoc/>
         public string FormatPropertyValue(int propertyId, double value)
         {
             if (_properties.TryGetValue(propertyId.ToString(), out var propertyInfo) && !string.IsNullOrEmpty(propertyInfo.Format))
@@ -378,59 +363,108 @@ namespace EnkaDotNet.Assets.ZZZ
             bool isPercentage = EnkaDotNet.Utils.ZZZ.ZZZStatsHelpers.IsDisplayPercentageStat((StatType)propertyId);
             return isPercentage ? $"{value:F1}%" : $"{Math.Floor(value)}";
         }
-        /// <inheritdoc/>
         public string GetTitleText(int titleId)
         {
             if (_titles.TryGetValue(titleId.ToString(), out var titleInfo) && !string.IsNullOrEmpty(titleInfo.TitleText))
                 return GetText(titleInfo.TitleText);
             return $"Title_{titleId}";
         }
-        /// <inheritdoc/>
         public string GetMedalName(int medalId)
         {
             if (_medals.TryGetValue(medalId.ToString(), out var medalInfo) && !string.IsNullOrEmpty(medalInfo.Name))
                 return GetText(medalInfo.Name);
             return $"Medal_{medalId}";
         }
-        /// <inheritdoc/>
         public string GetMedalIconUrl(int medalId)
         {
             if (_medals.TryGetValue(medalId.ToString(), out var medalInfo) && !string.IsNullOrEmpty(medalInfo.Icon))
                 return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{medalInfo.Icon}";
             return string.Empty;
         }
-        /// <inheritdoc/>
         public string GetNameCardIconUrl(int nameCardId)
         {
             if (_namecards.TryGetValue(nameCardId.ToString(), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon))
                 return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{nameCardInfo.Icon}";
             return string.Empty;
         }
-        /// <inheritdoc/>
         public string GetProfilePictureIconUrl(int profilePictureId)
         {
             if (_pfps.TryGetValue(profilePictureId.ToString(), out var pfpInfo) && !string.IsNullOrEmpty(pfpInfo.Icon))
                 return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{pfpInfo.Icon}";
             return string.Empty;
         }
-        /// <inheritdoc/>
         public string GetSkillIconUrl(int agentId, SkillType skillType) => string.Empty;
-        /// <inheritdoc/>
-        public List<ZZZEquipmentLevelItem> GetEquipmentLevelData() => _equipmentLevelData;
-        /// <inheritdoc/>
-        public List<ZZZWeaponLevelItem> GetWeaponLevelData() => _weaponLevelData;
-        /// <inheritdoc/>
-        public List<ZZZWeaponStarItem> GetWeaponStarData() => _weaponStarData;
+        public IReadOnlyList<ZZZEquipmentLevelItem> GetEquipmentLevelData() => _equipmentLevelData;
+        public IReadOnlyList<ZZZWeaponLevelItem> GetWeaponLevelData() => _weaponLevelData;
+        public IReadOnlyList<ZZZWeaponStarItem> GetWeaponStarData() => _weaponStarData;
+        public IReadOnlyDictionary<string, Skin> GetAgentSkins(string agentId)
+        {
+            if (string.IsNullOrWhiteSpace(agentId))
+            {
+                _logger?.LogWarning("Invalid agent ID provided: {AgentId}", agentId);
+                return new Dictionary<string, Skin>();
+            }
+
+            _logger?.LogDebug("Fetching skins for agent ID: {AgentId}", agentId);
+
+            if (!_avatars.TryGetValue(agentId, out var avatarInfo))
+            {
+                _logger?.LogInformation("No avatar found for agent ID: {AgentId}", agentId);
+                return new Dictionary<string, Skin>();
+            }
+
+            if (avatarInfo.Skins == null || !avatarInfo.Skins.Any())
+            {
+                _logger?.LogInformation("No skins available for agent ID: {AgentId}", agentId);
+                return new Dictionary<string, Skin>();
+            }
+
+            _logger?.LogDebug("Found {SkinCount} skins for agent ID: {AgentId}",
+                avatarInfo.Skins.Count, agentId);
+
+            try
+            {
+                var result = avatarInfo.Skins.ToDictionary(
+                    skinEntry => skinEntry.Key,
+                    skinEntry => new Skin
+                    {
+                        Image = $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{skinEntry.Value.Image}",
+                        CircleIcon = $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{skinEntry.Value.CircleIcon}"
+                    });
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error processing skins for agent ID: {AgentId}", agentId);
+                return new Dictionary<string, Skin>();
+            }
+        }
+
+        public Skin GetAgentSkin(string agentId, string skinId)
+        {
+            if (string.IsNullOrWhiteSpace(skinId))
+            {
+                _logger?.LogWarning("Invalid skin ID provided for agent {AgentId}", agentId);
+                return null;
+            }
+
+            var skins = GetAgentSkins(agentId);
+            return skins.TryGetValue(skinId, out var skin) ? skin : null;
+        }
+
 
         private ElementType MapElementNameToEnum(string elementName)
         {
             switch (elementName?.ToUpperInvariant())
             {
                 case "FIRE": return ElementType.Fire;
-                case "ICE": case "FIREFROST": return ElementType.Ice;
+                case "ICE": return ElementType.Ice;
+                case "FIREFROST": return ElementType.FireFrost;
                 case "ELEC": return ElementType.Electric;
                 case "ETHER": return ElementType.Ether;
                 case "PHYSICS": return ElementType.Physical;
+                case "AURICETHER": return ElementType.AuricEther;
                 default: return ElementType.Unknown;
             }
         }
@@ -438,6 +472,7 @@ namespace EnkaDotNet.Assets.ZZZ
         {
             switch (professionName?.ToUpperInvariant())
             {
+                case "RUPTURE": return ProfessionType.Rupture;
                 case "ATTACK": return ProfessionType.Attack;
                 case "STUN": return ProfessionType.Stun;
                 case "ANOMALY": return ProfessionType.Anomaly;

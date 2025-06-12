@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace EnkaDotNet.Enums.ZZZ
+﻿namespace EnkaDotNet.Enums.ZZZ
 {
     public class StatSummary
     {

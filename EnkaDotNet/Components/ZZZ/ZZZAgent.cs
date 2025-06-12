@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -15,7 +16,6 @@ namespace EnkaDotNet.Components.ZZZ
         public int Level { get; internal set; }
         public int PromotionLevel { get; internal set; }
         public int TalentLevel { get; internal set; }
-        public int SkinId { get; internal set; }
         public List<int> CoreSkillEnhancements { get; internal set; } = new List<int>();
         public int CoreSkillEnhancement { get; internal set; }
         public List<int> TalentToggles { get; internal set; } = new List<int>();
@@ -25,19 +25,20 @@ namespace EnkaDotNet.Components.ZZZ
         public DateTimeOffset ObtainmentTimestamp { get; internal set; }
 
         public ZZZWEngine Weapon { get; internal set; }
-        public Dictionary<SkillType, int> SkillLevels { get; internal set; } = new Dictionary<SkillType, int>();
+        public ConcurrentDictionary<SkillType, int> SkillLevels { get; internal set; } = new ConcurrentDictionary<SkillType, int>();
         public List<ZZZDriveDisc> EquippedDiscs { get; internal set; } = new List<ZZZDriveDisc>();
 
         public Rarity Rarity { get; internal set; }
         public ProfessionType ProfessionType { get; internal set; }
-        public List<ElementType> ElementTypes { get; internal set; } = new List<ElementType>();
+        public IReadOnlyList<ElementType> ElementTypes { get; internal set; } = new List<ElementType>();
         public string ImageUrl { get; internal set; } = string.Empty;
         public string CircleIconUrl { get; internal set; } = string.Empty;
-        public List<Assets.ZZZ.Models.ZZZAvatarColors> Colors { get; internal set; } = new List<Assets.ZZZ.Models.ZZZAvatarColors>();
-        public Dictionary<StatType, double> Stats { get; internal set; } = new Dictionary<StatType, double>();
+        public IReadOnlyList<Assets.ZZZ.Models.ZZZAvatarColors> Colors { get; internal set; } = new List<Assets.ZZZ.Models.ZZZAvatarColors>();
+        public ConcurrentDictionary<StatType, double> Stats { get; internal set; } = new ConcurrentDictionary<StatType, double>();
 
         internal EnkaClientOptions Options { get; set; }
         internal IZZZAssets Assets { get; set; }
+        public ConcurrentDictionary<string, Skin> Skins { get; internal set; } = new ConcurrentDictionary<string, Skin>();
 
         public Dictionary<string, FormattedStatValues> GetAllStats()
         {
@@ -153,7 +154,7 @@ namespace EnkaDotNet.Components.ZZZ
             return resultStats;
         }
 
-        public List<FormattedDriveDiscSetInfo> GetEquippedDiscSets()
+        public IReadOnlyList<FormattedDriveDiscSetInfo> GetEquippedDiscSets()
         {
             var result = new List<FormattedDriveDiscSetInfo>();
             bool raw = this.Options?.Raw ?? false;
@@ -213,11 +214,10 @@ namespace EnkaDotNet.Components.ZZZ
             return result;
         }
     }
-
-public class FormattedDriveDiscSetInfo
-{
-    public string SuitName { get; set; } = string.Empty;
-    public int PieceCount { get; set; }
-    public List<KeyValuePair<string, string>> BonusStats { get; set; } = new List<KeyValuePair<string, string>>();
+    public class FormattedDriveDiscSetInfo
+    {
+        public string SuitName { get; set; } = string.Empty;
+        public int PieceCount { get; set; }
+        public List<KeyValuePair<string, string>> BonusStats { get; set; } = new List<KeyValuePair<string, string>>();
     }
 }

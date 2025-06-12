@@ -1,35 +1,45 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Assets.Genshin.Models;
 using EnkaDotNet.Enums.Genshin;
 using EnkaDotNet.Utils;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace EnkaDotNet.Assets.Genshin
 {
-    /// <summary>
-    /// Provides access to Genshin Impact specific game assets
-    /// </summary>
     public class GenshinAssets : BaseAssets, IGenshinAssets
     {
-        private readonly Dictionary<int, CharacterAssetInfo> _characters = new Dictionary<int, CharacterAssetInfo>();
-        private readonly Dictionary<int, TalentAssetInfo> _talents = new Dictionary<int, TalentAssetInfo>();
-        private readonly Dictionary<string, ConstellationAssetInfo> _constellations = new Dictionary<string, ConstellationAssetInfo>();
-        private readonly Dictionary<string, NameCardAssetInfo> _namecards = new Dictionary<string, NameCardAssetInfo>();
-        private readonly Dictionary<string, PfpAssetInfo> _pfps = new Dictionary<string, PfpAssetInfo>();
+        private readonly ConcurrentDictionary<int, CharacterAssetInfo> _characters = new ConcurrentDictionary<int, CharacterAssetInfo>();
+        private readonly ConcurrentDictionary<int, TalentAssetInfo> _talents = new ConcurrentDictionary<int, TalentAssetInfo>();
+        private readonly ConcurrentDictionary<string, ConstellationAssetInfo> _constellations = new ConcurrentDictionary<string, ConstellationAssetInfo>();
+        private readonly ConcurrentDictionary<string, NameCardAssetInfo> _namecards = new ConcurrentDictionary<string, NameCardAssetInfo>();
+        private readonly ConcurrentDictionary<string, PfpAssetInfo> _pfps = new ConcurrentDictionary<string, PfpAssetInfo>();
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="GenshinAssets"/> class
-        /// </summary>
+        private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(3, 3);
+
+        private async Task LoadWithSemaphore(Func<Task> loadFunction)
+        {
+            await _loadingSemaphore.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await loadFunction().ConfigureAwait(false);
+            }
+            finally
+            {
+                _loadingSemaphore.Release();
+            }
+        }
+
         public GenshinAssets(string language, HttpClient httpClient, ILogger<GenshinAssets> logger)
             : base(language, "genshin", httpClient, logger)
         {
         }
 
-        /// <inheritdoc/>
         protected override IReadOnlyDictionary<string, string> GetAssetFileUrls()
         {
             return Constants.GenshinAssetFileUrls;
@@ -39,15 +49,14 @@ namespace EnkaDotNet.Assets.Genshin
         {
             var tasks = new List<Task>
             {
-                LoadCharacters(),
-                LoadTalents(),
-                LoadConstellations(),
-                LoadNamecards(),
-                LoadPfps()
+                LoadWithSemaphore(LoadCharacters),
+                LoadWithSemaphore(LoadTalents),
+                LoadWithSemaphore(LoadConstellations),
+                LoadWithSemaphore(LoadNamecards),
+                LoadWithSemaphore(LoadPfps)
             };
             await Task.WhenAll(tasks).ConfigureAwait(false);
         }
-
         private string GetStringFromHashJsonElement(JsonElement element)
         {
             if (element.ValueKind == JsonValueKind.String) return element.GetString();
@@ -81,7 +90,6 @@ namespace EnkaDotNet.Assets.Genshin
                 throw new InvalidOperationException("Failed to load essential Genshin Impact character data", ex);
             }
         }
-
 
         private async Task LoadPfps()
         {
@@ -176,7 +184,6 @@ namespace EnkaDotNet.Assets.Genshin
             }
         }
 
-        /// <inheritdoc/>
         public string GetCharacterName(int characterId)
         {
             if (_characters.TryGetValue(characterId, out var charInfo))
@@ -188,7 +195,6 @@ namespace EnkaDotNet.Assets.Genshin
             return $"Character_{characterId}";
         }
 
-        /// <inheritdoc/>
         public string GetCharacterIconUrl(int characterId)
         {
             if (_characters.TryGetValue(characterId, out var charInfo))
@@ -202,25 +208,12 @@ namespace EnkaDotNet.Assets.Genshin
             return string.Empty;
         }
 
-        /// <inheritdoc/>
         public ElementType GetCharacterElement(int characterId) => _characters.TryGetValue(characterId, out var charInfo) && charInfo.Element != null ? MapElementNameToEnum(charInfo.Element) : ElementType.Unknown;
-
-        /// <inheritdoc/>
         public string GetWeaponNameFromHash(string nameHash) => GetText(nameHash);
-
-        /// <inheritdoc/>
         public string GetWeaponIconUrlFromIconName(string iconName) => !string.IsNullOrEmpty(iconName) ? $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{iconName}.png" : string.Empty;
-
-        /// <inheritdoc/>
         public string GetArtifactNameFromHash(string nameHash) => GetText(nameHash);
-
-        /// <inheritdoc/>
         public string GetArtifactSetNameFromHash(string setNameHash) => GetText(setNameHash);
-
-        /// <inheritdoc/>
         public string GetArtifactIconUrlFromIconName(string iconName) => !string.IsNullOrEmpty(iconName) ? $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{iconName}.png" : string.Empty;
-
-        /// <inheritdoc/>
         public string GetTalentName(int talentId)
         {
             if (_talents.TryGetValue(talentId, out var talentInfo))
@@ -247,7 +240,6 @@ namespace EnkaDotNet.Assets.Genshin
             return $"Talent_{talentId}";
         }
 
-        /// <inheritdoc/>
         public string GetProfilePictureIconUrl(int characterId)
         {
             string key = characterId.ToString();
@@ -262,10 +254,7 @@ namespace EnkaDotNet.Assets.Genshin
             return GetCharacterIconUrl(characterId);
         }
 
-        /// <inheritdoc/>
         public string GetNameCardIconUrl(int nameCardId) => _namecards.TryGetValue(nameCardId.ToString(), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon) ? $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{nameCardInfo.Icon}.png" : string.Empty;
-
-        /// <inheritdoc/>
         public string GetConstellationName(int constellationId)
         {
             if (_constellations.TryGetValue(constellationId.ToString(), out var constellationInfo))
@@ -277,7 +266,6 @@ namespace EnkaDotNet.Assets.Genshin
             return $"Constellation_{constellationId}";
         }
 
-        /// <inheritdoc/>
         public string GetTalentIconUrl(int talentId)
         {
             if (_talents.TryGetValue(talentId, out var talentInfo) && talentInfo != null && !string.IsNullOrEmpty(talentInfo.Icon))
@@ -287,9 +275,7 @@ namespace EnkaDotNet.Assets.Genshin
             return string.Empty;
         }
 
-        /// <inheritdoc/>
         public string GetConstellationIconUrl(int constellationId) => _constellations.TryGetValue(constellationId.ToString(), out var constellationInfo) && !string.IsNullOrEmpty(constellationInfo.Icon) ? $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{constellationInfo.Icon}.png" : string.Empty;
-
         private ElementType MapElementNameToEnum(string elementName)
         {
             if (elementName == null) return ElementType.Unknown;

@@ -25,9 +25,6 @@ namespace EnkaDotNet.Internal
         private readonly ILogger<EnkaProfileServiceHandler> _logger;
         private readonly HttpClient _directHttpClient;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="EnkaProfileServiceHandler"/> class
-        /// </summary>
         public EnkaProfileServiceHandler(
             EnkaClientOptions options,
             IHttpHelper httpHelper,
@@ -51,9 +48,6 @@ namespace EnkaDotNet.Internal
             }
         }
 
-        /// <summary>
-        /// Fetches the raw API response for an Enka.Network profile by username
-        /// </summary>
         public async Task<EnkaProfileResponse> GetRawEnkaProfileByUsernameAsync(string username, bool bypassCache, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(username))
@@ -102,9 +96,6 @@ namespace EnkaDotNet.Internal
             return response;
         }
 
-        /// <summary>
-        /// Fetches and maps the Enka.Network profile information for a user by username
-        /// </summary>
         public async Task<EnkaUserProfile> GetEnkaProfileByUsernameAsync(string username, bool bypassCache, CancellationToken cancellationToken)
         {
             var rawResponse = await GetRawEnkaProfileByUsernameAsync(username, bypassCache, cancellationToken).ConfigureAwait(false);

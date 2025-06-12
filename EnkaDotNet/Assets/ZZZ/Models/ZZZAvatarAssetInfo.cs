@@ -26,6 +26,10 @@ namespace EnkaDotNet.Assets.ZZZ.Models
         [JsonPropertyName("WeaponId")]
         public int WeaponId { get; set; }
 
+        [JsonPropertyName("Skins")]
+        public Dictionary<string, ZZZAvatarSkin> Skins { get; set; }
+
+
         [JsonPropertyName("Colors")]
         public ZZZAvatarColors Colors { get; set; }
 
@@ -52,5 +56,13 @@ namespace EnkaDotNet.Assets.ZZZ.Models
 
         [JsonPropertyName("Mindscape")]
         public string Mindscape { get; set; }
+    }
+
+    public class ZZZAvatarSkin
+    {
+        [JsonPropertyName("Image")]
+        public string Image { get; set; }
+        [JsonPropertyName("CircleIcon")]
+        public string CircleIcon { get; set; }
     }
 }

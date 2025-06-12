@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace EnkaDotNet.Enums.ZZZ
+﻿namespace EnkaDotNet.Enums.ZZZ
 {
     public enum StatType
     {
@@ -65,6 +57,11 @@ namespace EnkaDotNet.Enums.ZZZ
         ElectricDMGBonusBase = 31801, // Electric DMG Bonus [Base]
         ElectricDMGBonusFlat = 31803, // Electric DMG Bonus [Flat]
         EtherDMGBonusBase = 31901,    // Ether DMG Bonus [Base]
-        EtherDMGBonusFlat = 31903     // Ether DMG Bonus [Flat]
+        EtherDMGBonusFlat = 31903,     // Ether DMG Bonus [Flat]
+
+        // Rupture Agent Specific Stats
+        AutomaticAdrenalineAccumulationBase = 32001, // Automatic Adrenaline Accumulation [Base]
+        AutomaticAdrenalineAccumulationPercent = 32002, // Automatic Adrenaline Accumulation%
+        AutomaticAdrenalineAccumulationFlat = 32003, // Automatic Adrenaline Accumulation [Flat]
     }
 }
