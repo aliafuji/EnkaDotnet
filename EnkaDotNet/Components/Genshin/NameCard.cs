@@ -4,8 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
-using System.Threading.Tasks;
-
 namespace EnkaDotNet.Components.Genshin
 {
     public class NameCard

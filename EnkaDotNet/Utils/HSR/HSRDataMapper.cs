@@ -5,6 +5,7 @@ using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Components.HSR.EnkaDotNet.Enums.HSR;
+using System.Collections.Concurrent;
 
 namespace EnkaDotNet.Utils.HSR
 {
@@ -100,7 +101,7 @@ namespace EnkaDotNet.Utils.HSR
             {
                 SkillTreeList = new List<HSRSkillTree>(),
                 RelicList = new List<HSRRelic>(),
-                Stats = new Dictionary<string, HSRStatValue>(),
+                Stats = new ConcurrentDictionary<string, HSRStatValue>(),
                 Eidolons = new List<Eidolon>(),
 
                 Id = avatarDetail.AvatarId,
@@ -217,7 +218,7 @@ namespace EnkaDotNet.Utils.HSR
                 }
             }
 
-            character.Stats = _statCalculator.CalculateCharacterStats(character);
+            character.Stats = new ConcurrentDictionary<string, HSRStatValue>(_statCalculator.CalculateCharacterStats(character));
 
             foreach (var statVal in character.Stats.Values)
             {
