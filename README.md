@@ -1,4 +1,4 @@
-﻿# Enka.DotNet
+# Enka.DotNet
 
 Enka.DotNet is a C# wrapper for accessing and processing character data from the Enka.Network API. It provides a simple interface to retrieve detailed information about characters, artifacts, weapons, and player profiles for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero.
 
