@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Utils.HSR;
@@ -44,6 +43,7 @@ namespace EnkaDotNet.Components.HSR
         public List<HSRRelic> RelicList { get; internal set; } = new List<HSRRelic>();
         public List<Eidolon> Eidolons { get; internal set; } = new List<Eidolon>();
         public ConcurrentDictionary<string, HSRStatValue> Stats { get; internal set; } = new ConcurrentDictionary<string, HSRStatValue>();
+
         public HSRStatValue HP => GetStat("HP");
         public HSRStatValue Attack => GetStat("Attack");
         public HSRStatValue Defense => GetStat("Defense");
@@ -94,19 +94,15 @@ namespace EnkaDotNet.Components.HSR
             }
             if (RelicList == null || RelicList.Count == 0) return new List<HSRRelicSetBonus>();
 
-            var setCount = new Dictionary<int, int>();
-            var setNames = new Dictionary<int, string>();
+            var setCount = new ConcurrentDictionary<int, int>();
+            var setNames = new ConcurrentDictionary<int, string>();
 
             foreach (var relic in RelicList)
             {
                 if (relic.SetId > 0)
                 {
-                    if (!setCount.ContainsKey(relic.SetId))
-                    {
-                        setCount[relic.SetId] = 0;
-                        setNames[relic.SetId] = relic.SetName;
-                    }
-                    setCount[relic.SetId]++;
+                    setCount.AddOrUpdate(relic.SetId, 1, (key, count) => count + 1);
+                    setNames.TryAdd(relic.SetId, relic.SetName);
                 }
             }
 
@@ -158,7 +154,7 @@ namespace EnkaDotNet.Components.HSR
                     addEffects(4);
                 }
 
-                if (currentSetBonus.Effects.Any())
+                if (currentSetBonus.Effects.Count > 0)
                 {
                     setBonusesResult.Add(currentSetBonus);
                 }

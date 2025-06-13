@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
-using EnkaDotNet.Components.HSR.EnkaDotNet.Enums.HSR;
+using System.Globalization;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Utils.HSR;
-using System.Globalization;
 
 namespace EnkaDotNet.Components.HSR
 {
@@ -38,13 +37,7 @@ namespace EnkaDotNet.Components.HSR
             }
         }
 
-        public double CalculationValue
-        {
-            get
-            {
-                return IsPercentage ? Value : Value;
-            }
-        }
+        public double CalculationValue => Value;
 
         public override string ToString()
         {
@@ -59,7 +52,6 @@ namespace EnkaDotNet.Components.HSR
         internal EnkaClientOptions Options { get; set; }
 
         public double Raw { get; set; }
-
         public string Formatted { get; set; }
         public bool IsPercentage { get; set; }
 
@@ -67,50 +59,29 @@ namespace EnkaDotNet.Components.HSR
         {
             Options = options;
             Raw = raw;
-
             IsPercentage = isPercentage;
             bool useRawFormatting = Options?.Raw ?? false;
 
-            if(useRawFormatting)
+            if (useRawFormatting)
             {
-
-                 Formatted = raw.ToString(CultureInfo.InvariantCulture);
+                Formatted = raw.ToString(CultureInfo.InvariantCulture);
             }
             else if (isPercentage)
             {
-
                 Formatted = $"{raw:F1}%";
             }
             else if (decimalPlaces > 0)
             {
-
                 string format = $"F{decimalPlaces}";
                 Formatted = $"{raw.ToString(format, CultureInfo.InvariantCulture)}";
             }
             else
             {
-
                 Formatted = $"{(int)raw}";
             }
         }
 
-
         public override string ToString() => Formatted;
-    }
-
-    namespace EnkaDotNet.Enums.HSR
-    {
-        public enum TraceType
-        {
-            Unknown = 0,
-            BasicAttack = 1,
-            Skill = 2,
-            Ultimate = 3,
-            Talent = 4,
-            Technique = 5,
-            StatBoost = 6,
-            MajorStatBoost = 7
-        }
     }
 
     public class HSRSkillTree
@@ -127,12 +98,12 @@ namespace EnkaDotNet.Components.HSR
         public bool IsBoosted { get; set; } = false;
         public int MaxLevel { get; set; } = 1;
         public string Anchor { get; set; } = string.Empty;
-        public List<int> SkillIds { get; set; } = new List<int>();
+        public IReadOnlyList<int> SkillIds { get; set; } = new List<int>();
 
         public override string ToString()
         {
             bool raw = Options?.Raw ?? false;
-            if(raw) return $"{PointId} - {Level}";
+            if (raw) return $"{PointId} - {Level}";
 
             string levelInfo = IsBoosted ? $"{BaseLevel}+{Level - BaseLevel}={Level}" : $"{Level}";
             return $"{Name} ({TraceType}) - Lv.{levelInfo}/{MaxLevel}";

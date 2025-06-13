@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Concurrent;
-using System.Linq;
+using System.Collections.Generic;
 using Polly;
 using Polly.Retry;
 
@@ -46,7 +46,17 @@ namespace EnkaDotNet.Utils.Common
             {
                 ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
                     .Handle<HttpRequestException>()
-                    .HandleResult(r => _options.RetryOnStatusCodes.Contains(r.StatusCode) && r.StatusCode != (HttpStatusCode)429),
+                    .HandleResult(r =>
+                    {
+                        foreach (var code in _options.RetryOnStatusCodes)
+                        {
+                            if (r.StatusCode == code && r.StatusCode != (HttpStatusCode)429)
+                            {
+                                return true;
+                            }
+                        }
+                        return false;
+                    }),
                 MaxRetryAttempts = _options.MaxRetries,
                 DelayGenerator = args =>
                 {
@@ -225,7 +235,12 @@ namespace EnkaDotNet.Utils.Common
 
         public void ClearCache()
         {
-            var keysToRemove = _trackedCacheKeys.Keys.ToList();
+            var keysToRemove = new List<string>();
+            foreach (var key in _trackedCacheKeys.Keys)
+            {
+                keysToRemove.Add(key);
+            }
+
             int clearedCount = 0;
             foreach (var key in keysToRemove)
             {

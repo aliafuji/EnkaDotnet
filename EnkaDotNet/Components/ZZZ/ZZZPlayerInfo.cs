@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using EnkaDotNet.Enums.ZZZ;
 
 namespace EnkaDotNet.Components.ZZZ
@@ -25,9 +19,8 @@ namespace EnkaDotNet.Components.ZZZ
         public string NameCardIcon { get; internal set; } = string.Empty;
         public int MainCharacterId { get; internal set; }
 
-        public List<ZZZMedal> Medals { get; internal set; } = new List<ZZZMedal>();
-
-        public List<ZZZAgent> ShowcaseAgents { get; internal set; } = new List<ZZZAgent>();
+        public IReadOnlyList<ZZZMedal> Medals { get; internal set; } = new List<ZZZMedal>();
+        public IReadOnlyList<ZZZAgent> ShowcaseAgents { get; internal set; } = new List<ZZZAgent>();
     }
 
     public class ZZZMedal

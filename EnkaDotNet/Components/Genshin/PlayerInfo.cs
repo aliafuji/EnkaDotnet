@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
 
 namespace EnkaDotNet.Components.Genshin
 {
@@ -28,40 +25,25 @@ namespace EnkaDotNet.Components.Genshin
 
         public ChallengeData Challenge { get; internal set; }
 
-        public List<int> ShowcaseCharacterIds { get; internal set; } = new List<int>();
+        public IReadOnlyList<int> ShowcaseCharacterIds { get; internal set; } = new List<int>();
 
-        public List<int> ShowcaseNameCardIds { get; internal set; } = new List<int>();
-
-        public List<string> ShowcaseNameCardIcons { get; internal set; } = new List<string>();
+        public IReadOnlyList<NameCard> ShowcaseNameCards { get; internal set; } = new List<NameCard>();
 
         public int ProfilePictureCharacterId { get; internal set; }
+    }
 
-        public IReadOnlyList<NameCard> ShowcaseNameCards
+    public class NameCard
+    {
+        private readonly int _id;
+        private readonly string _iconUrl;
+
+        public int Id => _id;
+        public string IconUrl => _iconUrl;
+
+        public NameCard(int id, string iconUrl)
         {
-            get
-            {
-                if (ShowcaseNameCardIcons == null || ShowcaseNameCardIds == null)
-                {
-                    Console.WriteLine($"Warning: {nameof(ShowcaseNameCardIcons)} or {nameof(ShowcaseNameCardIds)} is null.");
-                    return new ReadOnlyCollection<NameCard>(new List<NameCard>());
-                }
-
-                try
-                {
-                    var list = ShowcaseNameCardIds
-                        .Select((id, index) => new { id, index })
-                        .Where(x => x.index < ShowcaseNameCardIcons.Count)
-                        .Select(x => new NameCard(x.id, ShowcaseNameCardIcons[x.index]))
-                        .ToList();
-
-                    return new ReadOnlyCollection<NameCard>(list);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Unexpected error creating {nameof(ShowcaseNameCards)}: {ex.Message}");
-                    return new ReadOnlyCollection<NameCard>(new List<NameCard>());
-                }
-            }
+            _id = id;
+            _iconUrl = iconUrl ?? string.Empty;
         }
     }
 

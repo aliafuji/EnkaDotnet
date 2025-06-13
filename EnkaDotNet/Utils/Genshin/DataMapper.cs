@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Components.Genshin;
 using EnkaDotNet.Enums.Genshin;
@@ -9,33 +8,39 @@ using EnkaDotNet.Models.Genshin;
 
 namespace EnkaDotNet.Utils.Genshin
 {
-    /// <summary>
-    /// Maps raw API data to Genshin Impact specific component models
-    /// </summary>
     public class DataMapper
     {
         private readonly IGenshinAssets _assets;
         private readonly EnkaClientOptions _options;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DataMapper"/> class
-        /// </summary>
-        /// <param name="assets">The Genshin assets provider</param>
-        /// <param name="options">The client options</param>
         public DataMapper(IGenshinAssets assets, EnkaClientOptions options)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
             _options = options ?? throw new ArgumentNullException(nameof(options));
         }
 
-        /// <summary>
-        /// Maps raw player information model to the component model
-        /// </summary>
-        /// <param name="model">The raw player info model from the API</param>
-        /// <returns>The mapped <see cref="PlayerInfo"/> component model</returns>
         public PlayerInfo MapPlayerInfo(PlayerInfoModel model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
+
+            var showcaseCharacterIds = new List<int>();
+            if (model.ShowAvatarInfoList != null)
+            {
+                foreach (var a in model.ShowAvatarInfoList)
+                {
+                    showcaseCharacterIds.Add(a.AvatarId);
+                }
+            }
+
+            var showcaseNameCards = new List<NameCard>();
+            if (model.ShowNameCardIdList != null)
+            {
+                foreach (var id in model.ShowNameCardIdList)
+                {
+                    string iconUrl = _assets?.GetNameCardIconUrl(id) ?? string.Empty;
+                    showcaseNameCards.Add(new NameCard(id, iconUrl));
+                }
+            }
 
             var playerInfo = new PlayerInfo
             {
@@ -46,10 +51,9 @@ namespace EnkaDotNet.Utils.Genshin
                 WorldLevel = model.WorldLevel,
                 NameCardId = model.NameCardId,
                 FinishedAchievements = model.FinishAchievementNum,
-                ShowcaseCharacterIds = model.ShowAvatarInfoList?.Select(a => a.AvatarId).ToList() ?? new List<int>(),
-                ShowcaseNameCardIds = model.ShowNameCardIdList ?? new List<int>(),
+                ShowcaseCharacterIds = showcaseCharacterIds,
+                ShowcaseNameCards = showcaseNameCards,
                 ProfilePictureCharacterId = model.ProfilePicture?.Id ?? 0,
-                ShowcaseNameCardIcons = model.ShowNameCardIdList?.Select(id => _assets?.GetNameCardIconUrl(id) ?? string.Empty).ToList() ?? new List<string>(),
                 NameCardIcon = _assets?.GetNameCardIconUrl(model.NameCardId) ?? string.Empty
             };
 
@@ -69,22 +73,18 @@ namespace EnkaDotNet.Utils.Genshin
             return playerInfo;
         }
 
-        /// <summary>
-        /// Maps a list of raw avatar info models to a list of character component models
-        /// </summary>
-        /// <param name="modelList">The list of raw avatar info models</param>
-        /// <returns>A list of mapped <see cref="Character"/> component models</returns>
-        public List<Character> MapCharacters(List<AvatarInfoModel> modelList)
+        public IReadOnlyList<Character> MapCharacters(List<AvatarInfoModel> modelList)
         {
             if (modelList == null) return new List<Character>();
-            return modelList.Select(model => MapCharacter(model)).ToList();
+
+            var characters = new List<Character>();
+            foreach (var model in modelList)
+            {
+                characters.Add(MapCharacter(model));
+            }
+            return characters;
         }
 
-        /// <summary>
-        /// Maps a single raw avatar info model to a character component model
-        /// </summary>
-        /// <param name="model">The raw avatar info model</param>
-        /// <returns>The mapped <see cref="Character"/> component model</returns>
         public Character MapCharacter(AvatarInfoModel model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
@@ -93,6 +93,40 @@ namespace EnkaDotNet.Utils.Genshin
             if (element == ElementType.Unknown && _assets != null)
             {
                 element = MapElementFallback(model.SkillDepotId, model.AvatarId);
+            }
+
+            Weapon weapon = null;
+            var artifacts = new List<Artifact>();
+            if (model.EquipList != null)
+            {
+                foreach (var equipModel in model.EquipList)
+                {
+                    var equipment = MapEquipment(equipModel);
+                    if (equipment is Weapon w)
+                    {
+                        weapon = w;
+                    }
+                    else if (equipment is Artifact a)
+                    {
+                        artifacts.Add(a);
+                    }
+                }
+            }
+
+            var unlockedConstellationIds = new List<int>(model.TalentIdList ?? new List<int>());
+            var constellations = new List<Constellation>();
+            int index = 0;
+            foreach (var id in unlockedConstellationIds)
+            {
+                constellations.Add(new Constellation
+                {
+                    Id = id,
+                    Name = _assets?.GetConstellationName(id) ?? $"Constellation_{id}",
+                    IconUrl = _assets?.GetConstellationIconUrl(id) ?? string.Empty,
+                    Position = index + 1,
+                    Options = this._options
+                });
+                index++;
             }
 
             var character = new Character
@@ -104,26 +138,16 @@ namespace EnkaDotNet.Utils.Genshin
                 CostumeId = model.CostumeId,
                 Element = element,
                 Stats = new ConcurrentDictionary<StatType, double>(MapStats(model.FightPropMap)),
-                UnlockedConstellationIds = model.TalentIdList ?? new List<int>(),
-                Talents = MapTalents(model.SkillLevelMap, model.ProudSkillExtraLevelMap, model.SkillDepotId, model.AvatarId),
-                Weapon = model.EquipList?.Select(equipModel => MapEquipment(equipModel)).OfType<Weapon>().FirstOrDefault(),
-                Artifacts = model.EquipList?.Select(equipModel => MapEquipment(equipModel)).OfType<Artifact>().ToList() ?? new List<Artifact>(),
+                UnlockedConstellationIds = unlockedConstellationIds,
+                Talents = MapTalents(model.SkillLevelMap, model.ProudSkillExtraLevelMap),
+                Weapon = weapon,
+                Artifacts = artifacts,
                 Name = _assets?.GetCharacterName(model.AvatarId) ?? $"Character_{model.AvatarId}",
                 IconUrl = _assets?.GetCharacterIconUrl(model.AvatarId) ?? string.Empty,
-                Options = this._options
+                Options = this._options,
+                ConstellationLevel = unlockedConstellationIds.Count,
+                Constellations = constellations
             };
-
-            character.ConstellationLevel = character.UnlockedConstellationIds.Count;
-            character.Constellations = character.UnlockedConstellationIds
-               .Select((id, index) => new Constellation
-               {
-                   Id = id,
-                   Name = _assets?.GetConstellationName(id) ?? $"Constellation_{id}",
-                   IconUrl = _assets?.GetConstellationIconUrl(id) ?? string.Empty,
-                   Position = index + 1,
-                   Options = this._options
-               })
-               .ToList();
 
             if (character.Weapon != null) character.Weapon.Options = this._options;
             foreach (var artifact in character.Artifacts) artifact.Options = this._options;
@@ -132,11 +156,6 @@ namespace EnkaDotNet.Utils.Genshin
             return character;
         }
 
-        /// <summary>
-        /// Maps a raw equipment model to its corresponding component model base type
-        /// </summary>
-        /// <param name="model">The raw equipment model</param>
-        /// <returns>The mapped <see cref="EquipmentBase"/> component model, or null if not applicable</returns>
         public EquipmentBase MapEquipment(EquipModel model)
         {
             if (model?.Flat == null) return null;
@@ -155,12 +174,37 @@ namespace EnkaDotNet.Utils.Genshin
 
         private Weapon MapWeapon(EquipModel equip, WeaponModel weapon, FlatDataModel flat)
         {
-            var baseAtkProp = flat.WeaponStats?.FirstOrDefault(s => s.AppendPropId == "FIGHT_PROP_BASE_ATTACK");
-            var secondaryStatPropModel = flat.WeaponStats?.FirstOrDefault(s => s.AppendPropId != "FIGHT_PROP_BASE_ATTACK");
+            StatPropertyModel baseAtkProp = null;
+            StatPropertyModel secondaryStatPropModel = null;
+
+            if (flat.WeaponStats != null)
+            {
+                foreach (var s in flat.WeaponStats)
+                {
+                    if (s.AppendPropId == "FIGHT_PROP_BASE_ATTACK")
+                    {
+                        baseAtkProp = s;
+                    }
+                    else
+                    {
+                        secondaryStatPropModel = s;
+                    }
+                }
+            }
+
             var secondaryStat = secondaryStatPropModel != null ? MapStatProperty(secondaryStatPropModel) : null;
             if (secondaryStat != null) secondaryStat.Options = this._options;
 
-            int refinementRank = (weapon.AffixMap?.Values.FirstOrDefault() ?? -1) + 1;
+            int refinementValue = -1;
+            if (weapon.AffixMap != null)
+            {
+                foreach (var val in weapon.AffixMap.Values)
+                {
+                    refinementValue = val;
+                    break;
+                }
+            }
+            int refinementRank = refinementValue + 1;
 
             WeaponType weaponType = MapWeaponTypeFromIcon(flat.Icon);
 
@@ -185,10 +229,18 @@ namespace EnkaDotNet.Utils.Genshin
             var mainStat = MapStatProperty(flat.ReliquaryMainstat) ?? new StatProperty { Type = StatType.None, Value = 0, Options = this._options };
             if (mainStat != null) mainStat.Options = this._options;
 
-            var subStats = flat.ReliquarySubstats?
-                             .Select(substatModel => MapStatProperty(substatModel))
-                             .Where(s => s != null)
-                             .ToList() ?? new List<StatProperty>();
+            var subStats = new List<StatProperty>();
+            if (flat.ReliquarySubstats != null)
+            {
+                foreach (var substatModel in flat.ReliquarySubstats)
+                {
+                    var stat = MapStatProperty(substatModel);
+                    if (stat != null)
+                    {
+                        subStats.Add(stat);
+                    }
+                }
+            }
             foreach (var subStat in subStats) subStat.Options = this._options;
 
             return new Artifact
@@ -251,9 +303,9 @@ namespace EnkaDotNet.Utils.Genshin
             }
         }
 
-        private Dictionary<StatType, double> MapStats(Dictionary<string, double> fightPropMap)
+        private ConcurrentDictionary<StatType, double> MapStats(Dictionary<string, double> fightPropMap)
         {
-            var stats = new Dictionary<StatType, double>();
+            var stats = new ConcurrentDictionary<StatType, double>();
             if (fightPropMap == null) return stats;
 
             foreach (var kvp in fightPropMap)
@@ -270,7 +322,7 @@ namespace EnkaDotNet.Utils.Genshin
             return stats;
         }
 
-        private List<Talent> MapTalents(Dictionary<string, int> skillLevelMap, Dictionary<string, int> proudSkillExtraLevelMap, int skillDepotId, int avatarId)
+        private IReadOnlyList<Talent> MapTalents(Dictionary<string, int> skillLevelMap, Dictionary<string, int> proudSkillExtraLevelMap)
         {
             var talents = new List<Talent>();
             if (skillLevelMap == null) return talents;

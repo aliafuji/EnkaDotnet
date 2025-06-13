@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
+using System.Globalization;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Utils.HSR;
-using System.Globalization;
 
 namespace EnkaDotNet.Components.HSR
 {
@@ -30,7 +29,18 @@ namespace EnkaDotNet.Components.HSR
 
         public KeyValuePair<string, string> FormattedMainStat => GetAllStats(MainStat);
 
-        public List<KeyValuePair<string, string>> FormattedSubStats => SubStats.Select(GetAllStats).ToList();
+        public List<KeyValuePair<string, string>> FormattedSubStats
+        {
+            get
+            {
+                var formattedStats = new List<KeyValuePair<string, string>>();
+                foreach (var stat in SubStats)
+                {
+                    formattedStats.Add(GetAllStats(stat));
+                }
+                return formattedStats;
+            }
+        }
 
         private KeyValuePair<string, string> GetAllStats(HSRStatProperty stat)
         {

@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Components.HSR;
-using EnkaDotNet.Enums.HSR;
 using Microsoft.Extensions.Options;
 
 namespace EnkaDotNet.Utils.HSR
@@ -115,7 +113,7 @@ namespace EnkaDotNet.Utils.HSR
             }
         }
 
-        private void ProcessRelics(Dictionary<string, double> stats, List<HSRRelic> relics)
+        private void ProcessRelics(Dictionary<string, double> stats, IReadOnlyList<HSRRelic> relics)
         {
             if (relics == null || relics.Count == 0) return;
             foreach (var relic in relics)
@@ -146,7 +144,7 @@ namespace EnkaDotNet.Utils.HSR
             }
         }
 
-        private void ApplyRelicSetBonuses(Dictionary<string, double> stats, List<HSRRelic> relics)
+        private void ApplyRelicSetBonuses(Dictionary<string, double> stats, IReadOnlyList<HSRRelic> relics)
         {
             if (relics == null || relics.Count == 0) return;
             var relicSets = new Dictionary<int, int>();
@@ -190,7 +188,7 @@ namespace EnkaDotNet.Utils.HSR
             }
         }
 
-        private void ApplyTraceEffects(Dictionary<string, double> stats, List<HSRSkillTree> traces)
+        private void ApplyTraceEffects(Dictionary<string, double> stats, IReadOnlyList<HSRSkillTree> traces)
         {
             if (traces == null || traces.Count == 0) return;
             foreach (var trace in traces)

@@ -1,19 +1,19 @@
 ﻿using System;
+using EnkaDotNet.Assets;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Assets.ZZZ;
-using EnkaDotNet.Utils.Common;
 using EnkaDotNet.Utils;
+using EnkaDotNet.Utils.Common;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System.Net.Http;
-using System.Net;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
-using EnkaDotNet.Assets;
+using Microsoft.Extensions.Options;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace EnkaDotNet.DIExtensions
 {
@@ -95,7 +95,22 @@ namespace EnkaDotNet.DIExtensions
                 };
             });
 
-            services.TryAddScoped<IEnkaClient, EnkaClient>();
+            services.TryAddSingleton<EnkaClient>();
+            
+            services.TryAddSingleton<IEnkaClient>(sp =>
+            {
+                var client = sp.GetRequiredService<EnkaClient>();
+                var options = sp.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
+                
+                if (options.PreloadLanguages != null && options.PreloadLanguages.Count > 0)
+                {
+                    client.PreloadAssetsAsync(options.PreloadLanguages)
+                          .GetAwaiter()
+                          .GetResult();
+                }
+                return client;
+            });
+
             return services;
         }
     }
