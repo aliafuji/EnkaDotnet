@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Assets.ZZZ.Models;
 using EnkaDotNet.Components.ZZZ;
@@ -89,14 +88,32 @@ namespace EnkaDotNet.Utils.ZZZ
             }
 
             int rarity = weaponInfo.Rarity;
-            var levelData = weaponLevelDataList.FirstOrDefault(d => d.Level == level && d.Rarity == rarity);
+            ZZZWeaponLevelItem levelData = null;
+            foreach (var d in weaponLevelDataList)
+            {
+                if (d.Level == level && d.Rarity == rarity)
+                {
+                    levelData = d;
+                    break;
+                }
+            }
+
             if (levelData == null)
             {
                 return (new ZZZStat { Type = StatType.None }, new ZZZStat { Type = StatType.None });
             }
             double enhanceRate = levelData.EnhanceRate;
 
-            var starData = weaponStarDataList.FirstOrDefault(d => d.Rarity == rarity && d.BreakLevel == breakLevel);
+            ZZZWeaponStarItem starData = null;
+            foreach (var d in weaponStarDataList)
+            {
+                if (d.Rarity == rarity && d.BreakLevel == breakLevel)
+                {
+                    starData = d;
+                    break;
+                }
+            }
+
             if (starData == null)
             {
                 starData = new ZZZWeaponStarItem { StarRate = 0, RandRate = 0 };
@@ -133,7 +150,16 @@ namespace EnkaDotNet.Utils.ZZZ
                 return CreateStatWithProperScaling(propertyId, baseValue, propertyLevel);
             }
 
-            var discLevelData = equipmentLevelDataList.FirstOrDefault(d => d.Level == discLevel && d.Rarity == (int)rarity);
+            ZZZEquipmentLevelItem discLevelData = null;
+            foreach (var d in equipmentLevelDataList)
+            {
+                if (d.Level == discLevel && d.Rarity == (int)rarity)
+                {
+                    discLevelData = d;
+                    break;
+                }
+            }
+
             if (discLevelData == null)
             {
                 return CreateStatWithProperScaling(propertyId, baseValue, propertyLevel);

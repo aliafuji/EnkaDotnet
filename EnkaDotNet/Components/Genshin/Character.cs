@@ -15,12 +15,12 @@ namespace EnkaDotNet.Components.Genshin
         public int Friendship { get; internal set; }
         public ElementType Element { get; internal set; }
         public ConcurrentDictionary<StatType, double> Stats { get; internal set; } = new ConcurrentDictionary<StatType, double>();
-        public IReadOnlyList<int> UnlockedConstellationIds { get; internal set; } = new List<int>();
+        public IReadOnlyList<int> UnlockedConstellationIds { get; internal set; } = System.Array.Empty<int>();
         public int ConstellationLevel { get; internal set; }
-        public IReadOnlyList<Talent> Talents { get; internal set; } = new List<Talent>();
-        public IReadOnlyList<Constellation> Constellations { get; internal set; } = new List<Constellation>();
+        public IReadOnlyList<Talent> Talents { get; internal set; } = System.Array.Empty<Talent>();
+        public IReadOnlyList<Constellation> Constellations { get; internal set; } = System.Array.Empty<Constellation>();
         public Weapon Weapon { get; internal set; }
-        public IReadOnlyList<Artifact> Artifacts { get; internal set; } = new List<Artifact>();
+        public IReadOnlyList<Artifact> Artifacts { get; internal set; } = System.Array.Empty<Artifact>();
         public int CostumeId { get; internal set; }
         public string IconUrl { get; internal set; } = string.Empty;
 

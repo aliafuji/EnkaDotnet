@@ -1,13 +1,9 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using EnkaDotNet;
-using EnkaDotNet.Enums;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Components.HSR;
-using EnkaDotNet.Utils.HSR;
 using EnkaDotNet.Exceptions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HSRStatsViewer
 {
@@ -25,11 +21,22 @@ namespace HSRStatsViewer
                     Raw = false
                 };
 
-                ILogger<EnkaClient> clientLogger = null;
+                var services = new ServiceCollection();
+
+                services.AddLogging(builder =>
+                    builder
+                        .AddConsole()
+                        .SetMinimumLevel(LogLevel.Trace)
+                );
+                services.AddMemoryCache();
+
+                var provider = services.BuildServiceProvider();
+                var loggerFactory = provider.GetService<ILoggerFactory>();
+                var cache = provider.GetService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
 
                 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-                IEnkaClient client = await EnkaClient.CreateAsync(options, clientLogger);
+                IEnkaClient client = await EnkaClient.CreateAsync(options, loggerFactory, cache);
 
                 int uid = args.Length > 0 && int.TryParse(args[0], out int parsedUid) ? parsedUid : 80000000;
 

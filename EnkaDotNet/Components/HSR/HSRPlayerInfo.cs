@@ -22,7 +22,7 @@ namespace EnkaDotNet.Components.HSR
 
         public HSRRecordInfo RecordInfo { get; internal set; } = new HSRRecordInfo();
 
-        public List<HSRCharacter> DisplayedCharacters { get; internal set; } = new List<HSRCharacter>();
+        public IReadOnlyList<HSRCharacter> DisplayedCharacters { get; internal set; } = new List<HSRCharacter>();
     }
 
     public class HSRRecordInfo
@@ -31,8 +31,6 @@ namespace EnkaDotNet.Components.HSR
         public int AvatarCount { get; internal set; }
         public int LightConeCount { get; internal set; }
         public int RelicCount { get; internal set; }
-        public int ChestCount { get; internal set; }
-        public int SpiralAbyssProgress { get; internal set; }
         public int MemoryOfChaosScore { get; internal set; }
     }
 }

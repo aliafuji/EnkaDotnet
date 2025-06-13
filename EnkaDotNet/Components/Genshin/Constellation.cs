@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-namespace EnkaDotNet.Components.Genshin
+﻿namespace EnkaDotNet.Components.Genshin
 {
     public class Constellation
     {

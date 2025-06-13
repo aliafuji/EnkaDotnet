@@ -1,11 +1,6 @@
 ﻿using EnkaDotNet.Enums.ZZZ;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using EnkaDotNet.Utils.ZZZ;
 using System.Globalization;
 
@@ -37,7 +32,7 @@ namespace EnkaDotNet.Components.ZZZ
             {
                 bool raw = Options?.Raw ?? false;
                 string key = raw ? MainStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(MainStat.Type);
-                string value = Math.Floor(MainStat.Value).ToString();
+                string value = Math.Floor(MainStat.Value).ToString(CultureInfo.InvariantCulture);
                 return new KeyValuePair<string, string>(key, value);
             }
         }
@@ -52,15 +47,15 @@ namespace EnkaDotNet.Components.ZZZ
 
                 if (raw)
                 {
-                    if (SecondaryStat.Type == StatType.EnergyRegenPercent) value = Math.Floor(SecondaryStat.Value).ToString();
+                    if (SecondaryStat.Type == StatType.EnergyRegenPercent) value = Math.Floor(SecondaryStat.Value).ToString(CultureInfo.InvariantCulture);
                     else if (SecondaryStat.IsPercentage) value = SecondaryStat.Value.ToString("F1", CultureInfo.InvariantCulture);
-                    else value = Math.Floor(SecondaryStat.Value).ToString();
+                    else value = Math.Floor(SecondaryStat.Value).ToString(CultureInfo.InvariantCulture);
                 }
                 else
                 {
                     if (SecondaryStat.Type == StatType.EnergyRegenPercent) value = (SecondaryStat.Value / 100.0).ToString("F1", CultureInfo.InvariantCulture) + "%";
                     else if (SecondaryStat.IsPercentage) value = SecondaryStat.Value.ToString("F1", CultureInfo.InvariantCulture) + "%";
-                    else value = Math.Floor(SecondaryStat.Value).ToString();
+                    else value = Math.Floor(SecondaryStat.Value).ToString(CultureInfo.InvariantCulture);
                 }
                 return new KeyValuePair<string, string>(key, value);
             }

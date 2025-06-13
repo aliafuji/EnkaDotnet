@@ -101,6 +101,18 @@
         Epic = 5
     }
 
+    public enum TraceType
+    {
+        Unknown = 0,
+        BasicAttack = 1,
+        Skill = 2,
+        Ultimate = 3,
+        Talent = 4,
+        Technique = 5,
+        StatBoost = 6,
+        MajorStatBoost = 7
+    }
+
     public static class EnumExtensions
     {
         public static string GetPathName(this PathType pathType)

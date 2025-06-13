@@ -1,13 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Globalization;
 using EnkaDotNet.Enums.ZZZ;
 using EnkaDotNet.Utils.ZZZ;
-using System.Globalization;
 
 namespace EnkaDotNet.Components.ZZZ
 {
@@ -28,7 +23,7 @@ namespace EnkaDotNet.Components.ZZZ
         public string IconUrl { get; internal set; } = string.Empty;
 
         public ZZZStat MainStat { get; internal set; } = new ZZZStat();
-        public List<ZZZStat> SubStatsRaw { get; internal set; } = new List<ZZZStat>();
+        public IReadOnlyList<ZZZStat> SubStatsRaw { get; internal set; } = new List<ZZZStat>();
 
         internal EnkaClientOptions Options { get; set; }
 
@@ -47,7 +42,7 @@ namespace EnkaDotNet.Components.ZZZ
             }
         }
 
-        public List<KeyValuePair<string, string>> SubStats
+        public IReadOnlyList<KeyValuePair<string, string>> SubStats
         {
             get
             {

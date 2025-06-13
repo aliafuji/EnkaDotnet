@@ -1,13 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using EnkaDotNet.Utils.ZZZ;
-using EnkaDotNet.Enums.ZZZ;
-using System.Globalization;
 
 namespace EnkaDotNet.Components.ZZZ
 {
