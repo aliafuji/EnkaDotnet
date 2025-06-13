@@ -9,10 +9,11 @@ using EnkaDotNet.Assets.Genshin.Models;
 using EnkaDotNet.Enums.Genshin;
 using EnkaDotNet.Utils;
 using Microsoft.Extensions.Logging;
+using EnkaDotNet.Utils.Common;
 
 namespace EnkaDotNet.Assets.Genshin
 {
-    public class GenshinAssets : BaseAssets, IGenshinAssets
+    public class GenshinAssets : BaseAssets, IGenshinAssets, IDisposable
     {
         private readonly ConcurrentDictionary<int, CharacterAssetInfo> _characters = new ConcurrentDictionary<int, CharacterAssetInfo>();
         private readonly ConcurrentDictionary<int, TalentAssetInfo> _talents = new ConcurrentDictionary<int, TalentAssetInfo>();
@@ -20,24 +21,14 @@ namespace EnkaDotNet.Assets.Genshin
         private readonly ConcurrentDictionary<string, NameCardAssetInfo> _namecards = new ConcurrentDictionary<string, NameCardAssetInfo>();
         private readonly ConcurrentDictionary<string, PfpAssetInfo> _pfps = new ConcurrentDictionary<string, PfpAssetInfo>();
 
-        private readonly SemaphoreSlim _loadingSemaphore = new SemaphoreSlim(3, 3);
-
-        private async Task LoadWithSemaphore(Func<Task> loadFunction)
-        {
-            await _loadingSemaphore.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                await loadFunction().ConfigureAwait(false);
-            }
-            finally
-            {
-                _loadingSemaphore.Release();
-            }
-        }
+        private readonly SemaphoreSlim _loadingSemaphore;
+        private bool _disposed = false;
 
         public GenshinAssets(string language, HttpClient httpClient, ILogger<GenshinAssets> logger)
             : base(language, "genshin", httpClient, logger)
         {
+            int maxConcurrency = Meth.Clamp(Environment.ProcessorCount, 1, 8);
+            _loadingSemaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
         }
 
         protected override IReadOnlyDictionary<string, string> GetAssetFileUrls()
@@ -57,15 +48,46 @@ namespace EnkaDotNet.Assets.Genshin
             };
             await Task.WhenAll(tasks).ConfigureAwait(false);
         }
+
+        private async Task LoadWithSemaphore(Func<Task> loadFunction)
+        {
+            await _loadingSemaphore.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                var loadTask = loadFunction();
+                var timeout = TimeSpan.FromMinutes(5);
+                var timeoutTask = Task.Delay(timeout);
+
+                var completedTask = await Task.WhenAny(loadTask, timeoutTask).ConfigureAwait(false);
+
+                if (completedTask == timeoutTask)
+                {
+                    throw new TimeoutException($"Asset loading operation '{loadFunction.Method.Name}' timed out after {timeout.TotalMinutes} minutes.");
+                }
+
+                await loadTask.ConfigureAwait(false);
+            }
+            finally
+            {
+                _loadingSemaphore.Release();
+            }
+        }
+
         private string GetStringFromHashJsonElement(JsonElement element)
         {
             if (element.ValueKind == JsonValueKind.String) return element.GetString();
             if (element.ValueKind == JsonValueKind.Number)
             {
-                if (element.TryGetInt64(out long longValue)) return longValue.ToString();
+                if (element.TryGetInt64(out long longValue))
+                {
+                    return longValue.ToString();
+                }
                 return element.GetRawText();
             }
-            if (element.ValueKind == JsonValueKind.Undefined || element.ValueKind == JsonValueKind.Null) return null;
+            if (element.ValueKind == JsonValueKind.Undefined || element.ValueKind == JsonValueKind.Null)
+            {
+                return null;
+            }
             return element.ToString();
         }
 
@@ -80,13 +102,15 @@ namespace EnkaDotNet.Assets.Genshin
                     foreach (var kvp in deserializedMap)
                     {
                         if (int.TryParse(kvp.Key, out int charId))
+                        {
                             _characters[charId] = kvp.Value;
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Genshin Impact charactersjson asset");
+                _logger.LogError(ex, "Error loading Genshin Impact characters.json asset");
                 throw new InvalidOperationException("Failed to load essential Genshin Impact character data", ex);
             }
         }
@@ -107,7 +131,7 @@ namespace EnkaDotNet.Assets.Genshin
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Genshin Impact pfpsjson asset");
+                _logger.LogError(ex, "Error loading Genshin Impact pfps.json asset");
                 throw new InvalidOperationException("Failed to load essential Genshin Impact profile picture data", ex);
             }
         }
@@ -123,13 +147,15 @@ namespace EnkaDotNet.Assets.Genshin
                     foreach (var kvp in deserializedMap)
                     {
                         if (int.TryParse(kvp.Key, out int talentId))
+                        {
                             _talents[talentId] = kvp.Value;
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Genshin Impact talentsjson asset");
+                _logger.LogError(ex, "Error loading Genshin Impact talents.json asset");
                 throw new InvalidOperationException("Failed to load essential Genshin Impact talent data", ex);
             }
         }
@@ -144,21 +170,24 @@ namespace EnkaDotNet.Assets.Genshin
                 {
                     foreach (var kvp in deserializedMap)
                     {
-                        if (kvp.Value != null && kvp.Value.NameTextMapHash.ValueKind != JsonValueKind.Undefined && kvp.Value.NameTextMapHash.ValueKind != JsonValueKind.Null)
+                        if (kvp.Value != null)
                         {
-                            _constellations[kvp.Key] = kvp.Value;
-                        }
-                        else if (kvp.Value != null)
-                        {
-                            _constellations[kvp.Key] = kvp.Value;
-                            _logger.LogWarning("Constellation '{Key}' has a null or undefined NameTextMapHash", kvp.Key);
+                            if (kvp.Value.NameTextMapHash.ValueKind != JsonValueKind.Undefined && kvp.Value.NameTextMapHash.ValueKind != JsonValueKind.Null)
+                            {
+                                _constellations[kvp.Key] = kvp.Value;
+                            }
+                            else
+                            {
+                                _constellations[kvp.Key] = kvp.Value;
+                                _logger.LogWarning("Constellation '{Key}' has a null or undefined NameTextMapHash", kvp.Key);
+                            }
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Genshin Impact constsjson asset");
+                _logger.LogError(ex, "Error loading Genshin Impact consts.json asset");
                 throw new InvalidOperationException("Failed to load essential Genshin Impact constellation data", ex);
             }
         }
@@ -179,7 +208,7 @@ namespace EnkaDotNet.Assets.Genshin
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Genshin Impact namecardsjson asset");
+                _logger.LogError(ex, "Error loading Genshin Impact namecards.json asset");
                 throw new InvalidOperationException("Failed to load essential Genshin Impact namecard data", ex);
             }
         }
@@ -214,6 +243,7 @@ namespace EnkaDotNet.Assets.Genshin
         public string GetArtifactNameFromHash(string nameHash) => GetText(nameHash);
         public string GetArtifactSetNameFromHash(string setNameHash) => GetText(setNameHash);
         public string GetArtifactIconUrlFromIconName(string iconName) => !string.IsNullOrEmpty(iconName) ? $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{iconName}.png" : string.Empty;
+
         public string GetTalentName(int talentId)
         {
             if (_talents.TryGetValue(talentId, out var talentInfo))
@@ -254,7 +284,15 @@ namespace EnkaDotNet.Assets.Genshin
             return GetCharacterIconUrl(characterId);
         }
 
-        public string GetNameCardIconUrl(int nameCardId) => _namecards.TryGetValue(nameCardId.ToString(), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon) ? $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{nameCardInfo.Icon}.png" : string.Empty;
+        public string GetNameCardIconUrl(int nameCardId)
+        {
+            if (_namecards.TryGetValue(nameCardId.ToString(), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon))
+            {
+                return $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{nameCardInfo.Icon}.png";
+            }
+            return string.Empty;
+        }
+
         public string GetConstellationName(int constellationId)
         {
             if (_constellations.TryGetValue(constellationId.ToString(), out var constellationInfo))
@@ -276,6 +314,7 @@ namespace EnkaDotNet.Assets.Genshin
         }
 
         public string GetConstellationIconUrl(int constellationId) => _constellations.TryGetValue(constellationId.ToString(), out var constellationInfo) && !string.IsNullOrEmpty(constellationInfo.Icon) ? $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{constellationInfo.Icon}.png" : string.Empty;
+
         private ElementType MapElementNameToEnum(string elementName)
         {
             if (elementName == null) return ElementType.Unknown;
@@ -290,6 +329,24 @@ namespace EnkaDotNet.Assets.Genshin
                 case "ROCK": return ElementType.Geo;
                 default: return ElementType.Unknown;
             }
+        }
+
+        public new void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected new virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                _loadingSemaphore.Dispose();
+            }
+
+            _disposed = true;
         }
     }
 }

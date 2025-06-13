@@ -1,8 +1,3 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using EnkaDotNet;
-using EnkaDotNet.Enums;
 using EnkaDotNet.DIExtensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -49,7 +44,7 @@ namespace EnkaDotNet.Examples.GenshinImpact.DI
 
         public async Task FetchAndDisplayData()
         {
-            _logger.LogInformation("Fetching Genshin Impact Data (DI)...");
+            _logger.LogInformation("Fetching Genshin Impact Data...");
             try
             {
                 int uid = 800000000; // Replace with a valid Genshin Impact UID

@@ -148,5 +148,10 @@ namespace EnkaDotNet
             clone.RetryOnStatusCodes = new List<HttpStatusCode>(RetryOnStatusCodes);
             return clone;
         }
+
+        /// <summary>
+        /// Preloads languages for assets data
+        /// </summary>
+        public List<string> PreloadLanguages { get; set; } = new List<string>();
     }
 }

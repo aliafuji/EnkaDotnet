@@ -1,8 +1,3 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using EnkaDotNet;
-using EnkaDotNet.Enums;
 using EnkaDotNet.DIExtensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -49,7 +44,7 @@ namespace EnkaDotNet.Examples.ZenlessZoneZero.DI
 
         public async Task FetchAndDisplayData()
         {
-            _logger.LogInformation("Fetching Zenless Zone Zero Data (DI)...");
+            _logger.LogInformation("Fetching Zenless Zone Zero Data...");
             try
             {
                 int uid = 10000000; // Replace with a valid ZZZ UID
@@ -66,7 +61,7 @@ namespace EnkaDotNet.Examples.ZenlessZoneZero.DI
                         _logger.LogInformation($"  - {agent.Name} (Lv. {agent.Level})");
                     }
                 }
-                 else
+                else
                 {
                     _logger.LogInformation("No agent data found or profile might be private.");
                 }

@@ -11,14 +11,16 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace EnkaDotNet.Assets
 {
-    public abstract class BaseAssets : IAssets
+    public abstract class BaseAssets : IAssets, IDisposable
     {
         private readonly HttpClient _httpClient;
-        protected readonly ConcurrentDictionary<string, object> _assetCache = new ConcurrentDictionary<string, object>();
+        private readonly ConcurrentDictionary<string, object> _assetCache = new ConcurrentDictionary<string, object>();
+        private readonly ConcurrentDictionary<string, SemaphoreSlim> _assetFetchLocks = new ConcurrentDictionary<string, SemaphoreSlim>();
         private static readonly SemaphoreSlim _initializationSemaphore = new SemaphoreSlim(1, 1);
         protected ConcurrentDictionary<string, string> _textMap;
         protected readonly ILogger _logger;
         private volatile bool _isInitialized = false;
+        private bool _disposed = false;
 
         public string Language { get; }
         public string GameIdentifier { get; }
@@ -34,12 +36,29 @@ namespace EnkaDotNet.Assets
         public async Task EnsureInitializedAsync()
         {
             if (_isInitialized) return;
+
             await _initializationSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
                 if (_isInitialized) return;
-                await LoadTextMapInternalAsync(Language).ConfigureAwait(false);
-                await LoadAssetsInternalAsync().ConfigureAwait(false);
+
+                var timeout = TimeSpan.FromMinutes(5);
+                var initializationTask = Task.WhenAll(
+                    LoadTextMapInternalAsync(Language),
+                    LoadAssetsInternalAsync()
+                );
+
+                var completedTask = await Task.WhenAny(initializationTask, Task.Delay(timeout)).ConfigureAwait(false);
+
+                if (completedTask == initializationTask)
+                {
+                    await initializationTask.ConfigureAwait(false);
+                }
+                else
+                {
+                    throw new TimeoutException($"Asset initialization for {GameIdentifier} timed out after {timeout.TotalMinutes} minutes.");
+                }
+
                 _isInitialized = true;
             }
             finally
@@ -66,10 +85,22 @@ namespace EnkaDotNet.Assets
                     _logger.LogWarning("Language code '{Language}' not found in the TextMap file for {GameIdentifier}. Available: {AvailableLanguages}", language, this.GameIdentifier, string.Join(", ", allLanguageMaps.Keys));
                     string fallbackLanguage = "en";
 
-                    if (this.GameIdentifier == "zzz" && language != "en" && !allLanguageMaps.ContainsKey("en"))
+                    if (language != "en" && !allLanguageMaps.ContainsKey("en"))
                     {
-                        fallbackLanguage = System.Linq.Enumerable.FirstOrDefault(allLanguageMaps.Keys);
-                        if (fallbackLanguage == null) throw new InvalidOperationException($"No languages found in ZZZ TextMap data for {this.GameIdentifier}");
+                        string firstAvailableLanguage = null;
+                        using (var enumerator = allLanguageMaps.Keys.GetEnumerator())
+                        {
+                            if (enumerator.MoveNext())
+                            {
+                                firstAvailableLanguage = enumerator.Current;
+                            }
+                        }
+
+                        if (firstAvailableLanguage == null)
+                        {
+                            throw new InvalidOperationException($"No languages found in ZZZ TextMap data for {this.GameIdentifier}");
+                        }
+                        fallbackLanguage = firstAvailableLanguage;
                     }
 
                     if (allLanguageMaps.TryGetValue(fallbackLanguage, out var fallbackMap))
@@ -94,7 +125,7 @@ namespace EnkaDotNet.Assets
         {
             if (!_isInitialized)
             {
-                _logger.LogWarning("GetText called before assets for {GameIdentifier} were initialized Call EnsureInitializedAsync() first Returning hash or empty string as fallback", GameIdentifier);
+                _logger.LogWarning("GetText called before assets for {GameIdentifier} were initialized. Call EnsureInitializedAsync() first. Returning hash or empty string as fallback.", GameIdentifier);
                 return hash ?? string.Empty;
             }
             return hash != null && _textMap != null && _textMap.TryGetValue(hash, out var text) ? text ?? string.Empty : hash ?? string.Empty;
@@ -120,12 +151,12 @@ namespace EnkaDotNet.Assets
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "FAILED to fetch '{AssetKey}' for {GameIdentifier} (Network Error) URL: {Url}", assetKey, GameIdentifier, url);
+                _logger.LogError(ex, "FAILED to fetch '{AssetKey}' for {GameIdentifier} (Network Error). URL: {Url}", assetKey, GameIdentifier, url);
                 throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error fetching '{AssetKey}' for {GameIdentifier} URL: {Url}", assetKey, GameIdentifier, url);
+                _logger.LogError(ex, "Unexpected error fetching '{AssetKey}' for {GameIdentifier}. URL: {Url}", assetKey, GameIdentifier, url);
                 throw;
             }
         }
@@ -133,27 +164,65 @@ namespace EnkaDotNet.Assets
         protected async Task<T> FetchAndDeserializeAssetAsync<T>(string assetKey)
         {
             string cacheKey = $"{GameIdentifier}_{assetKey}";
+
             if (_assetCache.TryGetValue(cacheKey, out var cachedAsset) && cachedAsset is T typedAsset)
             {
                 return typedAsset;
             }
 
-            string jsonContent = await FetchAssetAsync(assetKey).ConfigureAwait(false);
+            var fetchLock = _assetFetchLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+
+            await fetchLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                var result = JsonSerializer.Deserialize<T>(jsonContent);
-                if (result == null)
+                if (_assetCache.TryGetValue(cacheKey, out cachedAsset) && cachedAsset is T recheckedAsset)
                 {
-                    throw new JsonException($"Failed to deserialize {assetKey} for {GameIdentifier} - result was null");
+                    return recheckedAsset;
                 }
-                _assetCache[cacheKey] = result;
-                return result;
+
+                string jsonContent = await FetchAssetAsync(assetKey).ConfigureAwait(false);
+                try
+                {
+                    var result = JsonSerializer.Deserialize<T>(jsonContent);
+                    if (result == null)
+                    {
+                        throw new JsonException($"Failed to deserialize {assetKey} for {GameIdentifier} - result was null.");
+                    }
+                    _assetCache[cacheKey] = result;
+                    return result;
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogError(ex, "Error parsing {AssetKey} JSON for {GameIdentifier}", assetKey, GameIdentifier);
+                    throw;
+                }
             }
-            catch (JsonException ex)
+            finally
             {
-                _logger.LogError(ex, "Error parsing {AssetKey} JSON for {GameIdentifier}", assetKey, GameIdentifier);
-                throw;
+                fetchLock.Release();
             }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                _initializationSemaphore.Dispose();
+                foreach (var semaphore in _assetFetchLocks.Values)
+                {
+                    semaphore.Dispose();
+                }
+            }
+
+            _disposed = true;
         }
     }
 }

@@ -1,28 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using EnkaDotNet.Models.HSR;
 using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Enums.HSR;
-using EnkaDotNet.Components.HSR.EnkaDotNet.Enums.HSR;
-using System.Collections.Concurrent;
 
 namespace EnkaDotNet.Utils.HSR
 {
-    /// <summary>
-    /// Maps raw API data to Honkai: Star Rail specific component models
-    /// </summary>
     public class HSRDataMapper
     {
         private readonly IHSRAssets _assets;
         private readonly HSRStatCalculator _statCalculator;
         private readonly EnkaClientOptions _options;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="HSRDataMapper"/> class
-        /// </summary>
-        /// <param name="assets">The HSR assets provider</param>
-        /// <param name="options">The client options</param>
         public HSRDataMapper(IHSRAssets assets, EnkaClientOptions options)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
@@ -30,19 +21,27 @@ namespace EnkaDotNet.Utils.HSR
             _statCalculator = new HSRStatCalculator(_assets, _options);
         }
 
-        /// <summary>
-        /// Maps the raw API response to HSR player information
-        /// </summary>
-        /// <param name="response">The raw API response</param>
-        /// <returns>The mapped <see cref="HSRPlayerInfo"/> component model</returns>
         public HSRPlayerInfo MapPlayerInfo(HSRApiResponse response)
         {
             if (response == null) throw new ArgumentNullException(nameof(response));
             if (response.DetailInfo == null) throw new ArgumentException("DetailInfo is null in the API response", nameof(response));
 
+            var displayedCharacters = new List<HSRCharacter>();
+            if (response.DetailInfo.AvatarDetailList != null)
+            {
+                foreach (var avatarDetail in response.DetailInfo.AvatarDetailList)
+                {
+                    if (avatarDetail.AvatarId > 0)
+                    {
+                        var character = MapCharacter(avatarDetail);
+                        displayedCharacters.Add(character);
+                    }
+                }
+            }
+
             var playerInfo = new HSRPlayerInfo
             {
-                DisplayedCharacters = new List<HSRCharacter>(),
+                DisplayedCharacters = displayedCharacters,
                 Uid = response.Uid ?? response.DetailInfo.Uid.ToString(),
                 TTL = response.Ttl.ToString(),
                 Nickname = response.DetailInfo.Nickname ?? "Unknown",
@@ -72,26 +71,9 @@ namespace EnkaDotNet.Utils.HSR
                 playerInfo.RecordInfo = new HSRRecordInfo();
             }
 
-            if (response.DetailInfo.AvatarDetailList != null)
-            {
-                foreach (var avatarDetail in response.DetailInfo.AvatarDetailList)
-                {
-                    if (avatarDetail.AvatarId > 0)
-                    {
-                        var character = MapCharacter(avatarDetail);
-                        playerInfo.DisplayedCharacters.Add(character);
-                    }
-                }
-            }
-
             return playerInfo;
         }
 
-        /// <summary>
-        /// Maps a raw avatar detail model to an HSR character component model
-        /// </summary>
-        /// <param name="avatarDetail">The raw avatar detail model</param>
-        /// <returns>The mapped <see cref="HSRCharacter"/> component model</returns>
         public HSRCharacter MapCharacter(HSRAvatarDetail avatarDetail)
         {
             if (avatarDetail == null) throw new ArgumentNullException(nameof(avatarDetail));
@@ -103,14 +85,12 @@ namespace EnkaDotNet.Utils.HSR
                 RelicList = new List<HSRRelic>(),
                 Stats = new ConcurrentDictionary<string, HSRStatValue>(),
                 Eidolons = new List<Eidolon>(),
-
                 Id = avatarDetail.AvatarId,
                 Level = avatarDetail.Level,
                 Promotion = avatarDetail.Promotion,
                 Rank = avatarDetail.Rank,
                 Position = avatarDetail.Position,
                 IsAssist = avatarDetail.IsAssist,
-
                 Name = _assets.GetCharacterName(avatarDetail.AvatarId),
                 Element = _assets.GetCharacterElement(avatarDetail.AvatarId),
                 Path = _assets.GetCharacterPath(avatarDetail.AvatarId),
@@ -168,7 +148,7 @@ namespace EnkaDotNet.Utils.HSR
                         skillTree.TraceType = (TraceType)(pointInfo.PointType);
                         skillTree.MaxLevel = pointInfo.MaxLevel;
                         skillTree.Icon = _assets.GetSkillTreeIconUrl(skillTree.PointId);
-                        skillTree.SkillIds = pointInfo.SkillIds ?? new List<int>();
+                        skillTree.SkillIds = new List<int>(pointInfo.SkillIds ?? new List<int>());
                         skillTree.Name = _assets.GetSkillTreePointName(skillTree.PointId.ToString());
                         skillTree.Description = _assets.GetSkillTreePointDescription(skillTree.PointId.ToString());
 
@@ -227,11 +207,6 @@ namespace EnkaDotNet.Utils.HSR
             return character;
         }
 
-        /// <summary>
-        /// Maps a raw equipment model to an HSR light cone component model
-        /// </summary>
-        /// <param name="equipment">The raw equipment model</param>
-        /// <returns>The mapped <see cref="HSRLightCone"/> component model</returns>
         public HSRLightCone MapLightCone(HSREquipment equipment)
         {
             if (equipment == null) throw new ArgumentNullException(nameof(equipment));
@@ -287,11 +262,6 @@ namespace EnkaDotNet.Utils.HSR
             return !string.IsNullOrEmpty(nameFromAssets) ? nameFromAssets : $"Set_{setId}";
         }
 
-        /// <summary>
-        /// Maps a raw relic model to an HSR relic component model
-        /// </summary>
-        /// <param name="relicModel">The raw relic model</param>
-        /// <returns>The mapped <see cref="HSRRelic"/> component model</returns>
         public HSRRelic MapRelicModelToRelic(HSRRelicModel relicModel)
         {
             if (relicModel == null) throw new ArgumentNullException(nameof(relicModel));

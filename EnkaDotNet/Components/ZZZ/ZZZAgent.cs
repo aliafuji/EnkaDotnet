@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
 using EnkaDotNet.Utils.ZZZ;
@@ -16,17 +15,17 @@ namespace EnkaDotNet.Components.ZZZ
         public int Level { get; internal set; }
         public int PromotionLevel { get; internal set; }
         public int TalentLevel { get; internal set; }
-        public List<int> CoreSkillEnhancements { get; internal set; } = new List<int>();
+        public IReadOnlyList<int> CoreSkillEnhancements { get; internal set; } = new List<int>();
         public int CoreSkillEnhancement { get; internal set; }
-        public List<int> TalentToggles { get; internal set; } = new List<int>();
+        public IReadOnlyList<int> TalentToggles { get; internal set; } = new List<int>();
         public WEngineEffectState WeaponEffectState { get; internal set; }
         public bool IsHidden { get; internal set; }
-        public List<int> ClaimedRewards { get; internal set; } = new List<int>();
+        public IReadOnlyList<int> ClaimedRewards { get; internal set; } = new List<int>();
         public DateTimeOffset ObtainmentTimestamp { get; internal set; }
 
         public ZZZWEngine Weapon { get; internal set; }
         public ConcurrentDictionary<SkillType, int> SkillLevels { get; internal set; } = new ConcurrentDictionary<SkillType, int>();
-        public List<ZZZDriveDisc> EquippedDiscs { get; internal set; } = new List<ZZZDriveDisc>();
+        public IReadOnlyList<ZZZDriveDisc> EquippedDiscs { get; internal set; } = new List<ZZZDriveDisc>();
 
         public Rarity Rarity { get; internal set; }
         public ProfessionType ProfessionType { get; internal set; }
@@ -74,68 +73,16 @@ namespace EnkaDotNet.Components.ZZZ
                     displayAdded = addedValue.ToString("F1", invariantCulture) + (raw ? "" : "%");
                     if (friendlyKey == "Energy Regen" && !raw)
                     {
-                        if (Math.Abs(numericValue) < 0.01)
-                        {
-                            displayValue = "0";
-                        }
-                        else
-                        {
-                            string formatted = numericValue.ToString("F2", CultureInfo.InvariantCulture);
-                            displayValue = formatted.EndsWith("0") ? formatted.TrimEnd('0') : formatted;
-                        }
-
-                        if (Math.Abs(baseValue) < 0.01)
-                        {
-                            displayBase = "0";
-                        }
-                        else
-                        {
-                            string formattedBase = baseValue.ToString("F2", CultureInfo.InvariantCulture);
-                            displayBase = formattedBase.EndsWith("0") ? formattedBase.TrimEnd('0') : formattedBase;
-                        }
-
-                        if (Math.Abs(addedValue) < 0.01)
-                        {
-                            displayAdded = "0";
-                        }
-                        else
-                        {
-                            string formattedAdded = addedValue.ToString("F2", CultureInfo.InvariantCulture);
-                            displayAdded = formattedAdded.EndsWith("0") ? formattedAdded.TrimEnd('0') : formattedAdded;
-                        }
+                        displayValue = Math.Abs(numericValue) < 0.01 ? "0" : (numericValue.ToString("F2", invariantCulture).TrimEnd('0'));
+                        displayBase = Math.Abs(baseValue) < 0.01 ? "0" : (baseValue.ToString("F2", invariantCulture).TrimEnd('0'));
+                        displayAdded = Math.Abs(addedValue) < 0.01 ? "0" : (addedValue.ToString("F2", invariantCulture).TrimEnd('0'));
                     }
                 }
                 else if (friendlyKey == "Energy Regen" && raw)
                 {
-                    if (Math.Abs(numericValue) < 0.01)
-                    {
-                        displayValue = "0";
-                    }
-                    else
-                    {
-                        string formatted = numericValue.ToString("F2", CultureInfo.InvariantCulture);
-                        displayValue = formatted.EndsWith("0") ? formatted.TrimEnd('0') : formatted;
-                    }
-
-                    if (Math.Abs(baseValue) < 0.01)
-                    {
-                        displayBase = "0";
-                    }
-                    else
-                    {
-                        string formattedBase = baseValue.ToString("F2", CultureInfo.InvariantCulture);
-                        displayBase = formattedBase.EndsWith("0") ? formattedBase.TrimEnd('0') : formattedBase;
-                    }
-
-                    if (Math.Abs(addedValue) < 0.01)
-                    {
-                        displayAdded = "0";
-                    }
-                    else
-                    {
-                        string formattedAdded = addedValue.ToString("F2", CultureInfo.InvariantCulture);
-                        displayAdded = formattedAdded.EndsWith("0") ? formattedAdded.TrimEnd('0') : formattedAdded;
-                    }
+                    displayValue = Math.Abs(numericValue) < 0.01 ? "0" : (numericValue.ToString("F2", invariantCulture).TrimEnd('0'));
+                    displayBase = Math.Abs(baseValue) < 0.01 ? "0" : (baseValue.ToString("F2", invariantCulture).TrimEnd('0'));
+                    displayAdded = Math.Abs(addedValue) < 0.01 ? "0" : (addedValue.ToString("F2", invariantCulture).TrimEnd('0'));
                 }
                 else
                 {
@@ -166,25 +113,32 @@ namespace EnkaDotNet.Components.ZZZ
             }
             if (EquippedDiscs.Count < 2) return result;
 
-            var discSetsGrouped = EquippedDiscs
-                .GroupBy(d => d.SuitId)
-                .Where(g => g.Count() >= 2)
-                .Select(g => new { SuitId = g.Key, Count = g.Count(), Discs = g.ToList() })
-                .ToList();
-
-            foreach (var set in discSetsGrouped)
+            var discSetsGrouped = new Dictionary<int, List<ZZZDriveDisc>>();
+            foreach (var disc in EquippedDiscs)
             {
-                var firstDisc = set.Discs.First();
-                var suitInfo = Assets.GetDiscSetInfo(set.SuitId.ToString());
+                if (!discSetsGrouped.ContainsKey(disc.SuitId))
+                {
+                    discSetsGrouped[disc.SuitId] = new List<ZZZDriveDisc>();
+                }
+                discSetsGrouped[disc.SuitId].Add(disc);
+            }
+
+
+            foreach (var group in discSetsGrouped.Values)
+            {
+                if (group.Count < 2) continue;
+
+                var firstDisc = group[0];
+                var suitInfo = Assets.GetDiscSetInfo(firstDisc.SuitId.ToString());
 
                 var setInfo = new FormattedDriveDiscSetInfo
                 {
                     SuitName = firstDisc.SuitName,
-                    PieceCount = set.Count,
+                    PieceCount = group.Count,
                     BonusStats = new List<KeyValuePair<string, string>>()
                 };
 
-                if (suitInfo?.SetBonusProps != null && suitInfo.SetBonusProps.Any())
+                if (suitInfo?.SetBonusProps != null && suitInfo.SetBonusProps.Count > 0)
                 {
                     foreach (var prop in suitInfo.SetBonusProps)
                     {
@@ -218,6 +172,6 @@ namespace EnkaDotNet.Components.ZZZ
     {
         public string SuitName { get; set; } = string.Empty;
         public int PieceCount { get; set; }
-        public List<KeyValuePair<string, string>> BonusStats { get; set; } = new List<KeyValuePair<string, string>>();
+        public ICollection<KeyValuePair<string, string>> BonusStats { get; set; } = new List<KeyValuePair<string, string>>();
     }
 }

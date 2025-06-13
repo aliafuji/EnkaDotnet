@@ -1,8 +1,3 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using EnkaDotNet;
-using EnkaDotNet.Enums;
 using EnkaDotNet.DIExtensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -49,7 +44,7 @@ namespace EnkaDotNet.Examples.HonkaiStarRail.DI
 
         public async Task FetchAndDisplayData()
         {
-            _logger.LogInformation("Fetching Honkai: Star Rail Data (DI)...");
+            _logger.LogInformation("Fetching Honkai: Star Rail Data...");
             try
             {
                 int uid = 800000000; // Replace with a valid HSR UID
@@ -66,7 +61,7 @@ namespace EnkaDotNet.Examples.HonkaiStarRail.DI
                         _logger.LogInformation($"  - {character.Name} (Lv. {character.Level})");
                     }
                 }
-                 else
+                else
                 {
                     _logger.LogInformation("No character data found or profile might be private.");
                 }
@@ -77,7 +72,7 @@ namespace EnkaDotNet.Examples.HonkaiStarRail.DI
             }
             catch (EnkaDotNet.Exceptions.EnkaNetworkException ex)
             {
-                 _logger.LogError(ex, "An Enka.Network API error occurred.");
+                _logger.LogError(ex, "An Enka.Network API error occurred.");
             }
             catch (Exception ex)
             {

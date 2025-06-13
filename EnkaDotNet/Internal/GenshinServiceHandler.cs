@@ -72,7 +72,14 @@ namespace EnkaDotNet.Internal
                 _logger.LogInformation("Genshin UID {Uid} has public profile info but no character showcase data (AvatarInfoList is null)", uid);
                 return Array.Empty<Character>();
             }
-            return _dataMapper.MapCharacters(rawResponse.AvatarInfoList).AsReadOnly();
+
+            var mappedCharacters = _dataMapper.MapCharacters(rawResponse.AvatarInfoList);
+            var characterList = new List<Character>();
+            foreach (var character in mappedCharacters)
+            {
+                characterList.Add(character);
+            }
+            return characterList;
         }
 
         public async Task<(PlayerInfo PlayerInfo, IReadOnlyList<Character> Characters)> GetUserProfileAsync(int uid, bool bypassCache, CancellationToken cancellationToken)
@@ -82,13 +89,20 @@ namespace EnkaDotNet.Internal
             playerInfo.Uid = rawResponse.Uid;
             playerInfo.TTL = rawResponse.Ttl.ToString();
 
-            IReadOnlyList<Character> characters = Array.Empty<Character>();
+            IReadOnlyList<Character> characters;
             if (rawResponse.AvatarInfoList != null)
             {
-                characters = _dataMapper.MapCharacters(rawResponse.AvatarInfoList).AsReadOnly();
+                var mappedCharacters = _dataMapper.MapCharacters(rawResponse.AvatarInfoList);
+                var characterList = new List<Character>();
+                foreach (var character in mappedCharacters)
+                {
+                    characterList.Add(character);
+                }
+                characters = characterList;
             }
             else
             {
+                characters = Array.Empty<Character>();
                 _logger.LogInformation("Genshin UID {Uid} has public profile info but no character showcase data (AvatarInfoList is null) for GetUserProfileAsync", uid);
             }
             return (playerInfo, characters);

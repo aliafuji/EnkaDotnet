@@ -1,7 +1,6 @@
 ﻿using EnkaDotNet.Enums.Genshin;
 using EnkaDotNet.Utils.Genshin;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace EnkaDotNet.Components.Genshin
 {
@@ -11,14 +10,28 @@ namespace EnkaDotNet.Components.Genshin
         public string SetName { get; internal set; } = string.Empty;
         public ArtifactSlot Slot { get; internal set; }
         public StatProperty MainStat { get; internal set; }
-        public List<StatProperty> SubStats { get; internal set; } = new List<StatProperty>();
+        public IReadOnlyList<StatProperty> SubStats { get; internal set; } = new List<StatProperty>();
 
         public KeyValuePair<string, string> FormattedMainStat =>
              MainStat != null ? FormatStat(MainStat.Type, MainStat.Value)
              : new KeyValuePair<string, string>(Options?.Raw ?? false ? "None" : "None", "0");
 
-        public List<KeyValuePair<string, string>> FormattedSubStats =>
-            SubStats?.Select(s => FormatStat(s.Type, s.Value)).ToList() ?? new List<KeyValuePair<string, string>>();
+        public List<KeyValuePair<string, string>> FormattedSubStats
+        {
+            get
+            {
+                var formattedStats = new List<KeyValuePair<string, string>>();
+                if (SubStats != null)
+                {
+                    foreach (var s in SubStats)
+                    {
+                        formattedStats.Add(FormatStat(s.Type, s.Value));
+                    }
+                }
+                return formattedStats;
+            }
+        }
+
 
         private KeyValuePair<string, string> FormatStat(StatType type, double value)
         {
