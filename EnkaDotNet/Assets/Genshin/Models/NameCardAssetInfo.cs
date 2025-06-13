@@ -4,7 +4,7 @@ namespace EnkaDotNet.Assets.Genshin.Models
 {
     public class NameCardAssetInfo
     {
-        [JsonPropertyName("Icon")]
+        [JsonPropertyName("icon")]
         public string Icon { get; set; }
     }
 }

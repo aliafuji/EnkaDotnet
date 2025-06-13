@@ -284,7 +284,14 @@ namespace EnkaDotNet.Assets.Genshin
             return GetCharacterIconUrl(characterId);
         }
 
-        public string GetNameCardIconUrl(int nameCardId) => _namecards.TryGetValue(nameCardId.ToString(), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon) ? $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{nameCardInfo.Icon}.png" : string.Empty;
+        public string GetNameCardIconUrl(int nameCardId)
+        {
+            if (_namecards.TryGetValue(nameCardId.ToString(), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon))
+            {
+                return $"{Constants.DEFAULT_GENSHIN_ASSET_CDN_URL}{nameCardInfo.Icon}.png";
+            }
+            return string.Empty;
+        }
 
         public string GetConstellationName(int constellationId)
         {
