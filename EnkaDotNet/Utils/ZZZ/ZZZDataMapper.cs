@@ -135,7 +135,11 @@ namespace EnkaDotNet.Utils.ZZZ
                 {
                     if (Enum.IsDefined(typeof(SkillType), skillLevel.Index))
                     {
-                        skillLevels.TryAdd((SkillType)skillLevel.Index, skillLevel.Level);
+                        int baseLevel = skillLevel.Level;
+                        int mindscapeBonus = CalculateMindscapeSkillBonus(model.TalentLevel);
+                        int finalLevel = baseLevel + mindscapeBonus;
+
+                        skillLevels.TryAdd((SkillType)skillLevel.Index, finalLevel);
                     }
                 }
             }
@@ -189,6 +193,23 @@ namespace EnkaDotNet.Utils.ZZZ
             };
 
             return agent;
+        }
+
+        private int CalculateMindscapeSkillBonus(int mindscape)
+        {
+            int bonus = 0;
+
+            if (mindscape >= 3)
+            {
+                bonus += 2;
+            }
+
+            if (mindscape >= 5)
+            {
+                bonus += 2;
+            }
+
+            return bonus;
         }
 
         public ZZZWEngine MapWeapon(ZZZWeaponModel model)
