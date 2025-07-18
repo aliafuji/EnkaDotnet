@@ -425,6 +425,8 @@ namespace EnkaDotNet.Utils.ZZZ
                         finalValue = Math.Floor((agentBase + totalFlatBonus + totalPercentBonusEnergy) * 100) / 100;
                         break;
                     case "Pen Ratio":
+                        finalValue = (totalPercentBonus * 1000) + totalFlatBonus;
+                        break;
                     case "Physical DMG":
                     case "Fire DMG":
                     case "Ice DMG":
