@@ -148,8 +148,8 @@ namespace EnkaDotNet.Utils.ZZZ
                             int mindscapeBonus = CalculateMindscapeSkillBonus(model.TalentLevel);
                             finalLevel = baseLevel + mindscapeBonus;
                         }
-
-                            skillLevels.TryAdd((SkillType)skillLevel.Index, finalLevel);
+                        
+                        skillLevels.TryAdd((SkillType)skillLevel.Index, finalLevel);
                     }
                 }
             }
