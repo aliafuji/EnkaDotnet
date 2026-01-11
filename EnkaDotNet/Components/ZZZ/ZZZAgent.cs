@@ -73,35 +73,28 @@ namespace EnkaDotNet.Components.ZZZ
 
                 if (isPercentageDisplay)
                 {
-                    double displayNumeric = numericValue / 100.0;
-                    double displayBaseVal = baseValue / 100.0;
-                    double displayAddedVal = addedValue / 100.0;
-                    
-                    displayValue = displayNumeric.ToString("F1", invariantCulture) + (raw ? "" : "%");
-                    displayBase = displayBaseVal.ToString("F1", invariantCulture) + (raw ? "" : "%");
-                    displayAdded = displayAddedVal.ToString("F1", invariantCulture) + (raw ? "" : "%");
+                    displayValue = numericValue.ToString("F1", invariantCulture) + (raw ? "" : "%");
+                    displayBase = baseValue.ToString("F1", invariantCulture) + (raw ? "" : "%");
+                    displayAdded = addedValue.ToString("F1", invariantCulture) + (raw ? "" : "%");
                     
                     if (friendlyKey == "Energy Regen" && !raw)
                     {
-                        displayValue = Math.Abs(displayNumeric) < 0.01 ? "0" : (displayNumeric.ToString("F2", invariantCulture).TrimEnd('0'));
-                        displayBase = Math.Abs(displayBaseVal) < 0.01 ? "0" : (displayBaseVal.ToString("F2", invariantCulture).TrimEnd('0'));
-                        displayAdded = Math.Abs(displayAddedVal) < 0.01 ? "0" : (displayAddedVal.ToString("F2", invariantCulture).TrimEnd('0'));
+                        displayValue = Math.Abs(numericValue) < 0.01 ? "0" : (numericValue.ToString("F2", invariantCulture).TrimEnd('0'));
+                        displayBase = Math.Abs(baseValue) < 0.01 ? "0" : (baseValue.ToString("F2", invariantCulture).TrimEnd('0'));
+                        displayAdded = Math.Abs(addedValue) < 0.01 ? "0" : (addedValue.ToString("F2", invariantCulture).TrimEnd('0'));
                     }
                 }
                 else if (friendlyKey == "Energy Regen" && raw)
                 {
-                    double displayNumeric = numericValue / 100.0;
-                    double displayBaseVal = baseValue / 100.0;
-                    double displayAddedVal = addedValue / 100.0;
-                    displayValue = Math.Abs(displayNumeric) < 0.01 ? "0" : (displayNumeric.ToString("F2", invariantCulture).TrimEnd('0'));
-                    displayBase = Math.Abs(displayBaseVal) < 0.01 ? "0" : (displayBaseVal.ToString("F2", invariantCulture).TrimEnd('0'));
-                    displayAdded = Math.Abs(displayAddedVal) < 0.01 ? "0" : (displayAddedVal.ToString("F2", invariantCulture).TrimEnd('0'));
+                    displayValue = Math.Abs(numericValue) < 0.01 ? "0" : (numericValue.ToString("F2", invariantCulture).TrimEnd('0'));
+                    displayBase = Math.Abs(baseValue) < 0.01 ? "0" : (baseValue.ToString("F2", invariantCulture).TrimEnd('0'));
+                    displayAdded = Math.Abs(addedValue) < 0.01 ? "0" : (addedValue.ToString("F2", invariantCulture).TrimEnd('0'));
                 }
                 else
                 {
-                    displayValue = Math.Floor(numericValue).ToString(invariantCulture);
-                    displayBase = Math.Floor(baseValue).ToString(invariantCulture);
-                    displayAdded = Math.Floor(addedValue).ToString(invariantCulture);
+                    displayValue = numericValue.ToString("F0", invariantCulture);
+                    displayBase = baseValue.ToString("F0", invariantCulture);
+                    displayAdded = addedValue.ToString("F0", invariantCulture);
                 }
 
                 resultStats[displayKey] = new FormattedStatValues
@@ -112,6 +105,29 @@ namespace EnkaDotNet.Components.ZZZ
                 };
             }
             return resultStats;
+        }
+
+        /// <summary>
+        /// Gets the final calculated stats as raw numeric values.
+        /// Returns a dictionary with stat names as keys and final values as doubles.
+        /// </summary>
+        public Dictionary<string, double> GetFinalStats()
+        {
+            var finalStats = new Dictionary<string, double>();
+
+            if (this.Assets == null)
+            {
+                Console.Error.WriteLine($"Warning: ZZZAgent {Name} ({Id}) has null Assets. Cannot calculate stats.");
+                return finalStats;
+            }
+
+            var calculatedStats = ZZZStatsHelpers.CalculateAllTotalStats(this, this.Assets);
+            foreach (var stat in calculatedStats)
+            {
+                finalStats[stat.Key] = stat.Value.FinalValue;
+            }
+
+            return finalStats;
         }
 
         public IReadOnlyList<FormattedDriveDiscSetInfo> GetEquippedDiscSets()

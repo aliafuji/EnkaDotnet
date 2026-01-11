@@ -25,11 +25,34 @@ namespace EnkaDotNet.Utils.ZZZ
             var result = new Dictionary<string, StatSummary>();
             foreach (var kvp in breakdown)
             {
+                double finalVal = kvp.Value.TryGetValue("Final", out var final) ? final : 0;
+                double baseVal = kvp.Value.TryGetValue("BaseDisplay", out var bv) ? bv : 0;
+                double addedVal = kvp.Value.TryGetValue("AddedDisplay", out var av) ? av : 0;
+
+                bool isPercentageDisplay = IsDisplayPercentageStatForGroup(kvp.Key);
+                bool isFlatStat = kvp.Key == "HP" || kvp.Key == "ATK" || kvp.Key == "DEF" || 
+                                  kvp.Key == "Anomaly Proficiency" || kvp.Key == "Anomaly Mastery" || 
+                                  kvp.Key == "Impact" || kvp.Key == "PEN" || kvp.Key == "Sheer Force" ||
+                                  kvp.Key == "Automatic Adrenaline Accumulation";
+
+                if (isPercentageDisplay)
+                {
+                    finalVal /= 100.0;
+                    baseVal /= 100.0;
+                    addedVal /= 100.0;
+                }
+                else if (isFlatStat)
+                {
+                    finalVal = Math.Floor(finalVal);
+                    baseVal = Math.Floor(baseVal);
+                    addedVal = Math.Floor(addedVal);
+                }
+
                 result[kvp.Key] = new StatSummary
                 {
-                    FinalValue = kvp.Value.TryGetValue("Final", out var final) ? final : 0,
-                    BaseValue = kvp.Value.TryGetValue("BaseDisplay", out var baseVal) ? baseVal : 0,
-                    AddedValue = kvp.Value.TryGetValue("AddedDisplay", out var addedVal) ? addedVal : 0
+                    FinalValue = finalVal,
+                    BaseValue = baseVal,
+                    AddedValue = addedVal
                 };
             }
             return result;
