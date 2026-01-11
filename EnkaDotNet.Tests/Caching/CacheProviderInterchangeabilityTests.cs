@@ -13,7 +13,6 @@ namespace EnkaDotNet.Tests.Caching
     /// <summary>
     /// Property-based tests for cache provider interchangeability.
     /// Feature: persistent-cache, Property 3: Provider Interchangeability
-    /// Validates: Requirements 1.3
     /// </summary>
     public class CacheProviderInterchangeabilityTests : IDisposable
     {
