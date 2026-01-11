@@ -32,5 +32,10 @@ namespace EnkaDotNet.Components.HSR
         public int LightConeCount { get; internal set; }
         public int RelicCount { get; internal set; }
         public int MemoryOfChaosScore { get; internal set; }
+
+        // Added in game version 2.2
+        public int? BookCount { get; internal set; }
+        public int? MusicCount { get; internal set; }
+        public int? MaxSimulatedUniverseWorld { get; internal set; }
     }
 }

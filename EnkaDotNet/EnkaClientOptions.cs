@@ -1,4 +1,5 @@
-﻿using EnkaDotNet.Utils;
+﻿using EnkaDotNet.Caching;
+using EnkaDotNet.Utils;
 using System.Collections.Generic;
 using System.Net;
 using System;
@@ -153,5 +154,94 @@ namespace EnkaDotNet
         /// Preloads languages for assets data
         /// </summary>
         public List<string> PreloadLanguages { get; set; } = new List<string>();
+
+        /// <summary>
+        /// Gets or sets the cache provider to use for storing cached API responses.
+        /// </summary>
+        /// <remarks>
+        /// <para>Available providers:</para>
+        /// <list type="bullet">
+        ///   <item><description><see cref="Caching.CacheProvider.Memory"/> - In-memory cache (default). Fast but not persistent across application restarts.</description></item>
+        ///   <item><description><see cref="Caching.CacheProvider.SQLite"/> - SQLite-based persistent cache. Data survives application restarts without external dependencies.</description></item>
+        ///   <item><description><see cref="Caching.CacheProvider.Redis"/> - Redis-based distributed cache. Ideal for multiple application instances sharing cache data.</description></item>
+        ///   <item><description><see cref="Caching.CacheProvider.Custom"/> - Custom cache provider via dependency injection. Implement <see cref="IEnkaCache"/> interface.</description></item>
+        /// </list>
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// // Using SQLite cache
+        /// var options = new EnkaClientOptions
+        /// {
+        ///     CacheProvider = CacheProvider.SQLite,
+        ///     SQLiteCache = new SQLiteCacheOptions
+        ///     {
+        ///         DatabasePath = "my_cache.db",
+        ///         DefaultTtl = TimeSpan.FromMinutes(10)
+        ///     }
+        /// };
+        /// </code>
+        /// </example>
+        public CacheProvider CacheProvider { get; set; } = CacheProvider.Memory;
+
+        /// <summary>
+        /// Gets or sets the SQLite cache configuration options.
+        /// Only used when <see cref="CacheProvider"/> is set to <see cref="Caching.CacheProvider.SQLite"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>Key configuration options:</para>
+        /// <list type="bullet">
+        ///   <item><description><see cref="SQLiteCacheOptions.DatabasePath"/> - Path to the SQLite database file (default: "enka_cache.db")</description></item>
+        ///   <item><description><see cref="SQLiteCacheOptions.DefaultTtl"/> - Default time-to-live for cache entries (default: 5 minutes)</description></item>
+        ///   <item><description><see cref="SQLiteCacheOptions.EnableAutoCleanup"/> - Enable automatic cleanup of expired entries (default: true)</description></item>
+        ///   <item><description><see cref="SQLiteCacheOptions.CleanupInterval"/> - Interval for automatic cleanup (default: 30 minutes)</description></item>
+        /// </list>
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// var options = new EnkaClientOptions
+        /// {
+        ///     CacheProvider = CacheProvider.SQLite,
+        ///     SQLiteCache = new SQLiteCacheOptions
+        ///     {
+        ///         DatabasePath = "cache/enka_data.db",
+        ///         DefaultTtl = TimeSpan.FromMinutes(15),
+        ///         EnableAutoCleanup = true,
+        ///         CleanupInterval = TimeSpan.FromHours(1)
+        ///     }
+        /// };
+        /// </code>
+        /// </example>
+        public SQLiteCacheOptions SQLiteCache { get; set; } = new SQLiteCacheOptions();
+
+        /// <summary>
+        /// Gets or sets the Redis cache configuration options.
+        /// Only used when <see cref="CacheProvider"/> is set to <see cref="Caching.CacheProvider.Redis"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>Key configuration options:</para>
+        /// <list type="bullet">
+        ///   <item><description><see cref="RedisCacheOptions.ConnectionString"/> - Redis server connection string (default: "localhost:6379")</description></item>
+        ///   <item><description><see cref="RedisCacheOptions.KeyPrefix"/> - Prefix for all cache keys for namespace isolation (default: "enka:")</description></item>
+        ///   <item><description><see cref="RedisCacheOptions.DefaultTtl"/> - Default time-to-live for cache entries (default: 5 minutes)</description></item>
+        ///   <item><description><see cref="RedisCacheOptions.ConnectRetry"/> - Number of connection retry attempts (default: 3)</description></item>
+        ///   <item><description><see cref="RedisCacheOptions.ConnectTimeout"/> - Connection timeout (default: 5 seconds)</description></item>
+        /// </list>
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// var options = new EnkaClientOptions
+        /// {
+        ///     CacheProvider = CacheProvider.Redis,
+        ///     RedisCache = new RedisCacheOptions
+        ///     {
+        ///         ConnectionString = "redis.example.com:6379,password=secret",
+        ///         KeyPrefix = "myapp:enka:",
+        ///         DefaultTtl = TimeSpan.FromMinutes(10),
+        ///         ConnectRetry = 5
+        ///     }
+        /// };
+        /// </code>
+        /// </example>
+        public RedisCacheOptions RedisCache { get; set; } = new RedisCacheOptions();
     }
 }

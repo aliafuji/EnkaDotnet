@@ -45,6 +45,12 @@ namespace EnkaDotNet.Utils
         public const string ENKA_PROFILE_ENDPOINT_FORMAT = "profile/{0}/?format=json";
 
         /// <summary>
+        /// Endpoint format for Enka.Network user profile builds
+        /// Format parameters: {0} = username, {1} = hoyo hash
+        /// </summary>
+        public const string ENKA_BUILDS_ENDPOINT_FORMAT = "profile/{0}/hoyos/{1}/builds/";
+
+        /// <summary>
         /// Default endpoint format for game-specific user information, typically by UID
         /// </summary>
         public const string DEFAULT_GAME_SPECIFIC_USER_INFO_ENDPOINT_FORMAT = "uid/{0}";

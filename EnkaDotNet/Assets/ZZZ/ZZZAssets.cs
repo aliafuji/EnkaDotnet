@@ -579,6 +579,7 @@ namespace EnkaDotNet.Assets.ZZZ
                 case "ETHER": return ElementType.Ether;
                 case "PHYSICS": return ElementType.Physical;
                 case "AURICETHER": return ElementType.AuricEther;
+                case "ZHENZHENASSAULT": return ElementType.HonedEdge;
                 default: return ElementType.Unknown;
             }
         }

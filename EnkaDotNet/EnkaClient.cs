@@ -8,6 +8,7 @@ using EnkaDotNet.Assets;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Assets.ZZZ;
+using EnkaDotNet.Caching;
 using EnkaDotNet.Components.EnkaProfile;
 using EnkaDotNet.Components.Genshin;
 using EnkaDotNet.Components.HSR;
@@ -101,14 +102,19 @@ namespace EnkaDotNet
         /// </summary>
         /// <param name="options">The options to configure the client. If provided, `PreloadLanguages` will trigger automatic asset loading.</param>
         /// <param name="loggerFactory">The logger factory to use for creating loggers.</param>
-        /// <param name="cache">Optional custom memory cache instance.</param>
+        /// <param name="cache">Optional custom memory cache instance (for backward compatibility).</param>
         /// <param name="httpClientFactory">Optional HTTP client factory. If null, a default one will be used.</param>
+        /// <param name="customCache">Optional custom IEnkaCache instance for Custom cache provider.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the created EnkaClient instance.</returns>
-        public static async Task<IEnkaClient> CreateAsync(EnkaClientOptions options = null, ILoggerFactory loggerFactory = null, IMemoryCache cache = null, IHttpClientFactory httpClientFactory = null)
+        public static async Task<IEnkaClient> CreateAsync(
+            EnkaClientOptions options = null, 
+            ILoggerFactory loggerFactory = null, 
+            IMemoryCache cache = null, 
+            IHttpClientFactory httpClientFactory = null,
+            IEnkaCache customCache = null)
         {
             options = options ?? new EnkaClientOptions();
             loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
-            cache = cache ?? new MemoryCache(new MemoryCacheOptions());
             httpClientFactory = httpClientFactory ?? new DefaultHttpClientFactory();
 
             var httpHelperHttpClient = httpClientFactory.CreateClient("DefaultEnkaClient");
@@ -116,9 +122,26 @@ namespace EnkaDotNet
             httpHelperHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd(options.UserAgent ?? Constants.DefaultUserAgent);
             httpHelperHttpClient.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 
+            // Create the appropriate cache provider based on options
+            IEnkaCache enkaCache;
+            if (options.CacheProvider == CacheProvider.Custom && customCache != null)
+            {
+                enkaCache = customCache;
+            }
+            else if (options.CacheProvider == CacheProvider.Memory && cache != null)
+            {
+                // Use provided memory cache for backward compatibility
+                enkaCache = CacheFactory.CreateCache(options, cache);
+            }
+            else
+            {
+                // Create cache based on provider setting
+                enkaCache = CacheFactory.CreateCache(options, cache, customCache);
+            }
+
             var httpHelper = new HttpHelper(
                 httpHelperHttpClient,
-                cache,
+                enkaCache,
                 Microsoft.Extensions.Options.Options.Create(options),
                 loggerFactory.CreateLogger<HttpHelper>()
             );
@@ -343,6 +366,205 @@ namespace EnkaDotNet
             {
                 var handler = await GetZZZHandlerAsync(language).ConfigureAwait(false);
                 return await handler.GetZZZAgentsAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+            });
+
+        /// <inheritdoc/>
+        public Task<Dictionary<string, List<GenshinBuild>>> GetGenshinBuildsByUsernameAsync(string username, string hoyoHash, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            ExecuteApiCallAsync(async () =>
+            {
+                // Fetch raw builds from the API
+                var rawBuilds = await _enkaProfileServiceHandler.GetRawBuildsByUsernameAsync(username, hoyoHash, bypassCache, cancellationToken).ConfigureAwait(false);
+                
+                // Get the Genshin handler with the appropriate language assets
+                var handler = await GetGenshinHandlerAsync(language).ConfigureAwait(false);
+                var assets = await GetGenshinAssetsAsync(language).ConfigureAwait(false);
+                var dataMapper = new Utils.Genshin.DataMapper(assets, _options);
+                
+                // Map raw builds to GenshinBuild components
+                var result = new Dictionary<string, List<GenshinBuild>>();
+                
+                foreach (var kvp in rawBuilds)
+                {
+                    var characterId = kvp.Key;
+                    var buildList = new List<GenshinBuild>();
+                    
+                    foreach (var rawBuild in kvp.Value)
+                    {
+                        var build = new GenshinBuild
+                        {
+                            Id = rawBuild.Id,
+                            Name = rawBuild.Name ?? string.Empty,
+                            Order = rawBuild.Order,
+                            IsLive = rawBuild.Live,
+                            CharacterId = rawBuild.AvatarId
+                        };
+                        
+                        // Parse the avatar_data to get the character
+                        if (rawBuild.AvatarData.ValueKind != System.Text.Json.JsonValueKind.Undefined &&
+                            rawBuild.AvatarData.ValueKind != System.Text.Json.JsonValueKind.Null)
+                        {
+                            try
+                            {
+#if NET8_0_OR_GREATER
+                                var avatarInfo = System.Text.Json.JsonSerializer.Deserialize<Models.Genshin.AvatarInfoModel>(
+                                    rawBuild.AvatarData.GetRawText(), 
+                                    Serialization.EnkaJsonContext.Default.Options);
+#else
+#pragma warning disable IL2026, IL3050
+                                var avatarInfo = System.Text.Json.JsonSerializer.Deserialize<Models.Genshin.AvatarInfoModel>(
+                                    rawBuild.AvatarData.GetRawText());
+#pragma warning restore IL2026, IL3050
+#endif
+                                if (avatarInfo != null)
+                                {
+                                    build.Character = dataMapper.MapCharacter(avatarInfo);
+                                }
+                            }
+                            catch (System.Text.Json.JsonException ex)
+                            {
+                                Logger.LogWarning(ex, "Failed to deserialize avatar_data for build {BuildId} in character {CharacterId}", rawBuild.Id, characterId);
+                            }
+                        }
+                        
+                        buildList.Add(build);
+                    }
+                    
+                    result[characterId] = buildList;
+                }
+                
+                return result;
+            });
+
+        /// <inheritdoc/>
+        public Task<Dictionary<string, List<HSRBuild>>> GetHSRBuildsByUsernameAsync(string username, string hoyoHash, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            ExecuteApiCallAsync(async () =>
+            {
+                // Fetch raw builds from the API
+                var rawBuilds = await _enkaProfileServiceHandler.GetRawBuildsByUsernameAsync(username, hoyoHash, bypassCache, cancellationToken).ConfigureAwait(false);
+                
+                // Get the HSR assets with the appropriate language
+                var assets = await GetHSRAssetsAsync(language).ConfigureAwait(false);
+                var dataMapper = new Utils.HSR.HSRDataMapper(assets, _options);
+                
+                // Map raw builds to HSRBuild components
+                var result = new Dictionary<string, List<HSRBuild>>();
+                
+                foreach (var kvp in rawBuilds)
+                {
+                    var characterId = kvp.Key;
+                    var buildList = new List<HSRBuild>();
+                    
+                    foreach (var rawBuild in kvp.Value)
+                    {
+                        var build = new HSRBuild
+                        {
+                            Id = rawBuild.Id,
+                            Name = rawBuild.Name ?? string.Empty,
+                            Order = rawBuild.Order,
+                            IsLive = rawBuild.Live,
+                            CharacterId = rawBuild.AvatarId
+                        };
+                        
+                        // Parse the avatar_data to get the character
+                        if (rawBuild.AvatarData.ValueKind != System.Text.Json.JsonValueKind.Undefined &&
+                            rawBuild.AvatarData.ValueKind != System.Text.Json.JsonValueKind.Null)
+                        {
+                            try
+                            {
+#if NET8_0_OR_GREATER
+                                var avatarDetail = System.Text.Json.JsonSerializer.Deserialize<Models.HSR.HSRAvatarDetail>(
+                                    rawBuild.AvatarData.GetRawText(), 
+                                    Serialization.EnkaJsonContext.Default.Options);
+#else
+#pragma warning disable IL2026, IL3050
+                                var avatarDetail = System.Text.Json.JsonSerializer.Deserialize<Models.HSR.HSRAvatarDetail>(
+                                    rawBuild.AvatarData.GetRawText());
+#pragma warning restore IL2026, IL3050
+#endif
+                                if (avatarDetail != null)
+                                {
+                                    build.Character = dataMapper.MapCharacter(avatarDetail);
+                                }
+                            }
+                            catch (System.Text.Json.JsonException ex)
+                            {
+                                Logger.LogWarning(ex, "Failed to deserialize avatar_data for HSR build {BuildId} in character {CharacterId}", rawBuild.Id, characterId);
+                            }
+                        }
+                        
+                        buildList.Add(build);
+                    }
+                    
+                    result[characterId] = buildList;
+                }
+                
+                return result;
+            });
+
+        /// <inheritdoc/>
+        public Task<Dictionary<string, List<ZZZBuild>>> GetZZZBuildsByUsernameAsync(string username, string hoyoHash, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            ExecuteApiCallAsync(async () =>
+            {
+                // Fetch raw builds from the API
+                var rawBuilds = await _enkaProfileServiceHandler.GetRawBuildsByUsernameAsync(username, hoyoHash, bypassCache, cancellationToken).ConfigureAwait(false);
+                
+                // Get the ZZZ assets with the appropriate language
+                var assets = await GetZZZAssetsAsync(language).ConfigureAwait(false);
+                var dataMapper = new Utils.ZZZ.ZZZDataMapper(assets, _options);
+                
+                // Map raw builds to ZZZBuild components
+                var result = new Dictionary<string, List<ZZZBuild>>();
+                
+                foreach (var kvp in rawBuilds)
+                {
+                    var agentId = kvp.Key;
+                    var buildList = new List<ZZZBuild>();
+                    
+                    foreach (var rawBuild in kvp.Value)
+                    {
+                        var build = new ZZZBuild
+                        {
+                            Id = rawBuild.Id,
+                            Name = rawBuild.Name ?? string.Empty,
+                            Order = rawBuild.Order,
+                            IsLive = rawBuild.Live,
+                            AgentId = rawBuild.AvatarId
+                        };
+                        
+                        // Parse the avatar_data to get the agent
+                        if (rawBuild.AvatarData.ValueKind != System.Text.Json.JsonValueKind.Undefined &&
+                            rawBuild.AvatarData.ValueKind != System.Text.Json.JsonValueKind.Null)
+                        {
+                            try
+                            {
+#if NET8_0_OR_GREATER
+                                var avatarModel = System.Text.Json.JsonSerializer.Deserialize<Models.ZZZ.ZZZAvatarModel>(
+                                    rawBuild.AvatarData.GetRawText(), 
+                                    Serialization.EnkaJsonContext.Default.Options);
+#else
+#pragma warning disable IL2026, IL3050
+                                var avatarModel = System.Text.Json.JsonSerializer.Deserialize<Models.ZZZ.ZZZAvatarModel>(
+                                    rawBuild.AvatarData.GetRawText());
+#pragma warning restore IL2026, IL3050
+#endif
+                                if (avatarModel != null)
+                                {
+                                    build.Agent = dataMapper.MapAgent(avatarModel);
+                                }
+                            }
+                            catch (System.Text.Json.JsonException ex)
+                            {
+                                Logger.LogWarning(ex, "Failed to deserialize avatar_data for ZZZ build {BuildId} in agent {AgentId}", rawBuild.Id, agentId);
+                            }
+                        }
+                        
+                        buildList.Add(build);
+                    }
+                    
+                    result[agentId] = buildList;
+                }
+                
+                return result;
             });
 
         /// <inheritdoc/>

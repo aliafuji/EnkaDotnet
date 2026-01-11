@@ -63,7 +63,10 @@ namespace EnkaDotNet.Utils.HSR
                     AvatarCount = response.DetailInfo.RecordInfo.AvatarCount,
                     LightConeCount = response.DetailInfo.RecordInfo.EquipmentCount,
                     RelicCount = response.DetailInfo.RecordInfo.RelicCount,
-                    MemoryOfChaosScore = response.DetailInfo.RecordInfo.MaxRogueChallengeScore
+                    MemoryOfChaosScore = response.DetailInfo.RecordInfo.MaxRogueChallengeScore ?? 0,
+                    BookCount = response.DetailInfo.RecordInfo.BookCount,
+                    MusicCount = response.DetailInfo.RecordInfo.MusicCount,
+                    MaxSimulatedUniverseWorld = response.DetailInfo.RecordInfo.MaxRogueChallengeScore
                 };
             }
             else
@@ -91,6 +94,7 @@ namespace EnkaDotNet.Utils.HSR
                 Rank = avatarDetail.Rank,
                 Position = avatarDetail.Position,
                 IsAssist = avatarDetail.IsAssist,
+                Enhanced = avatarDetail.Enhanced,
                 Name = _assets.GetCharacterName(avatarDetail.AvatarId),
                 Element = _assets.GetCharacterElement(avatarDetail.AvatarId),
                 Path = _assets.GetCharacterPath(avatarDetail.AvatarId),

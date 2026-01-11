@@ -433,14 +433,14 @@ namespace EnkaDotNet.Assets.HSR
 
         public string GetPropertyName(int propertyId)
         {
-            return Enum.IsDefined(typeof(StatPropertyType), propertyId)
+            return EnumHelper.IsDefinedHSRStatPropertyType(propertyId)
                 ? ((StatPropertyType)propertyId).ToString()
                 : $"Property_{propertyId}";
         }
 
         public string FormatPropertyValue(int propertyId, double value)
         {
-            if (Enum.IsDefined(typeof(StatPropertyType), propertyId))
+            if (EnumHelper.IsDefinedHSRStatPropertyType(propertyId))
             {
                 var propType = (StatPropertyType)propertyId;
                 bool isPercentage = HSRStatPropertyUtils.IsPercentageType(propType.ToString());

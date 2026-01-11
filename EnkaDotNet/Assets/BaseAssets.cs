@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 using EnkaDotNet.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+#if NET8_0_OR_GREATER
+using EnkaDotNet.Serialization;
+#endif
 
 namespace EnkaDotNet.Assets
 {
@@ -183,7 +186,13 @@ namespace EnkaDotNet.Assets
                 string jsonContent = await FetchAssetAsync(assetKey).ConfigureAwait(false);
                 try
                 {
+#if NET8_0_OR_GREATER
+                    var result = JsonSerializer.Deserialize<T>(jsonContent, EnkaJsonContext.Default.Options);
+#else
+#pragma warning disable IL2026, IL3050
                     var result = JsonSerializer.Deserialize<T>(jsonContent);
+#pragma warning restore IL2026, IL3050
+#endif
                     if (result == null)
                     {
                         throw new JsonException($"Failed to deserialize {assetKey} for {GameIdentifier} - result was null.");

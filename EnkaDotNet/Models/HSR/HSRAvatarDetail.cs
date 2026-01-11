@@ -31,6 +31,9 @@ namespace EnkaDotNet.Models.HSR
 
         [JsonPropertyName("_assist")]
         public bool IsAssist { get; set; }
+
+        [JsonPropertyName("enhanceId")]
+        public bool Enhanced { get; set; }
     }
 
     public class HSRSkillTreeModel

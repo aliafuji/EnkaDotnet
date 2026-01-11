@@ -2,106 +2,151 @@
 {
     public enum StatType
     {
-        None,
+        None = 0,
 
         // Base Stats
-        BaseHP,             // FIGHT_PROP_BASE_HP (ID: 1)
-        BaseAttack,         // FIGHT_PROP_BASE_ATTACK (ID: 4)
-        BaseDefense,        // FIGHT_PROP_BASE_DEFENSE (ID: 7)
-        BaseSpeed,          // FIGHT_PROP_BASE_SPEED (ID: 10)
-
-        // Percentage Stats
-        HPPercentage,       // FIGHT_PROP_HP_PERCENT (ID: 2)
-        AttackPercentage,   // FIGHT_PROP_ATTACK_PERCENT (ID: 5)
-        DefensePercentage,  // FIGHT_PROP_DEFENSE_PERCENT (ID: 8)
-        SpeedPercentage,    // FIGHT_PROP_SPEED_PERCENT (ID: 11)
+        BaseHP = 1,                     // FIGHT_PROP_BASE_HP
+        HP_Flat = 2,                    // FIGHT_PROP_HP (flat HP bonus)
+        HPPercentage = 3,               // FIGHT_PROP_HP_PERCENT
+        BaseAttack = 4,                 // FIGHT_PROP_BASE_ATTACK
+        Attack_Flat = 5,                // FIGHT_PROP_ATTACK (flat ATK bonus)
+        AttackPercentage = 6,           // FIGHT_PROP_ATTACK_PERCENT
+        BaseDefense = 7,                // FIGHT_PROP_BASE_DEFENSE
+        Defense_Flat = 8,               // FIGHT_PROP_DEFENSE (flat DEF bonus)
+        DefensePercentage = 9,          // FIGHT_PROP_DEFENSE_PERCENT
+        BaseSpeed = 10,                 // FIGHT_PROP_BASE_SPEED
+        SpeedPercentage = 11,           // FIGHT_PROP_SPEED_PERCENT
+        HPMPPercentage = 12,            // FIGHT_PROP_HP_MP_PERCENT
+        AttackMPPercentage = 13,        // FIGHT_PROP_ATTACK_MP_PERCENT
 
         // Critical Stats
-        CriticalRate,       // FIGHT_PROP_CRITICAL (ID: 20)
-        CriticalDamage,     // FIGHT_PROP_CRITICAL_HURT (ID: 22)
+        CriticalRate = 20,              // FIGHT_PROP_CRITICAL
+        AntiCritical = 21,              // FIGHT_PROP_ANTI_CRITICAL
+        CriticalDamage = 22,            // FIGHT_PROP_CRITICAL_HURT
 
         // Energy & Mastery
-        EnergyRecharge,     // FIGHT_PROP_CHARGE_EFFICIENCY (ID: 23)
-        ElementalMastery,   // FIGHT_PROP_ELEMENT_MASTERY (ID: 28)
+        EnergyRecharge = 23,            // FIGHT_PROP_CHARGE_EFFICIENCY
+        AddHurt = 24,                   // FIGHT_PROP_ADD_HURT (all damage bonus)
+        SubHurt = 25,                   // FIGHT_PROP_SUB_HURT (all damage reduction)
+        HealingBonus = 26,              // FIGHT_PROP_HEAL_ADD
+        IncomingHealingBonus = 27,      // FIGHT_PROP_HEALED_ADD
+        ElementalMastery = 28,          // FIGHT_PROP_ELEMENT_MASTERY
 
-        // Healing
-        HealingBonus,       // FIGHT_PROP_HEAL_ADD (ID: 26)
-        IncomingHealingBonus, // FIGHT_PROP_HEALED_ADD (ID: 27)
+        // Physical Stats
+        PhysicalResistance = 29,        // FIGHT_PROP_PHYSICAL_SUB_HURT
+        PhysicalDamageBonus = 30,       // FIGHT_PROP_PHYSICAL_ADD_HURT
 
-        // Resistances
-        PhysicalResistance, // FIGHT_PROP_PHYSICAL_SUB_HURT (ID: 29)
-        PyroResistance,     // FIGHT_PROP_FIRE_SUB_HURT (ID: 50)
-        ElectroResistance,  // FIGHT_PROP_ELEC_SUB_HURT (ID: 51)
-        HydroResistance,    // FIGHT_PROP_WATER_SUB_HURT (ID: 52)
-        DendroResistance,   // FIGHT_PROP_GRASS_SUB_HURT (ID: 53)
-        AnemoResistance,    // FIGHT_PROP_WIND_SUB_HURT (ID: 54)
-        GeoResistance,      // FIGHT_PROP_ROCK_SUB_HURT (ID: 55)
-        CryoResistance,     // FIGHT_PROP_ICE_SUB_HURT (ID: 56)
+        // Defense Ignore
+        DefenseIgnoreRatio = 31,        // FIGHT_PROP_DEFENCE_IGNORE_RATIO
+        DefenseIgnoreDelta = 32,        // FIGHT_PROP_DEFENCE_IGNORE_DELTA
 
-        // Damage Bonuses
-        PhysicalDamageBonus,// FIGHT_PROP_PHYSICAL_ADD_HURT (ID: 30)
-        PyroDamageBonus,    // FIGHT_PROP_FIRE_ADD_HURT (ID: 40)
-        ElectroDamageBonus, // FIGHT_PROP_ELEC_ADD_HURT (ID: 41)
-        HydroDamageBonus,   // FIGHT_PROP_WATER_ADD_HURT (ID: 42)
-        DendroDamageBonus,  // FIGHT_PROP_GRASS_ADD_HURT (ID: 43)
-        AnemoDamageBonus,   // FIGHT_PROP_WIND_ADD_HURT (ID: 44)
-        GeoDamageBonus,     // FIGHT_PROP_ROCK_ADD_HURT (ID: 45)
-        CryoDamageBonus,    // FIGHT_PROP_ICE_ADD_HURT (ID: 46)
+        // Elemental Damage Bonuses
+        PyroDamageBonus = 40,           // FIGHT_PROP_FIRE_ADD_HURT
+        ElectroDamageBonus = 41,        // FIGHT_PROP_ELEC_ADD_HURT
+        HydroDamageBonus = 42,          // FIGHT_PROP_WATER_ADD_HURT
+        DendroDamageBonus = 43,         // FIGHT_PROP_GRASS_ADD_HURT
+        AnemoDamageBonus = 44,          // FIGHT_PROP_WIND_ADD_HURT
+        GeoDamageBonus = 45,            // FIGHT_PROP_ROCK_ADD_HURT
+        CryoDamageBonus = 46,           // FIGHT_PROP_ICE_ADD_HURT
+        HeadAddHurt = 47,               // FIGHT_PROP_HIT_HEAD_ADD_HURT
 
-        // Energy Costs
-        PyroEnergyCost,     // FIGHT_PROP_FIRE_ENERGY_COST (ID: 70)
-        ElectroEnergyCost,  // FIGHT_PROP_ELEC_ENERGY_COST (ID: 71)
-        HydroEnergyCost,    // FIGHT_PROP_WATER_ENERGY_COST (ID: 72)
-        DendroEnergyCost,   // FIGHT_PROP_GRASS_ENERGY_COST (ID: 73)
-        AnemoEnergyCost,    // FIGHT_PROP_WIND_ENERGY_COST (ID: 74)
-        CryoEnergyCost,     // FIGHT_PROP_ICE_ENERGY_COST (ID: 75)
-        GeoEnergyCost,      // FIGHT_PROP_ROCK_ENERGY_COST (ID: 76)
-        MaxSpecialEnergy,   // FIGHT_PROP_MAX_SP (ID: 77)
-        SpecialEnergyCost,  // FIGHT_PROP_SP_COST (ID: 78)
+        // Elemental Resistances
+        PyroResistance = 50,            // FIGHT_PROP_FIRE_SUB_HURT
+        ElectroResistance = 51,         // FIGHT_PROP_ELEC_SUB_HURT
+        HydroResistance = 52,           // FIGHT_PROP_WATER_SUB_HURT
+        DendroResistance = 53,          // FIGHT_PROP_GRASS_SUB_HURT
+        AnemoResistance = 54,           // FIGHT_PROP_WIND_SUB_HURT
+        GeoResistance = 55,             // FIGHT_PROP_ROCK_SUB_HURT
+        CryoResistance = 56,            // FIGHT_PROP_ICE_SUB_HURT
 
-        // Current Energy
-        CurrentPyroEnergy,  // FIGHT_PROP_CUR_FIRE_ENERGY (ID: 1000)
-        CurrentElectroEnergy, // FIGHT_PROP_CUR_ELEC_ENERGY (ID: 1001)
-        CurrentHydroEnergy, // FIGHT_PROP_CUR_WATER_ENERGY (ID: 1002)
-        CurrentDendroEnergy, // FIGHT_PROP_CUR_GRASS_ENERGY (ID: 1003)
-        CurrentAnemoEnergy, // FIGHT_PROP_CUR_WIND_ENERGY (ID: 1004)
-        CurrentCryoEnergy,  // FIGHT_PROP_CUR_ICE_ENERGY (ID: 1005)
-        CurrentGeoEnergy,   // FIGHT_PROP_CUR_ROCK_ENERGY (ID: 1006)
-        CurrentSpecialEnergy, // FIGHT_PROP_CUR_SP (ID: 1007)
-        CurrentHP,          // FIGHT_PROP_CUR_HP (ID: 1010)
+        // Effect Stats
+        EffectHit = 60,                 // FIGHT_PROP_EFFECT_HIT
+        EffectResist = 61,              // FIGHT_PROP_EFFECT_RESIST
+        FreezeResist = 62,              // FIGHT_PROP_FREEZE_RESIST
+        DizzyResist = 64,               // FIGHT_PROP_DIZZY_RESIST
+        FreezeShorten = 65,             // FIGHT_PROP_FREEZE_SHORTEN
+        DizzyShorten = 67,              // FIGHT_PROP_DIZZY_SHORTEN
 
-        // Final Stats
-        HP,                 // FIGHT_PROP_MAX_HP (ID: 2000)
-        Attack,             // FIGHT_PROP_CUR_ATTACK (ID: 2001)
-        Defense,            // FIGHT_PROP_CUR_DEFENSE (ID: 2002)
-        Speed,              // FIGHT_PROP_CUR_SPEED (ID: 2003)
+        // Max Energy
+        MaxPyroEnergy = 70,             // FIGHT_PROP_MAX_FIRE_ENERGY
+        MaxElectroEnergy = 71,          // FIGHT_PROP_MAX_ELEC_ENERGY
+        MaxHydroEnergy = 72,            // FIGHT_PROP_MAX_WATER_ENERGY
+        MaxDendroEnergy = 73,           // FIGHT_PROP_MAX_GRASS_ENERGY
+        MaxAnemoEnergy = 74,            // FIGHT_PROP_MAX_WIND_ENERGY
+        MaxCryoEnergy = 75,             // FIGHT_PROP_MAX_ICE_ENERGY
+        MaxGeoEnergy = 76,              // FIGHT_PROP_MAX_ROCK_ENERGY
 
         // Utility
-        CooldownReduction,  // FIGHT_PROP_SKILL_CD_MINUS_RATIO (ID: 80)
-        ShieldStrength,     // FIGHT_PROP_SHIELD_COST_MINUS_RATIO (ID: 81)
+        CooldownReduction = 80,         // FIGHT_PROP_SKILL_CD_MINUS_RATIO
+        ShieldStrength = 81,            // FIGHT_PROP_SHIELD_COST_MINUS_RATIO
+
+        // Current Energy
+        CurrentPyroEnergy = 1000,       // FIGHT_PROP_CUR_FIRE_ENERGY
+        CurrentElectroEnergy = 1001,    // FIGHT_PROP_CUR_ELEC_ENERGY
+        CurrentHydroEnergy = 1002,      // FIGHT_PROP_CUR_WATER_ENERGY
+        CurrentDendroEnergy = 1003,     // FIGHT_PROP_CUR_GRASS_ENERGY
+        CurrentAnemoEnergy = 1004,      // FIGHT_PROP_CUR_WIND_ENERGY
+        CurrentCryoEnergy = 1005,       // FIGHT_PROP_CUR_ICE_ENERGY
+        CurrentGeoEnergy = 1006,        // FIGHT_PROP_CUR_ROCK_ENERGY
+        CurrentHP = 1010,               // FIGHT_PROP_CUR_HP
+
+        // Final Stats
+        HP = 2000,                      // FIGHT_PROP_MAX_HP
+        Attack = 2001,                  // FIGHT_PROP_CUR_ATTACK
+        Defense = 2002,                 // FIGHT_PROP_CUR_DEFENSE
+        Speed = 2003,                   // FIGHT_PROP_CUR_SPEED
+        CurrentHPDebts = 2004,          // FIGHT_PROP_CUR_HP_DEBTS
+        CurrentHPPaidDebts = 2005,      // FIGHT_PROP_CUR_HP_PAID_DEBTS
+
+        // Non-Extra Stats (base stats without bonuses)
+        NonExtraAttack = 3000,          // FIGHT_PROP_NONEXTRA_ATTACK
+        NonExtraDefense = 3001,         // FIGHT_PROP_NONEXTRA_DEFENSE
+        NonExtraCritical = 3002,        // FIGHT_PROP_NONEXTRA_CRITICAL
+        NonExtraAntiCritical = 3003,    // FIGHT_PROP_NONEXTRA_ANTI_CRITICAL
+        NonExtraCriticalHurt = 3004,    // FIGHT_PROP_NONEXTRA_CRITICAL_HURT
+        NonExtraChargeEfficiency = 3005,// FIGHT_PROP_NONEXTRA_CHARGE_EFFICIENCY
+        NonExtraElementMastery = 3006,  // FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY
+        NonExtraPhysicalSubHurt = 3007, // FIGHT_PROP_NONEXTRA_PHYSICAL_SUB_HURT
+        NonExtraPyroDamageBonus = 3008, // FIGHT_PROP_NONEXTRA_FIRE_ADD_HURT
+        NonExtraElectroDamageBonus = 3009, // FIGHT_PROP_NONEXTRA_ELEC_ADD_HURT
+        NonExtraHydroDamageBonus = 3010,// FIGHT_PROP_NONEXTRA_WATER_ADD_HURT
+        NonExtraDendroDamageBonus = 3011,// FIGHT_PROP_NONEXTRA_GRASS_ADD_HURT
+        NonExtraAnemoDamageBonus = 3012,// FIGHT_PROP_NONEXTRA_WIND_ADD_HURT
+        NonExtraGeoDamageBonus = 3013,  // FIGHT_PROP_NONEXTRA_ROCK_ADD_HURT
+        NonExtraCryoDamageBonus = 3014, // FIGHT_PROP_NONEXTRA_ICE_ADD_HURT
+        NonExtraPyroResistance = 3015,  // FIGHT_PROP_NONEXTRA_FIRE_SUB_HURT
+        NonExtraElectroResistance = 3016,// FIGHT_PROP_NONEXTRA_ELEC_SUB_HURT
+        NonExtraHydroResistance = 3017, // FIGHT_PROP_NONEXTRA_WATER_SUB_HURT
+        NonExtraDendroResistance = 3018,// FIGHT_PROP_NONEXTRA_GRASS_SUB_HURT
+        NonExtraAnemoResistance = 3019, // FIGHT_PROP_NONEXTRA_WIND_SUB_HURT
+        NonExtraGeoResistance = 3020,   // FIGHT_PROP_NONEXTRA_ROCK_SUB_HURT
+        NonExtraCryoResistance = 3021,  // FIGHT_PROP_NONEXTRA_ICE_SUB_HURT
+        NonExtraCooldownReduction = 3022,// FIGHT_PROP_NONEXTRA_SKILL_CD_MINUS_RATIO
+        NonExtraShieldStrength = 3023,  // FIGHT_PROP_NONEXTRA_SHIELD_COST_MINUS_RATIO
+        NonExtraPhysicalDamageBonus = 3024, // FIGHT_PROP_NONEXTRA_PHYSICAL_ADD_HURT
 
         // Elemental Reaction Stats
-        ElementalReactionCritRate,      // FIGHT_PROP_ELEMENT_REACTION_CRIT_RATE (ID: 3025)
-        ElementalReactionCritDamage,    // FIGHT_PROP_ELEMENT_REACTION_CRIT_DMG (ID: 3026)
-        OverloadedCritRate,             // ID: 3027
-        OverloadedCritDamage,           // ID: 3028
-        SwirlCritRate,                  // ID: 3029
-        SwirlCritDamage,                // ID: 3030
-        ElectroChargedCritRate,         // ID: 3031
-        ElectroChargedCritDamage,       // ID: 3032
-        SuperconductCritRate,           // ID: 3033
-        SuperconductCritDamage,         // ID: 3034
-        BurnCritRate,                   // ID: 3035
-        BurnCritDamage,                 // ID: 3036
-        ShatteredCritRate,              // ID: 3037
-        ShatteredCritDamage,            // ID: 3038
-        BloomCritRate,                  // ID: 3039
-        BloomCritDamage,                // ID: 3040
-        BurgeonCritRate,                // ID: 3041
-        BurgeonCritDamage,              // ID: 3042
-        HyperbloomCritRate,             // ID: 3043
-        HyperbloomCritDamage,           // ID: 3044
-        BaseElementalReactionCritRate,  // ID: 3045
-        BaseElementalReactionCritDamage // ID: 3046
+        ElementalReactionCritRate = 3025,      // FIGHT_PROP_ELEM_REACT_CRITICAL
+        ElementalReactionCritDamage = 3026,    // FIGHT_PROP_ELEM_REACT_CRITICAL_HURT
+        OverloadedCritRate = 3027,             // FIGHT_PROP_ELEM_REACT_EXPLODE_CRITICAL
+        OverloadedCritDamage = 3028,           // FIGHT_PROP_ELEM_REACT_EXPLODE_CRITICAL_HURT
+        SwirlCritRate = 3029,                  // FIGHT_PROP_ELEM_REACT_SWIRL_CRITICAL
+        SwirlCritDamage = 3030,                // FIGHT_PROP_ELEM_REACT_SWIRL_CRITICAL_HURT
+        ElectroChargedCritRate = 3031,         // FIGHT_PROP_ELEM_REACT_ELECTRIC_CRITICAL
+        ElectroChargedCritDamage = 3032,       // FIGHT_PROP_ELEM_REACT_ELECTRIC_CRITICAL_HURT
+        SuperconductCritRate = 3033,           // FIGHT_PROP_ELEM_REACT_SCONDUCT_CRITICAL
+        SuperconductCritDamage = 3034,         // FIGHT_PROP_ELEM_REACT_SCONDUCT_CRITICAL_HURT
+        BurnCritRate = 3035,                   // FIGHT_PROP_ELEM_REACT_BURN_CRITICAL
+        BurnCritDamage = 3036,                 // FIGHT_PROP_ELEM_REACT_BURN_CRITICAL_HURT
+        ShatteredCritRate = 3037,              // FIGHT_PROP_ELEM_REACT_FROZENBROKEN_CRITICAL
+        ShatteredCritDamage = 3038,            // FIGHT_PROP_ELEM_REACT_FROZENBROKEN_CRITICAL_HURT
+        BloomCritRate = 3039,                  // FIGHT_PROP_ELEM_REACT_OVERGROW_CRITICAL
+        BloomCritDamage = 3040,                // FIGHT_PROP_ELEM_REACT_OVERGROW_CRITICAL_HURT
+        BurgeonCritRate = 3041,                // FIGHT_PROP_ELEM_REACT_OVERGROW_FIRE_CRITICAL
+        BurgeonCritDamage = 3042,              // FIGHT_PROP_ELEM_REACT_OVERGROW_FIRE_CRITICAL_HURT
+        HyperbloomCritRate = 3043,             // FIGHT_PROP_ELEM_REACT_OVERGROW_ELECTRIC_CRITICAL
+        HyperbloomCritDamage = 3044,           // FIGHT_PROP_ELEM_REACT_OVERGROW_ELECTRIC_CRITICAL_HURT
+        BaseElementalReactionCritRate = 3045,  // FIGHT_PROP_BASE_ELEM_REACT_CRITICAL
+        BaseElementalReactionCritDamage = 3046 // FIGHT_PROP_BASE_ELEM_REACT_CRITICAL_HURT
     }
 }

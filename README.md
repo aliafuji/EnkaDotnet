@@ -30,9 +30,9 @@ Enka.DotNet is a C# wrapper for accessing and processing character data from the
 | Feature             | Status        | Method          |
 |---------------------|---------------|-----------------|
 | Fetch Basic Profile | ✅ Ready      | Enka Username   |
-| Genshin Impact      | ❌ Not Ready  | Enka Username   |
-| Honkai: Star Rail   | ❌ Not Ready  | Enka Username   |
-| Zenless Zone Zero   | ❌ Not Ready  | Enka Username   |
+| Genshin Impact      | ✅ Ready      | Enka Username   |
+| Honkai: Star Rail   | ✅ Ready      | Enka Username   |
+| Zenless Zone Zero   | ✅ Ready      | Enka Username   |
 
 
 ## Installation

@@ -9,6 +9,7 @@
         FireFrost,
         Electric,
         Ether,
-        AuricEther
+        AuricEther,
+        HonedEdge
     }
 }

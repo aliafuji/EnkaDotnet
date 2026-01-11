@@ -69,6 +69,13 @@ namespace EnkaDotNet.Models.HSR
         public Dictionary<string, object> ChallengeInfo { get; set; }
 
         [JsonPropertyName("maxRogueChallengeScore")]
-        public int MaxRogueChallengeScore { get; set; }
+        public int? MaxRogueChallengeScore { get; set; }
+
+        // Added in game version 2.2
+        [JsonPropertyName("bookCount")]
+        public int? BookCount { get; set; }
+
+        [JsonPropertyName("musicCount")]
+        public int? MusicCount { get; set; }
     }
 }
