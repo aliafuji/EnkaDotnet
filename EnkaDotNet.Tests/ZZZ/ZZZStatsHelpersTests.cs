@@ -802,8 +802,9 @@ namespace EnkaDotNet.Tests.ZZZ
             var result = ZZZStatsHelpers.CalculateAllTotalStats(agent, mockAssets.Object);
 
             Assert.True(result.ContainsKey("CRIT Rate"));
-            double expectedCritRate = 500 + 200;
-            Assert.True(Math.Abs(result["CRIT Rate"].FinalValue - expectedCritRate) <= 1);
+            // Raw value is 500 + 200 = 700, but CalculateAllTotalStats now returns scaled value (divided by 100)
+            double expectedCritRate = (500 + 200) / 100.0; // 7.0%
+            Assert.True(Math.Abs(result["CRIT Rate"].FinalValue - expectedCritRate) <= 0.01);
         }
 
         [Fact]
@@ -836,8 +837,9 @@ namespace EnkaDotNet.Tests.ZZZ
             var result = ZZZStatsHelpers.CalculateAllTotalStats(agent, mockAssets.Object);
 
             Assert.True(result.ContainsKey("CRIT DMG"));
-            double expectedCritDMG = 5000 + 1000;
-            Assert.True(Math.Abs(result["CRIT DMG"].FinalValue - expectedCritDMG) <= 1);
+            // Raw value is 5000 + 1000 = 6000, but CalculateAllTotalStats now returns scaled value (divided by 100)
+            double expectedCritDMG = (5000 + 1000) / 100.0; // 60.0%
+            Assert.True(Math.Abs(result["CRIT DMG"].FinalValue - expectedCritDMG) <= 0.01);
         }
 
         #endregion
