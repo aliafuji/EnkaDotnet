@@ -5,12 +5,16 @@ using EnkaDotNet.Models.EnkaProfile;
 using EnkaDotNet.Models.Genshin;
 using EnkaDotNet.Models.HSR;
 using EnkaDotNet.Models.ZZZ;
+using EnkaDotNet.Assets.ZZZ.Models;
+using EnkaDotNet.Assets.HSR.Models;
+using EnkaDotNet.Assets.Genshin.Models;
 
 namespace EnkaDotNet.Serialization
 {
     [JsonSourceGenerationOptions(
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         PropertyNameCaseInsensitive = true)]
+    // ZZZ API Response Models
     [JsonSerializable(typeof(ZZZApiResponse))]
     [JsonSerializable(typeof(ZZZPlayerInfoModel))]
     [JsonSerializable(typeof(ZZZShowcaseDetailModel))]
@@ -24,6 +28,39 @@ namespace EnkaDotNet.Serialization
     [JsonSerializable(typeof(ZZZPropertyModel))]
     [JsonSerializable(typeof(ZZZWeaponModel))]
     [JsonSerializable(typeof(ZZZProfileDetailModel))]
+    // ZZZ Asset Models
+    [JsonSerializable(typeof(ZZZAvatarAssetInfo))]
+    [JsonSerializable(typeof(ZZZAvatarColors))]
+    [JsonSerializable(typeof(ZZZAvatarSkin))]
+    [JsonSerializable(typeof(ZZZEquipmentData))]
+    [JsonSerializable(typeof(ZZZEquipmentItemInfo))]
+    [JsonSerializable(typeof(ZZZEquipmentSuitInfo))]
+    [JsonSerializable(typeof(ZZZEquipmentLevelData))]
+    [JsonSerializable(typeof(ZZZEquipmentLevelItem))]
+    [JsonSerializable(typeof(ZZZWeaponLevelData))]
+    [JsonSerializable(typeof(ZZZWeaponLevelItem))]
+    [JsonSerializable(typeof(ZZZWeaponStarData))]
+    [JsonSerializable(typeof(ZZZWeaponStarItem))]
+    [JsonSerializable(typeof(ZZZNameCardAssetInfo))]
+    [JsonSerializable(typeof(ZZZTitleAssetInfo))]
+    [JsonSerializable(typeof(ZZZPfpAssetInfo))]
+    [JsonSerializable(typeof(ZZZWeaponAssetInfo))]
+    [JsonSerializable(typeof(ZZZStatProperty))]
+    [JsonSerializable(typeof(ZZZMedalAssetInfo))]
+    [JsonSerializable(typeof(ZZZPropertyAssetInfo))]
+    [JsonSerializable(typeof(Dictionary<string, ZZZAvatarAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, ZZZNameCardAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, ZZZTitleAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, ZZZPfpAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, ZZZWeaponAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, ZZZMedalAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, ZZZPropertyAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, ZZZAvatarSkin>))]
+    [JsonSerializable(typeof(List<ZZZEquipmentLevelItem>))]
+    [JsonSerializable(typeof(List<ZZZWeaponLevelItem>))]
+    [JsonSerializable(typeof(List<ZZZWeaponStarItem>))]
+    [JsonSerializable(typeof(List<Dictionary<string, int>>))]
+    // HSR API Response Models
     [JsonSerializable(typeof(HSRApiResponse))]
     [JsonSerializable(typeof(HSRDetailInfo))]
     [JsonSerializable(typeof(HSRRecordInfoModel))]
@@ -35,6 +72,41 @@ namespace EnkaDotNet.Serialization
     [JsonSerializable(typeof(HSRRelicModel))]
     [JsonSerializable(typeof(HSRSubAffix))]
     [JsonSerializable(typeof(HSRRelicFlat))]
+    // HSR Asset Models
+    [JsonSerializable(typeof(HSRCharacterAssetInfo))]
+    [JsonSerializable(typeof(HSRLightConeAssetInfo))]
+    [JsonSerializable(typeof(HSRRelicItemInfo))]
+    [JsonSerializable(typeof(HSRRelicSetInfo))]
+    [JsonSerializable(typeof(HSRSetEffectInfo))]
+    [JsonSerializable(typeof(HSRSkillTreeData))]
+    [JsonSerializable(typeof(HSRSkillTreePointInfo))]
+    [JsonSerializable(typeof(HSRRelicMetaInfo))]
+    [JsonSerializable(typeof(HSRRelicMainAffixInfo))]
+    [JsonSerializable(typeof(HSRRelicSubAffixInfo))]
+    [JsonSerializable(typeof(HSRSetSkillInfo))]
+    [JsonSerializable(typeof(HSRAvatarMetaStats))]
+    [JsonSerializable(typeof(HSRNameCardAssetInfo))]
+    [JsonSerializable(typeof(HSRPfpAssetInfo))]
+    [JsonSerializable(typeof(HSRPropertyAssetInfo))]
+    [JsonSerializable(typeof(HSRSkillAssetInfo))]
+    [JsonSerializable(typeof(HSREidolonAssetInfo))]
+    [JsonSerializable(typeof(Dictionary<string, HSRCharacterAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, HSRLightConeAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, HSRRelicItemInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, HSRRelicSetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, HSRSkillTreeData>))]
+    [JsonSerializable(typeof(Dictionary<string, HSRSkillTreePointInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, HSRNameCardAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, HSRPfpAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, HSRPropertyAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, HSRSkillAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, HSREidolonAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, Dictionary<string, HSRRelicMainAffixInfo>>))]
+    [JsonSerializable(typeof(Dictionary<string, Dictionary<string, HSRRelicSubAffixInfo>>))]
+    [JsonSerializable(typeof(Dictionary<string, Dictionary<string, HSRSetSkillInfo>>))]
+    [JsonSerializable(typeof(Dictionary<string, HSRSetEffectInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, double>))]
+    // Genshin API Response Models
     [JsonSerializable(typeof(ApiResponse))]
     [JsonSerializable(typeof(PlayerInfoModel))]
     [JsonSerializable(typeof(ShowAvatarInfoModel))]
@@ -47,6 +119,18 @@ namespace EnkaDotNet.Serialization
     [JsonSerializable(typeof(ReliquaryModel))]
     [JsonSerializable(typeof(FlatDataModel))]
     [JsonSerializable(typeof(StatPropertyModel))]
+    // Genshin Asset Models
+    [JsonSerializable(typeof(CharacterAssetInfo))]
+    [JsonSerializable(typeof(ConstellationAssetInfo))]
+    [JsonSerializable(typeof(NameCardAssetInfo))]
+    [JsonSerializable(typeof(PfpAssetInfo))]
+    [JsonSerializable(typeof(TalentAssetInfo))]
+    [JsonSerializable(typeof(Dictionary<string, CharacterAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, ConstellationAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, NameCardAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, PfpAssetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, TalentAssetInfo>))]
+    // Enka Profile Models
     [JsonSerializable(typeof(EnkaProfileResponse))]
     [JsonSerializable(typeof(EnkaProfileDetail))]
     [JsonSerializable(typeof(HoyoAccountModel))]
@@ -54,8 +138,11 @@ namespace EnkaDotNet.Serialization
     [JsonSerializable(typeof(Dictionary<string, HoyoAccountModel>))]
     [JsonSerializable(typeof(Dictionary<string, List<RawBuildModel>>))]
     [JsonSerializable(typeof(List<RawBuildModel>))]
+    // Common Dictionary/List types
     [JsonSerializable(typeof(Dictionary<string, string>))]
+    [JsonSerializable(typeof(Dictionary<string, int>))]
     [JsonSerializable(typeof(Dictionary<string, Dictionary<string, string>>))]
+    [JsonSerializable(typeof(Dictionary<string, Dictionary<string, int>>))]
     [JsonSerializable(typeof(Dictionary<string, object>))]
     [JsonSerializable(typeof(List<ZZZAvatarModel>))]
     [JsonSerializable(typeof(List<ZZZMedalModel>))]
@@ -63,6 +150,8 @@ namespace EnkaDotNet.Serialization
     [JsonSerializable(typeof(List<HSRRelicModel>))]
     [JsonSerializable(typeof(List<AvatarInfoModel>))]
     [JsonSerializable(typeof(List<EquipModel>))]
+    [JsonSerializable(typeof(List<string>))]
+    [JsonSerializable(typeof(List<int>))]
     public partial class EnkaJsonContext : JsonSerializerContext
     {
     }
