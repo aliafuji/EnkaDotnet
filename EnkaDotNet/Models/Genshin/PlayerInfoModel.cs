@@ -38,6 +38,14 @@ namespace EnkaDotNet.Models.Genshin
         [JsonPropertyName("theaterStarIndex")]
         public int TheaterStarIndex { get; set; }
 
+        [JsonPropertyName("stygianIndex")]
+        public int? StygianIndex { get; set; }
+
+        [JsonPropertyName("stygianSeconds")]
+        public int? StygianSeconds { get; set; }
+
+        [JsonPropertyName("fetterCount")]
+        public int? FetterCount { get; set; }
 
         [JsonPropertyName("showAvatarInfoList")]
         public List<ShowAvatarInfoModel> ShowAvatarInfoList { get; set; }

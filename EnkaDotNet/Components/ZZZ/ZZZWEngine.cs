@@ -45,16 +45,17 @@ namespace EnkaDotNet.Components.ZZZ
                 string key = raw ? SecondaryStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(SecondaryStat.Type);
                 string value;
 
+                // Percentage stats are stored in basis points (e.g., 3000 = 30%), divide by 100 for display
                 if (raw)
                 {
-                    if (SecondaryStat.Type == StatType.EnergyRegenPercent) value = Math.Floor(SecondaryStat.Value).ToString(CultureInfo.InvariantCulture);
-                    else if (SecondaryStat.IsPercentage) value = SecondaryStat.Value.ToString("F1", CultureInfo.InvariantCulture);
+                    if (SecondaryStat.Type == StatType.EnergyRegenPercent) value = (SecondaryStat.Value / 100.0).ToString("F1", CultureInfo.InvariantCulture);
+                    else if (SecondaryStat.IsPercentage) value = (SecondaryStat.Value / 100.0).ToString("F1", CultureInfo.InvariantCulture);
                     else value = Math.Floor(SecondaryStat.Value).ToString(CultureInfo.InvariantCulture);
                 }
                 else
                 {
-                    if (SecondaryStat.Type == StatType.EnergyRegenPercent) value = (SecondaryStat.Value).ToString("F1", CultureInfo.InvariantCulture) + "%";
-                    else if (SecondaryStat.IsPercentage) value = SecondaryStat.Value.ToString("F1", CultureInfo.InvariantCulture) + "%";
+                    if (SecondaryStat.Type == StatType.EnergyRegenPercent) value = (SecondaryStat.Value / 100.0).ToString("F1", CultureInfo.InvariantCulture) + "%";
+                    else if (SecondaryStat.IsPercentage) value = (SecondaryStat.Value / 100.0).ToString("F1", CultureInfo.InvariantCulture) + "%";
                     else value = Math.Floor(SecondaryStat.Value).ToString(CultureInfo.InvariantCulture);
                 }
                 return new KeyValuePair<string, string>(key, value);

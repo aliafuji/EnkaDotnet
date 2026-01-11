@@ -36,15 +36,23 @@ namespace EnkaDotNet.Utils.HSR
             { "DefenceDelta", false },
             { "DefenceAddedRatio", true },
             { "SpeedDelta", false },
+            { "SpeedAddedRatio", true },
             { "CriticalChance", true },
+            { "CriticalChanceBase", true },
             { "CriticalDamage", true },
+            { "CriticalDamageBase", true },
             { "StatusProbability", true },
+            { "StatusProbabilityBase", true },
             { "StatusResistance", true },
             { "StatusResistanceBase", true },
-            { "SpeedAddedRatio", true },
             { "BreakDamageAddedRatio", true },
-            { "SPRatioBase", true },
+            { "BreakDamageAddedRatioBase", true },
+            { "HealRatio", true },
             { "HealRatioBase", true },
+            { "HealTakenRatio", true },
+            { "SPRatio", true },
+            { "SPRatioBase", true },
+            // Elemental DMG Boost
             { "PhysicalAddedRatio", true },
             { "FireAddedRatio", true },
             { "IceAddedRatio", true },
@@ -52,11 +60,14 @@ namespace EnkaDotNet.Utils.HSR
             { "WindAddedRatio", true },
             { "QuantumAddedRatio", true },
             { "ImaginaryAddedRatio", true },
-
-            { "CriticalChanceBase", true },
-            { "CriticalDamageBase", true },
-            { "BreakDamageAddedRatioBase", true }
-
+            // Elemental Resistance
+            { "PhysicalResistance", true },
+            { "FireResistance", true },
+            { "IceResistance", true },
+            { "ThunderResistance", true },
+            { "WindResistance", true },
+            { "QuantumResistance", true },
+            { "ImaginaryResistance", true }
         };
 
 
@@ -202,22 +213,57 @@ namespace EnkaDotNet.Utils.HSR
         {
             switch (propertyType)
             {
-                case "HPDelta": return StatPropertyType.HPDelta;
-                case "HPAddedRatio": return StatPropertyType.HPAddedRatio;
-                case "AttackDelta": return StatPropertyType.AttackDelta;
-                case "AttackAddedRatio": return StatPropertyType.AttackAddedRatio;
-                case "DefenceDelta": return StatPropertyType.DefenceDelta;
-                case "DefenceAddedRatio": return StatPropertyType.DefenceAddedRatio;
-                case "SpeedDelta": return StatPropertyType.SpeedDelta;
-                case "CriticalChance": return StatPropertyType.CriticalChance;
-                case "CriticalDamage": return StatPropertyType.CriticalDamage;
-                case "StatusProbability": return StatPropertyType.StatusProbability;
-                case "StatusResistance": return StatPropertyType.StatusResistance;
-                case "BreakDamageAddedRatio": return StatPropertyType.BreakDamageAddedRatio;
+                // Final Stats
+                case "MaxHP": return StatPropertyType.MaxHP;
+                case "Attack": return StatPropertyType.Attack;
+                case "Defence": return StatPropertyType.Defence;
+                case "Speed": return StatPropertyType.Speed;
+
+                // Base Stats
                 case "BaseHP": return StatPropertyType.BaseHP;
                 case "BaseAttack": return StatPropertyType.BaseAttack;
                 case "BaseDefence": return StatPropertyType.BaseDefence;
                 case "BaseSpeed": return StatPropertyType.BaseSpeed;
+
+                // Delta Stats
+                case "HPDelta": return StatPropertyType.HPDelta;
+                case "AttackDelta": return StatPropertyType.AttackDelta;
+                case "DefenceDelta": return StatPropertyType.DefenceDelta;
+                case "SpeedDelta": return StatPropertyType.SpeedDelta;
+
+                // Ratio Stats
+                case "HPAddedRatio": return StatPropertyType.HPAddedRatio;
+                case "AttackAddedRatio": return StatPropertyType.AttackAddedRatio;
+                case "DefenceAddedRatio": return StatPropertyType.DefenceAddedRatio;
+                case "SpeedAddedRatio": return StatPropertyType.SpeedAddedRatio;
+
+                // Critical Stats
+                case "CriticalChance": return StatPropertyType.CriticalChance;
+                case "CriticalDamage": return StatPropertyType.CriticalDamage;
+                case "CriticalChanceBase": return StatPropertyType.CriticalChanceBase;
+                case "CriticalDamageBase": return StatPropertyType.CriticalDamageBase;
+
+                // Effect Stats
+                case "StatusProbability": return StatPropertyType.StatusProbability;
+                case "StatusResistance": return StatPropertyType.StatusResistance;
+                case "StatusProbabilityBase": return StatPropertyType.StatusProbabilityBase;
+                case "StatusResistanceBase": return StatPropertyType.StatusResistanceBase;
+
+                // Break Effect
+                case "BreakDamageAddedRatio": return StatPropertyType.BreakDamageAddedRatio;
+                case "BreakDamageAddedRatioBase": return StatPropertyType.BreakDamageAddedRatioBase;
+
+                // Healing Stats
+                case "HealRatio": return StatPropertyType.HealRatio;
+                case "HealRatioBase": return StatPropertyType.HealRatioBase;
+                case "HealTakenRatio": return StatPropertyType.HealTakenRatio;
+
+                // Energy Stats
+                case "MaxSP": return StatPropertyType.MaxSP;
+                case "SPRatio": return StatPropertyType.SPRatio;
+                case "SPRatioBase": return StatPropertyType.SPRatioBase;
+
+                // Elemental DMG Boost
                 case "PhysicalAddedRatio": return StatPropertyType.PhysicalAddedRatio;
                 case "FireAddedRatio": return StatPropertyType.FireAddedRatio;
                 case "IceAddedRatio": return StatPropertyType.IceAddedRatio;
@@ -225,12 +271,25 @@ namespace EnkaDotNet.Utils.HSR
                 case "WindAddedRatio": return StatPropertyType.WindAddedRatio;
                 case "QuantumAddedRatio": return StatPropertyType.QuantumAddedRatio;
                 case "ImaginaryAddedRatio": return StatPropertyType.ImaginaryAddedRatio;
-                case "HealRatioBase": return StatPropertyType.HealRatioBase;
-                case "SPRatioBase": return StatPropertyType.SPRatioBase;
 
-                case "CriticalChanceBase": return StatPropertyType.CriticalChanceBase;
-                case "CriticalDamageBase": return StatPropertyType.CriticalDamageBase;
-                case "BreakDamageAddedRatioBase": return StatPropertyType.BreakDamageAddedRatioBase;
+                // Elemental Resistance
+                case "PhysicalResistance": return StatPropertyType.PhysicalResistance;
+                case "FireResistance": return StatPropertyType.FireResistance;
+                case "IceResistance": return StatPropertyType.IceResistance;
+                case "ThunderResistance": return StatPropertyType.LightningResistance;
+                case "WindResistance": return StatPropertyType.WindResistance;
+                case "QuantumResistance": return StatPropertyType.QuantumResistance;
+                case "ImaginaryResistance": return StatPropertyType.ImaginaryResistance;
+
+                // Elemental Resistance Delta
+                case "PhysicalResistanceDelta": return StatPropertyType.PhysicalResistanceDelta;
+                case "FireResistanceDelta": return StatPropertyType.FireResistanceDelta;
+                case "IceResistanceDelta": return StatPropertyType.IceResistanceDelta;
+                case "ThunderResistanceDelta": return StatPropertyType.LightningResistanceDelta;
+                case "WindResistanceDelta": return StatPropertyType.WindResistanceDelta;
+                case "QuantumResistanceDelta": return StatPropertyType.QuantumResistanceDelta;
+                case "ImaginaryResistanceDelta": return StatPropertyType.ImaginaryResistanceDelta;
+
                 default: return StatPropertyType.None;
             }
         }

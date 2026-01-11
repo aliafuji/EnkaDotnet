@@ -43,7 +43,7 @@ namespace EnkaDotNet.Components.HSR
         public List<HSRRelic> RelicList { get; internal set; } = new List<HSRRelic>();
         public List<Eidolon> Eidolons { get; internal set; } = new List<Eidolon>();
         public ConcurrentDictionary<string, HSRStatValue> Stats { get; internal set; } = new ConcurrentDictionary<string, HSRStatValue>();
-
+        public bool Enhanced { get; internal set; }
         public HSRStatValue HP => GetStat("HP");
         public HSRStatValue Attack => GetStat("Attack");
         public HSRStatValue Defense => GetStat("Defense");

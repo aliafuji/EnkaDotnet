@@ -26,6 +26,9 @@ namespace EnkaDotNet.Models.ZZZ
         [JsonPropertyName("CoreSkillEnhancement")]
         public int CoreSkillEnhancement { get; set; }
 
+        [JsonPropertyName("UpgradeId")]
+        public int UpgradeId { get; set; }
+
         [JsonPropertyName("WeaponUid")]
         public int WeaponUid { get; set; }
 

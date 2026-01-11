@@ -5,6 +5,7 @@ using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Assets.ZZZ.Models;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
+using EnkaDotNet.Utils.Common;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
@@ -32,13 +33,12 @@ namespace EnkaDotNet.Utils.ZZZ
 
             foreach (var prop in avatarInfo.BaseProps)
             {
-                if (int.TryParse(prop.Key, out int propertyId) && Enum.IsDefined(typeof(StatType), propertyId))
+                if (int.TryParse(prop.Key, out int propertyId) && EnumHelper.IsDefinedZZZStatType(propertyId))
                 {
                     StatType statType = (StatType)propertyId;
                     double baseValueRaw = prop.Value;
                     double growthValueRaw = 0;
                     double promotionValueRaw = 0;
-                    double coreEnhancementValueRaw = 0;
 
                     if (avatarInfo.GrowthProps != null && avatarInfo.GrowthProps.TryGetValue(prop.Key, out int growthValueInt))
                     {
@@ -52,19 +52,34 @@ namespace EnkaDotNet.Utils.ZZZ
                             promotionValueRaw = promoValueInt;
                         }
                     }
-                    if (avatarInfo.CoreEnhancementProps != null && coreSkillEnhancement >= 0 &&
-                        coreSkillEnhancement < avatarInfo.CoreEnhancementProps.Count)
-                    {
-                        var coreProps = avatarInfo.CoreEnhancementProps[coreSkillEnhancement];
-                        if (coreProps.TryGetValue(prop.Key, out int coreValueInt))
-                        {
-                            coreEnhancementValueRaw = coreValueInt;
-                        }
-                    }
-                    double totalRawContribution = baseValueRaw + Math.Floor(growthValueRaw) + promotionValueRaw + coreEnhancementValueRaw;
+                    double totalRawContribution = baseValueRaw + Math.Floor(growthValueRaw) + promotionValueRaw;
                     stats[statType] = totalRawContribution;
                 }
             }
+
+            if (avatarInfo.CoreEnhancementProps != null && coreSkillEnhancement >= 0 &&
+                coreSkillEnhancement < avatarInfo.CoreEnhancementProps.Count)
+            {
+                var coreProps = avatarInfo.CoreEnhancementProps[coreSkillEnhancement];
+                foreach (var coreProp in coreProps)
+                {
+                    if (int.TryParse(coreProp.Key, out int corePropertyId) && EnumHelper.IsDefinedZZZStatType(corePropertyId))
+                    {
+                        StatType coreStatType = (StatType)corePropertyId;
+                        double coreValue = coreProp.Value;
+                        
+                        if (stats.ContainsKey(coreStatType))
+                        {
+                            stats[coreStatType] += coreValue;
+                        }
+                        else
+                        {
+                            stats[coreStatType] = coreValue;
+                        }
+                    }
+                }
+            }
+
             _calculationCache[cacheKey] = stats;
             return stats;
         }
@@ -174,7 +189,7 @@ namespace EnkaDotNet.Utils.ZZZ
 
         public ZZZStat CreateStatWithProperScaling(int propertyId, double rawValue, int level = 0)
         {
-            if (!Enum.IsDefined(typeof(StatType), propertyId))
+            if (!EnumHelper.IsDefinedZZZStatType(propertyId))
             {
                 return new ZZZStat { Type = StatType.None, Value = rawValue, Level = level };
             }
@@ -182,13 +197,6 @@ namespace EnkaDotNet.Utils.ZZZ
             double calculationValue = rawValue;
             bool isPercentageDisplay = ZZZStatsHelpers.IsDisplayPercentageStat(statType);
             bool isEnergyRegenType = statType == StatType.EnergyRegenBase || statType == StatType.EnergyRegenPercent || statType == StatType.EnergyRegenFlat;
-
-            if (ZZZStatsHelpers.IsCalculationPercentageStat(statType) &&
-                statType != StatType.CritRateBase &&
-                statType != StatType.CritDMGBase)
-            {
-                calculationValue = rawValue / 100.0;
-            }
 
             return new ZZZStat
             {

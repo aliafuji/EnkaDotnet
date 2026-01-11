@@ -5,6 +5,8 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Exceptions;
+using EnkaDotNet.Caching;
+using EnkaDotNet.Caching.Providers;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -14,21 +16,58 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Polly;
 using Polly.Retry;
+#if NET8_0_OR_GREATER
+using EnkaDotNet.Serialization;
+#endif
+
+#nullable enable
 
 namespace EnkaDotNet.Utils.Common
 {
     public class HttpHelper : IHttpHelper
     {
         private readonly HttpClient _httpClient;
-        private readonly IMemoryCache _memoryCache;
+        private readonly IEnkaCache _cache;
+        private readonly IMemoryCache? _legacyMemoryCache;
         private readonly EnkaClientOptions _options;
         private readonly ILogger<HttpHelper> _logger;
         private bool _disposed = false;
         private readonly ConcurrentDictionary<string, bool> _trackedCacheKeys;
-        private readonly ResiliencePipeline<HttpResponseMessage> _resiliencePipeline;
+        private ResiliencePipeline<HttpResponseMessage> _resiliencePipeline;
         private static readonly Random _jitterer = new Random();
         private static readonly ResiliencePropertyKey<string> RelativeUrlKey = new ResiliencePropertyKey<string>("relativeUrl");
 
+        /// <summary>
+        /// Initializes a new instance of the HttpHelper class with IEnkaCache support.
+        /// </summary>
+        /// <param name="httpClient">The HTTP client for making requests.</param>
+        /// <param name="cache">The cache provider to use.</param>
+        /// <param name="options">The client options.</param>
+        /// <param name="logger">The logger instance.</param>
+        public HttpHelper(
+            HttpClient httpClient,
+            IEnkaCache cache,
+            IOptions<EnkaClientOptions> options,
+            ILogger<HttpHelper> logger)
+        {
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+            _legacyMemoryCache = null;
+            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+            _logger = logger ?? NullLogger<HttpHelper>.Instance;
+            _trackedCacheKeys = new ConcurrentDictionary<string, bool>();
+            _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
+
+            InitializeResiliencePipeline();
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the HttpHelper class with IMemoryCache for backward compatibility.
+        /// </summary>
+        /// <param name="httpClient">The HTTP client for making requests.</param>
+        /// <param name="memoryCache">The memory cache instance (legacy support).</param>
+        /// <param name="options">The client options.</param>
+        /// <param name="logger">The logger instance.</param>
         public HttpHelper(
             HttpClient httpClient,
             IMemoryCache memoryCache,
@@ -36,12 +75,25 @@ namespace EnkaDotNet.Utils.Common
             ILogger<HttpHelper> logger)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            _memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
+            _legacyMemoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
             _logger = logger ?? NullLogger<HttpHelper>.Instance;
             _trackedCacheKeys = new ConcurrentDictionary<string, bool>();
             _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
 
+            // Wrap the IMemoryCache in a MemoryCacheAdapter for unified interface
+            var defaultTtl = TimeSpan.FromMinutes(_options.CacheDurationMinutes);
+            _cache = new MemoryCacheAdapter(memoryCache, defaultTtl);
+
+            InitializeResiliencePipeline();
+        }
+
+        /// <summary>
+        /// Initializes the resilience pipeline for HTTP requests.
+        /// </summary>
+        private void InitializeResiliencePipeline()
+
+        {
             var retryOptions = new RetryStrategyOptions<HttpResponseMessage>
             {
                 ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
@@ -95,11 +147,18 @@ namespace EnkaDotNet.Utils.Common
 
             if (_options.EnableCaching && !bypassCache)
             {
-                if (_memoryCache.TryGetValue(cacheKey, out CacheEntry cachedEntry) && cachedEntry != null && !cachedEntry.IsExpired)
+                var cachedEntry = await _cache.GetAsync<CacheEntry>(cacheKey, cancellationToken).ConfigureAwait(false);
+                if (cachedEntry != null && !cachedEntry.IsExpired)
                 {
                     _logger.Log(LogLevel.Trace, "Cache hit for {Url}", relativeUrl);
                     _trackedCacheKeys.TryAdd(cacheKey, true);
+#if NET8_0_OR_GREATER
+                    return JsonSerializer.Deserialize<T>(cachedEntry.JsonResponse, EnkaJsonContext.Default.Options) ?? throw new EnkaNetworkException($"Failed to deserialize cached JSON response from {relativeUrl} (result was null)");
+#else
+#pragma warning disable IL2026, IL3050
                     return JsonSerializer.Deserialize<T>(cachedEntry.JsonResponse) ?? throw new EnkaNetworkException($"Failed to deserialize cached JSON response from {relativeUrl} (result was null)");
+#pragma warning restore IL2026, IL3050
+#endif
                 }
             }
 
@@ -160,7 +219,13 @@ namespace EnkaDotNet.Utils.Common
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
+#if NET8_0_OR_GREATER
+                T deserializedObject = JsonSerializer.Deserialize<T>(jsonString, EnkaJsonContext.Default.Options);
+#else
+#pragma warning disable IL2026, IL3050
                 T deserializedObject = JsonSerializer.Deserialize<T>(jsonString);
+#pragma warning restore IL2026, IL3050
+#endif
                 if (deserializedObject == null && !string.IsNullOrWhiteSpace(jsonString))
                 {
                     throw new EnkaNetworkException($"Failed to deserialize JSON response from {relativeUrl}, but content was not empty. Result was null.");
@@ -205,18 +270,29 @@ namespace EnkaDotNet.Utils.Common
             return defaultDelay;
         }
 
-        private void CacheSuccessfulResponse(string cacheKey, string jsonString, HttpResponseMessage response, string relativeUrl)
+        private async void CacheSuccessfulResponse(string cacheKey, string jsonString, HttpResponseMessage response, string relativeUrl)
         {
             DateTimeOffset expiration = CalculateExpiration(response, _options.CacheDurationMinutes);
             var newCacheEntry = new CacheEntry
             {
                 JsonResponse = jsonString,
-                Expiration = expiration.UtcDateTime
+                Expiration = expiration
             };
-            var entryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(expiration);
-            _memoryCache.Set(cacheKey, newCacheEntry, entryOptions);
-            _trackedCacheKeys.TryAdd(cacheKey, true);
-            _logger.Log(LogLevel.Trace, "Stored response in cache for {Url} with expiration: {Expiration}", relativeUrl, expiration);
+            
+            var ttl = expiration - DateTimeOffset.UtcNow;
+            if (ttl > TimeSpan.Zero)
+            {
+                try
+                {
+                    await _cache.SetAsync(cacheKey, newCacheEntry, ttl).ConfigureAwait(false);
+                    _trackedCacheKeys.TryAdd(cacheKey, true);
+                    _logger.Log(LogLevel.Trace, "Stored response in cache for {Url} with expiration: {Expiration}", relativeUrl, expiration);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to cache response for {Url}", relativeUrl);
+                }
+            }
         }
 
         private static DateTimeOffset CalculateExpiration(HttpResponseMessage response, int defaultCacheDurationMinutes)
@@ -235,50 +311,95 @@ namespace EnkaDotNet.Utils.Common
 
         public void ClearCache()
         {
-            var keysToRemove = new List<string>();
-            foreach (var key in _trackedCacheKeys.Keys)
-            {
-                keysToRemove.Add(key);
-            }
+            ClearCacheAsync().GetAwaiter().GetResult();
+        }
 
-            int clearedCount = 0;
-            foreach (var key in keysToRemove)
+        /// <summary>
+        /// Clears all entries from the cache asynchronously.
+        /// </summary>
+        public async Task ClearCacheAsync(CancellationToken cancellationToken = default)
+        {
+            try
             {
-                _memoryCache.Remove(key);
-                _trackedCacheKeys.TryRemove(key, out _);
-                clearedCount++;
+                await _cache.ClearAsync(cancellationToken).ConfigureAwait(false);
+                _trackedCacheKeys.Clear();
+                _logger.LogInformation("Cleared all entries from cache.");
             }
-            _logger.LogInformation("Cleared {ClearedCount} tracked entries from MemoryCache.", clearedCount);
-
-            if (_memoryCache is MemoryCache concreteCache)
+            catch (Exception ex)
             {
-                concreteCache.Compact(1.0);
-                _logger.LogInformation("Additionally attempted to clear MemoryCache by compacting 100% of entries.");
-            }
-            else
-            {
-                _logger.LogWarning("The IMemoryCache instance is not a concrete MemoryCache. Full compaction not performed, only tracked keys removed.");
+                _logger.LogWarning(ex, "Failed to clear cache, falling back to tracked keys removal.");
+                
+                // Fallback: remove tracked keys individually
+                foreach (var key in _trackedCacheKeys.Keys)
+                {
+                    try
+                    {
+                        await _cache.RemoveAsync(key, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // Ignore individual removal errors
+                    }
+                }
+                _trackedCacheKeys.Clear();
             }
         }
 
         public void RemoveFromCache(string relativeUrl)
         {
+            RemoveFromCacheAsync(relativeUrl).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Removes a specific entry from the cache asynchronously.
+        /// </summary>
+        public async Task RemoveFromCacheAsync(string relativeUrl, CancellationToken cancellationToken = default)
+        {
             if (string.IsNullOrEmpty(relativeUrl)) return;
             string cacheKey = relativeUrl.ToLowerInvariant();
-            _memoryCache.Remove(cacheKey);
-            _trackedCacheKeys.TryRemove(cacheKey, out _);
-            _logger.Log(LogLevel.Trace, "Removed {CacheKey} from MemoryCache and tracking.", cacheKey);
+            
+            try
+            {
+                await _cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+                _trackedCacheKeys.TryRemove(cacheKey, out _);
+                _logger.Log(LogLevel.Trace, "Removed {CacheKey} from cache.", cacheKey);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to remove {CacheKey} from cache.", cacheKey);
+            }
         }
 
         public (long CurrentEntryCount, int ExpiredCountNotAvailable) GetCacheStats()
         {
-            long count = 0;
-            if (_memoryCache is MemoryCache concreteCache)
+            return GetCacheStatsAsync().GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Gets cache statistics asynchronously.
+        /// </summary>
+        public async Task<(long CurrentEntryCount, int ExpiredCountNotAvailable)> GetCacheStatsAsync(CancellationToken cancellationToken = default)
+        {
+            try
             {
-                count = concreteCache.Count;
+                var stats = await _cache.GetStatsAsync(cancellationToken).ConfigureAwait(false);
+                _logger.Log(LogLevel.Trace, "Cache stats - Entries: {Count}, Hits: {Hits}, Misses: {Misses}, HitRate: {HitRate:P2}", 
+                    stats.EntryCount, stats.HitCount, stats.MissCount, stats.HitRate);
+                return (stats.EntryCount, 0);
             }
-            _logger.Log(LogLevel.Trace, "MemoryCache current entry count (approximate): {Count}. Tracked keys by HttpHelper: {TrackedKeyCount}. Detailed expired count not available.", count, _trackedCacheKeys.Count);
-            return (count, 0);
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to get cache stats, returning tracked keys count.");
+                return (_trackedCacheKeys.Count, 0);
+            }
+        }
+
+        /// <summary>
+        /// Gets detailed cache statistics.
+        /// </summary>
+        public async Task<CacheStatistics> GetDetailedCacheStatsAsync(CancellationToken cancellationToken = default)
+        {
+            return await _cache.GetStatsAsync(cancellationToken).ConfigureAwait(false);
         }
 
         private int ExtractUidFromUrl(string url)
@@ -309,6 +430,11 @@ namespace EnkaDotNet.Utils.Common
             {
                 if (disposing)
                 {
+                    // Dispose the cache if we own it (not the legacy memory cache)
+                    if (_legacyMemoryCache == null)
+                    {
+                        _cache?.Dispose();
+                    }
                 }
                 _disposed = true;
             }

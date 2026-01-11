@@ -69,6 +69,13 @@ namespace EnkaDotNet.Utils.Genshin
                 Act = model.TheaterActIndex,
                 Star = model.TheaterStarIndex
             };
+            playerInfo.Challenge.Stygian = new ChallengeData.StygianData
+            {
+                Difficulty = model.StygianIndex,
+                ClearTime = model.StygianSeconds
+            };
+
+            playerInfo.MaxFriendshipCharacterCount = model.FetterCount;
 
             return playerInfo;
         }
@@ -364,28 +371,31 @@ namespace EnkaDotNet.Utils.Genshin
             switch (key)
             {
                 case "1": return StatType.BaseHP;
+                case "2": return StatType.HP_Flat;
+                case "3": return StatType.HPPercentage;
                 case "4": return StatType.BaseAttack;
+                case "5": return StatType.Attack_Flat;
+                case "6": return StatType.AttackPercentage;
                 case "7": return StatType.BaseDefense;
+                case "8": return StatType.Defense_Flat;
+                case "9": return StatType.DefensePercentage;
                 case "10": return StatType.BaseSpeed;
-                case "2": return StatType.HPPercentage;
-                case "5": return StatType.AttackPercentage;
-                case "8": return StatType.DefensePercentage;
                 case "11": return StatType.SpeedPercentage;
+                case "12": return StatType.HPMPPercentage;
+                case "13": return StatType.AttackMPPercentage;
                 case "20": return StatType.CriticalRate;
+                case "21": return StatType.AntiCritical;
                 case "22": return StatType.CriticalDamage;
                 case "23": return StatType.EnergyRecharge;
-                case "28": return StatType.ElementalMastery;
+                case "24": return StatType.AddHurt;
+                case "25": return StatType.SubHurt;
                 case "26": return StatType.HealingBonus;
                 case "27": return StatType.IncomingHealingBonus;
+                case "28": return StatType.ElementalMastery;
                 case "29": return StatType.PhysicalResistance;
-                case "50": return StatType.PyroResistance;
-                case "51": return StatType.ElectroResistance;
-                case "52": return StatType.HydroResistance;
-                case "53": return StatType.DendroResistance;
-                case "54": return StatType.AnemoResistance;
-                case "55": return StatType.GeoResistance;
-                case "56": return StatType.CryoResistance;
                 case "30": return StatType.PhysicalDamageBonus;
+                case "31": return StatType.DefenseIgnoreRatio;
+                case "32": return StatType.DefenseIgnoreDelta;
                 case "40": return StatType.PyroDamageBonus;
                 case "41": return StatType.ElectroDamageBonus;
                 case "42": return StatType.HydroDamageBonus;
@@ -393,15 +403,29 @@ namespace EnkaDotNet.Utils.Genshin
                 case "44": return StatType.AnemoDamageBonus;
                 case "45": return StatType.GeoDamageBonus;
                 case "46": return StatType.CryoDamageBonus;
-                case "70": return StatType.PyroEnergyCost;
-                case "71": return StatType.ElectroEnergyCost;
-                case "72": return StatType.HydroEnergyCost;
-                case "73": return StatType.DendroEnergyCost;
-                case "74": return StatType.AnemoEnergyCost;
-                case "75": return StatType.CryoEnergyCost;
-                case "76": return StatType.GeoEnergyCost;
-                case "77": return StatType.MaxSpecialEnergy;
-                case "78": return StatType.SpecialEnergyCost;
+                case "47": return StatType.HeadAddHurt;
+                case "50": return StatType.PyroResistance;
+                case "51": return StatType.ElectroResistance;
+                case "52": return StatType.HydroResistance;
+                case "53": return StatType.DendroResistance;
+                case "54": return StatType.AnemoResistance;
+                case "55": return StatType.GeoResistance;
+                case "56": return StatType.CryoResistance;
+                case "60": return StatType.EffectHit;
+                case "61": return StatType.EffectResist;
+                case "62": return StatType.FreezeResist;
+                case "64": return StatType.DizzyResist;
+                case "65": return StatType.FreezeShorten;
+                case "67": return StatType.DizzyShorten;
+                case "70": return StatType.MaxPyroEnergy;
+                case "71": return StatType.MaxElectroEnergy;
+                case "72": return StatType.MaxHydroEnergy;
+                case "73": return StatType.MaxDendroEnergy;
+                case "74": return StatType.MaxAnemoEnergy;
+                case "75": return StatType.MaxCryoEnergy;
+                case "76": return StatType.MaxGeoEnergy;
+                case "80": return StatType.CooldownReduction;
+                case "81": return StatType.ShieldStrength;
                 case "1000": return StatType.CurrentPyroEnergy;
                 case "1001": return StatType.CurrentElectroEnergy;
                 case "1002": return StatType.CurrentHydroEnergy;
@@ -409,16 +433,58 @@ namespace EnkaDotNet.Utils.Genshin
                 case "1004": return StatType.CurrentAnemoEnergy;
                 case "1005": return StatType.CurrentCryoEnergy;
                 case "1006": return StatType.CurrentGeoEnergy;
-                case "1007": return StatType.CurrentSpecialEnergy;
                 case "1010": return StatType.CurrentHP;
                 case "2000": return StatType.HP;
                 case "2001": return StatType.Attack;
                 case "2002": return StatType.Defense;
                 case "2003": return StatType.Speed;
-                case "80": return StatType.CooldownReduction;
-                case "81": return StatType.ShieldStrength;
+                case "2004": return StatType.CurrentHPDebts;
+                case "2005": return StatType.CurrentHPPaidDebts;
+                case "3000": return StatType.NonExtraAttack;
+                case "3001": return StatType.NonExtraDefense;
+                case "3002": return StatType.NonExtraCritical;
+                case "3003": return StatType.NonExtraAntiCritical;
+                case "3004": return StatType.NonExtraCriticalHurt;
+                case "3005": return StatType.NonExtraChargeEfficiency;
+                case "3006": return StatType.NonExtraElementMastery;
+                case "3007": return StatType.NonExtraPhysicalSubHurt;
+                case "3008": return StatType.NonExtraPyroDamageBonus;
+                case "3009": return StatType.NonExtraElectroDamageBonus;
+                case "3010": return StatType.NonExtraHydroDamageBonus;
+                case "3011": return StatType.NonExtraDendroDamageBonus;
+                case "3012": return StatType.NonExtraAnemoDamageBonus;
+                case "3013": return StatType.NonExtraGeoDamageBonus;
+                case "3014": return StatType.NonExtraCryoDamageBonus;
+                case "3015": return StatType.NonExtraPyroResistance;
+                case "3016": return StatType.NonExtraElectroResistance;
+                case "3017": return StatType.NonExtraHydroResistance;
+                case "3018": return StatType.NonExtraDendroResistance;
+                case "3019": return StatType.NonExtraAnemoResistance;
+                case "3020": return StatType.NonExtraGeoResistance;
+                case "3021": return StatType.NonExtraCryoResistance;
+                case "3022": return StatType.NonExtraCooldownReduction;
+                case "3023": return StatType.NonExtraShieldStrength;
+                case "3024": return StatType.NonExtraPhysicalDamageBonus;
                 case "3025": return StatType.ElementalReactionCritRate;
                 case "3026": return StatType.ElementalReactionCritDamage;
+                case "3027": return StatType.OverloadedCritRate;
+                case "3028": return StatType.OverloadedCritDamage;
+                case "3029": return StatType.SwirlCritRate;
+                case "3030": return StatType.SwirlCritDamage;
+                case "3031": return StatType.ElectroChargedCritRate;
+                case "3032": return StatType.ElectroChargedCritDamage;
+                case "3033": return StatType.SuperconductCritRate;
+                case "3034": return StatType.SuperconductCritDamage;
+                case "3035": return StatType.BurnCritRate;
+                case "3036": return StatType.BurnCritDamage;
+                case "3037": return StatType.ShatteredCritRate;
+                case "3038": return StatType.ShatteredCritDamage;
+                case "3039": return StatType.BloomCritRate;
+                case "3040": return StatType.BloomCritDamage;
+                case "3041": return StatType.BurgeonCritRate;
+                case "3042": return StatType.BurgeonCritDamage;
+                case "3043": return StatType.HyperbloomCritRate;
+                case "3044": return StatType.HyperbloomCritDamage;
                 case "3045": return StatType.BaseElementalReactionCritRate;
                 case "3046": return StatType.BaseElementalReactionCritDamage;
                 default: return StatType.None;
@@ -429,28 +495,24 @@ namespace EnkaDotNet.Utils.Genshin
         {
             switch (propIdString)
             {
-                case "FIGHT_PROP_HP": return StatType.HP;
-                case "FIGHT_PROP_ATTACK": return StatType.Attack;
-                case "FIGHT_PROP_DEFENSE": return StatType.Defense;
                 case "FIGHT_PROP_BASE_HP": return StatType.BaseHP;
-                case "FIGHT_PROP_BASE_ATTACK": return StatType.BaseAttack;
-                case "FIGHT_PROP_BASE_DEFENSE": return StatType.BaseDefense;
+                case "FIGHT_PROP_HP": return StatType.HP_Flat;
                 case "FIGHT_PROP_HP_PERCENT": return StatType.HPPercentage;
+                case "FIGHT_PROP_BASE_ATTACK": return StatType.BaseAttack;
+                case "FIGHT_PROP_ATTACK": return StatType.Attack_Flat;
                 case "FIGHT_PROP_ATTACK_PERCENT": return StatType.AttackPercentage;
+                case "FIGHT_PROP_BASE_DEFENSE": return StatType.BaseDefense;
+                case "FIGHT_PROP_DEFENSE": return StatType.Defense_Flat;
                 case "FIGHT_PROP_DEFENSE_PERCENT": return StatType.DefensePercentage;
                 case "FIGHT_PROP_CRITICAL": return StatType.CriticalRate;
                 case "FIGHT_PROP_CRITICAL_HURT": return StatType.CriticalDamage;
                 case "FIGHT_PROP_CHARGE_EFFICIENCY": return StatType.EnergyRecharge;
                 case "FIGHT_PROP_ELEMENT_MASTERY": return StatType.ElementalMastery;
                 case "FIGHT_PROP_HEAL_ADD": return StatType.HealingBonus;
+                case "FIGHT_PROP_HEALED_ADD": return StatType.IncomingHealingBonus;
+                case "FIGHT_PROP_ADD_HURT": return StatType.AddHurt;
+                case "FIGHT_PROP_SUB_HURT": return StatType.SubHurt;
                 case "FIGHT_PROP_PHYSICAL_SUB_HURT": return StatType.PhysicalResistance;
-                case "FIGHT_PROP_FIRE_SUB_HURT": return StatType.PyroResistance;
-                case "FIGHT_PROP_ELEC_SUB_HURT": return StatType.ElectroResistance;
-                case "FIGHT_PROP_WATER_SUB_HURT": return StatType.HydroResistance;
-                case "FIGHT_PROP_GRASS_SUB_HURT": return StatType.DendroResistance;
-                case "FIGHT_PROP_WIND_SUB_HURT": return StatType.AnemoResistance;
-                case "FIGHT_PROP_ROCK_SUB_HURT": return StatType.GeoResistance;
-                case "FIGHT_PROP_ICE_SUB_HURT": return StatType.CryoResistance;
                 case "FIGHT_PROP_PHYSICAL_ADD_HURT": return StatType.PhysicalDamageBonus;
                 case "FIGHT_PROP_FIRE_ADD_HURT": return StatType.PyroDamageBonus;
                 case "FIGHT_PROP_ELEC_ADD_HURT": return StatType.ElectroDamageBonus;
@@ -459,9 +521,17 @@ namespace EnkaDotNet.Utils.Genshin
                 case "FIGHT_PROP_WIND_ADD_HURT": return StatType.AnemoDamageBonus;
                 case "FIGHT_PROP_ROCK_ADD_HURT": return StatType.GeoDamageBonus;
                 case "FIGHT_PROP_ICE_ADD_HURT": return StatType.CryoDamageBonus;
+                case "FIGHT_PROP_FIRE_SUB_HURT": return StatType.PyroResistance;
+                case "FIGHT_PROP_ELEC_SUB_HURT": return StatType.ElectroResistance;
+                case "FIGHT_PROP_WATER_SUB_HURT": return StatType.HydroResistance;
+                case "FIGHT_PROP_GRASS_SUB_HURT": return StatType.DendroResistance;
+                case "FIGHT_PROP_WIND_SUB_HURT": return StatType.AnemoResistance;
+                case "FIGHT_PROP_ROCK_SUB_HURT": return StatType.GeoResistance;
+                case "FIGHT_PROP_ICE_SUB_HURT": return StatType.CryoResistance;
                 case "FIGHT_PROP_MAX_HP": return StatType.HP;
                 case "FIGHT_PROP_CUR_ATTACK": return StatType.Attack;
                 case "FIGHT_PROP_CUR_DEFENSE": return StatType.Defense;
+                case "FIGHT_PROP_CUR_SPEED": return StatType.Speed;
                 default: return StatType.None;
             }
         }

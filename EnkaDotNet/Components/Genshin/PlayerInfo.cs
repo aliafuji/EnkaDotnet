@@ -30,6 +30,8 @@ namespace EnkaDotNet.Components.Genshin
         public IReadOnlyList<NameCard> ShowcaseNameCards { get; internal set; } = new List<NameCard>();
 
         public int ProfilePictureCharacterId { get; internal set; }
+
+        public int? MaxFriendshipCharacterCount { get; internal set; }
     }
 
     public class NameCard
@@ -51,6 +53,7 @@ namespace EnkaDotNet.Components.Genshin
     {
         public SpiralAbyssData SpiralAbyss { get; set; }
         public TheatreData Theater { get; set; }
+        public StygianData Stygian { get; set; }
         public class SpiralAbyssData
         {
             public int Floor { get; internal set; }
@@ -62,6 +65,12 @@ namespace EnkaDotNet.Components.Genshin
         {
             public int Act { get; internal set; }
             public int Star { get; internal set; }
+        }
+
+        public class StygianData
+        {
+            public int? Difficulty { get; internal set; }
+            public int? ClearTime { get; internal set; }
         }
     }
 }

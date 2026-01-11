@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
+using EnkaDotNet.Utils.Common;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
@@ -11,6 +12,12 @@ namespace EnkaDotNet.Utils.ZZZ
         private const double BASE_CRIT_RATE = 0;
         private const double BASE_CRIT_DMG = 0;
         private const double BASE_ENERGY_REGEN = 0;
+        
+        // Ben's agent ID for special DEF-to-ATK conversion
+        private const int BEN_AGENT_ID = 1121;
+        
+        // Ben's DEF-to-ATK multipliers based on core skill enhancement level (0-6)
+        private static readonly double[] BEN_DEF_TO_ATK_MULTIPLIERS = { 0.4, 0.46, 0.52, 0.6, 0.66, 0.72, 0.8 };
 
         public static Dictionary<string, StatSummary> CalculateAllTotalStats(ZZZAgent agent, IZZZAssets assets)
         {
@@ -86,6 +93,8 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.IceDMGBonusBase: case StatType.IceDMGBonusFlat: return "Ice DMG";
                 case StatType.ElectricDMGBonusBase: case StatType.ElectricDMGBonusFlat: return "Electric DMG";
                 case StatType.EtherDMGBonusBase: case StatType.EtherDMGBonusFlat: return "Ether DMG";
+                case StatType.SheerForceBase: case StatType.SheerForceFlat: return "Sheer Force";
+                case StatType.SheerDMGBonusBase: case StatType.SheerDMGBonusFlat: return "Sheer DMG";
                 default: return "";
             }
         }
@@ -133,6 +142,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 case "DEF%":
                 case "Impact":
                 case "Energy Regen":
+                case "Sheer DMG":
                     return true;
                 default: return false;
             }
@@ -158,18 +168,13 @@ namespace EnkaDotNet.Utils.ZZZ
                 {
                     GetOrCreateCategory(breakdown, "ATK")["WeaponBase"] += agent.Weapon.MainStat.Value;
                 }
-
                 if (agent.Weapon.SecondaryStat.Type == StatType.CritRateFlat)
                 {
-                    double value = agent.Weapon.SecondaryStat.Value;
-                    if (value > 1.0) value /= 100.0;
-                    GetOrCreateCategory(breakdown, "CRIT Rate")["Weapon_Flat"] += value;
+                    GetOrCreateCategory(breakdown, "CRIT Rate")["Weapon_Flat"] += agent.Weapon.SecondaryStat.Value;
                 }
                 else if (agent.Weapon.SecondaryStat.Type == StatType.CritDMGFlat)
                 {
-                    double value = agent.Weapon.SecondaryStat.Value;
-                    if (value > 1.0) value /= 100.0;
-                    GetOrCreateCategory(breakdown, "CRIT DMG")["Weapon_Flat"] += value;
+                    GetOrCreateCategory(breakdown, "CRIT DMG")["Weapon_Flat"] += agent.Weapon.SecondaryStat.Value;
                 }
                 else if (agent.Weapon.SecondaryStat.Type == StatType.EnergyRegenPercent)
                 {
@@ -185,15 +190,11 @@ namespace EnkaDotNet.Utils.ZZZ
             {
                 if (disc.MainStat.Type == StatType.CritRateFlat)
                 {
-                    double value = disc.MainStat.Value;
-                    if (value > 1.0) value /= 100.0;
-                    GetOrCreateCategory(breakdown, "CRIT Rate")["Discs_Flat"] += value;
+                    GetOrCreateCategory(breakdown, "CRIT Rate")["Discs_Flat"] += disc.MainStat.Value;
                 }
                 else if (disc.MainStat.Type == StatType.CritDMGFlat)
                 {
-                    double value = disc.MainStat.Value;
-                    if (value > 1.0) value /= 100.0;
-                    GetOrCreateCategory(breakdown, "CRIT DMG")["Discs_Flat"] += value;
+                    GetOrCreateCategory(breakdown, "CRIT DMG")["Discs_Flat"] += disc.MainStat.Value;
                 }
                 else
                 {
@@ -204,15 +205,11 @@ namespace EnkaDotNet.Utils.ZZZ
                 {
                     if (subStat.Type == StatType.CritRateFlat)
                     {
-                        double baseValue = subStat.Value;
-                        if (baseValue > 1.0) baseValue /= 100.0;
-                        GetOrCreateCategory(breakdown, "CRIT Rate")["Discs_Flat"] += baseValue * subStat.Level;
+                        GetOrCreateCategory(breakdown, "CRIT Rate")["Discs_Flat"] += subStat.Value * subStat.Level;
                     }
                     else if (subStat.Type == StatType.CritDMGFlat)
                     {
-                        double baseValue = subStat.Value;
-                        if (baseValue > 1.0) baseValue /= 100.0;
-                        GetOrCreateCategory(breakdown, "CRIT DMG")["Discs_Flat"] += baseValue * subStat.Level;
+                        GetOrCreateCategory(breakdown, "CRIT DMG")["Discs_Flat"] += subStat.Value * subStat.Level;
                     }
                     else
                     {
@@ -266,15 +263,10 @@ namespace EnkaDotNet.Utils.ZZZ
                 if (sourcePrefix == "Agent" && statType.ToString().EndsWith("Base"))
                 {
                     targetBucketSuffix = "Base";
-                    valueToAdd = value / 100.0;
                 }
                 else
                 {
                     targetBucketSuffix = "Flat";
-                    if (sourcePrefix != "Agent" && value > 1.0)
-                    {
-                        valueToAdd = value / 100.0;
-                    }
                 }
             }
             else
@@ -284,21 +276,21 @@ namespace EnkaDotNet.Utils.ZZZ
                 {
                     if (statType.ToString().EndsWith("Base"))
                     {
-                        if (statType == StatType.EnergyRegenBase) valueToAdd = value / 100;
                         targetBucketSuffix = "Base";
+                        // Base values are stored raw
                     }
                     else
                     {
                         targetBucketSuffix = isPercentForCalc ? "Percent" : "Flat";
-                        if (isPercentForCalc) valueToAdd = value / 100.0;
+                        // All percentage values are stored raw to be divided by 10000 later
                     }
                 }
                 else
                 {
                     if (isPercentForCalc)
                     {
-                        if (sourcePrefix == "SetBonus") valueToAdd = value / 100.0;
                         targetBucketSuffix = (statType == StatType.EnergyRegenFlat || statType == StatType.PenRatioFlat || statType.ToString().Contains("DMGBonusFlat")) ? "Flat" : "Percent";
+                        // All percentage values are stored raw
                     }
                     else
                     {
@@ -338,24 +330,20 @@ namespace EnkaDotNet.Utils.ZZZ
 
                 foreach (var prop in suitInfo.SetBonusProps)
                 {
-                    if (int.TryParse(prop.Key, out int propertyId) && Enum.IsDefined(typeof(StatType), propertyId))
+                    if (int.TryParse(prop.Key, out int propertyId) && EnumHelper.IsDefinedZZZStatType(propertyId))
                     {
                         StatType statType = (StatType)propertyId;
                         double rawValue = prop.Value;
                         string category = GetStatCategory(statType);
                         var categoryDict = GetOrCreateCategory(breakdown, category);
 
-                        if (statType == StatType.EnergyRegenPercent)
+                        if (category == "CRIT Rate" || category == "CRIT DMG")
                         {
-                            categoryDict["SetBonus_Percent"] += rawValue / 1000.0;
-                        }
-                        else if (category == "CRIT Rate" || category == "CRIT DMG")
-                        {
-                            categoryDict["SetBonus_Flat"] += rawValue / 1000.0;
+                            categoryDict["SetBonus_Flat"] += rawValue;
                         }
                         else if (IsCalculationPercentageStat(statType))
                         {
-                            categoryDict["SetBonus_Percent"] += rawValue / 1000.0;
+                            categoryDict["SetBonus_Percent"] += rawValue;
                         }
                         else
                         {
@@ -372,81 +360,104 @@ namespace EnkaDotNet.Utils.ZZZ
 
             double calculatedHP = 0;
             double calculatedATK = 0;
+            double calculatedDEF = 0;
 
             if (breakdown.TryGetValue("HP", out var hpCat))
             {
-                double hpSetBonusPercent = hpCat["SetBonus_Percent"] * 10.0;
-                double totalPercentBonusHP = (hpCat["Agent_Percent"] + hpCat["Weapon_Percent"] + hpCat["Discs_Percent"] + hpSetBonusPercent) / 100.0;
-                calculatedHP = Math.Ceiling(hpCat["Agent_Base"] * (1 + totalPercentBonusHP) + hpCat["Agent_Flat"] + hpCat["Weapon_Flat"] + hpCat["Discs_Flat"]);
+                double totalRatio = hpCat["Agent_Percent"] + hpCat["Weapon_Percent"] + hpCat["Discs_Percent"] + hpCat["SetBonus_Percent"];
+                double totalDelta = hpCat["Agent_Flat"] + hpCat["Weapon_Flat"] + hpCat["Discs_Flat"] + hpCat["SetBonus_Flat"];
+                double hpBase = hpCat["Agent_Base"];
+                calculatedHP = hpBase + Math.Ceiling(hpBase * totalRatio / 10000.0) + totalDelta;
                 hpCat["Final"] = calculatedHP;
-                hpCat["BaseDisplay"] = hpCat["Agent_Base"];
-                hpCat["AddedDisplay"] = calculatedHP - hpCat["Agent_Base"];
+                hpCat["BaseDisplay"] = hpBase;
+                hpCat["AddedDisplay"] = calculatedHP - hpBase;
             }
 
             if (breakdown.TryGetValue("ATK", out var atkCat))
             {
                 double combinedBaseATK = atkCat["Agent_Base"] + atkCat["WeaponBase"];
-                double setBonusPercent = atkCat["SetBonus_Percent"] / 10.0;
-                double totalPercentBonus = (atkCat["Agent_Percent"] + atkCat["Weapon_Percent"] + atkCat["Discs_Percent"]) / 100.0 + setBonusPercent;
-                double flatBonuses = atkCat["Agent_Flat"] + atkCat["Weapon_Flat"] + atkCat["Discs_Flat"] + atkCat["SetBonus_Flat"];
-                calculatedATK = Math.Floor(combinedBaseATK * (1 + totalPercentBonus) + flatBonuses);
+                double totalRatio = atkCat["Agent_Percent"] + atkCat["Weapon_Percent"] + atkCat["Discs_Percent"] + atkCat["SetBonus_Percent"];
+                double totalDelta = atkCat["Agent_Flat"] + atkCat["Weapon_Flat"] + atkCat["Discs_Flat"] + atkCat["SetBonus_Flat"];
+                calculatedATK = combinedBaseATK * (1 + totalRatio / 10000.0) + totalDelta;
                 atkCat["Final"] = calculatedATK;
                 atkCat["BaseDisplay"] = combinedBaseATK;
                 atkCat["AddedDisplay"] = calculatedATK - combinedBaseATK;
+            }
+
+            if (breakdown.TryGetValue("DEF", out var defCat))
+            {
+                double defBase = defCat["Agent_Base"];
+                double totalRatio = defCat["Agent_Percent"] + defCat["Weapon_Percent"] + defCat["Discs_Percent"] + defCat["SetBonus_Percent"];
+                double totalDelta = defCat["Agent_Flat"] + defCat["Weapon_Flat"] + defCat["Discs_Flat"] + defCat["SetBonus_Flat"];
+                calculatedDEF = defBase * (1 + totalRatio / 10000.0) + totalDelta;
+                defCat["Final"] = calculatedDEF;
+                defCat["BaseDisplay"] = defBase;
+                defCat["AddedDisplay"] = calculatedDEF - defBase;
+            }
+
+            if (agent.Id == BEN_AGENT_ID && breakdown.TryGetValue("ATK", out var benAtkCat))
+            {
+                int enhancementLevel = Math.Max(0, Math.Min(agent.CoreSkillEnhancement, BEN_DEF_TO_ATK_MULTIPLIERS.Length - 1));
+                double multiplier = BEN_DEF_TO_ATK_MULTIPLIERS[enhancementLevel];
+                double bonusATK = Math.Floor(calculatedDEF * multiplier);
+                
+                calculatedATK += bonusATK;
+                benAtkCat["Final"] = calculatedATK;
+                benAtkCat["AddedDisplay"] = calculatedATK - benAtkCat["BaseDisplay"];
             }
 
             foreach (var entry in breakdown)
             {
                 string category = entry.Key;
                 var catBreakdown = entry.Value;
-                if (category == "HP" || category == "ATK") continue;
+                if (category == "HP" || category == "ATK" || category == "DEF") continue;
 
                 double agentBase = catBreakdown["Agent_Base"];
-                double totalPercentBonus = (catBreakdown["Agent_Percent"] + catBreakdown["Weapon_Percent"] + catBreakdown["Discs_Percent"] + catBreakdown["SetBonus_Percent"]) / 100.0;
-                double totalFlatBonus = catBreakdown["Agent_Flat"] + catBreakdown["Weapon_Flat"] + catBreakdown["Discs_Flat"];
+                double totalRatio = catBreakdown["Agent_Percent"] + catBreakdown["Weapon_Percent"] + catBreakdown["Discs_Percent"] + catBreakdown["SetBonus_Percent"];
+                double totalDelta = catBreakdown["Agent_Flat"] + catBreakdown["Weapon_Flat"] + catBreakdown["Discs_Flat"] + catBreakdown["SetBonus_Flat"];
                 double finalValue = 0;
 
                 switch (category)
                 {
-                    case "DEF":
                     case "Impact":
-                    case "Anomaly Mastery":
-                    case "Anomaly Proficiency":
-                    case "PEN":
-                        finalValue = Math.Floor(agentBase * (1 + totalPercentBonus) + totalFlatBonus);
+                        finalValue = agentBase * (1 + totalRatio / 10000.0);
                         break;
                     case "CRIT Rate":
                     case "CRIT DMG":
-                        finalValue = agentBase + (totalFlatBonus + totalPercentBonus + (catBreakdown["SetBonus_Flat"] / 10)) * 100;
+                        finalValue = agentBase + totalDelta;
                         break;
                     case "Energy Regen":
-                        double combinedPercentBonus = catBreakdown["Weapon_Percent"] + catBreakdown["Discs_Percent"] + (catBreakdown["SetBonus_Percent"] * 10);
-                        double totalPercentBonusEnergy = (combinedPercentBonus > 0) ? Math.Max(0, (agentBase * combinedPercentBonus / 100)) : 0;
-                        finalValue = Math.Floor((agentBase + totalFlatBonus + totalPercentBonusEnergy) * 100) / 100;
+                        finalValue = agentBase * (1 + totalRatio / 10000.0) + totalDelta;
+                        break;
+                    case "Anomaly Mastery":
+                    case "Anomaly Proficiency":
+                    case "PEN":
+                        finalValue = agentBase * (1 + totalRatio / 10000.0) + totalDelta;
                         break;
                     case "Pen Ratio":
-                        finalValue = (totalPercentBonus * 1000) + totalFlatBonus;
+                        finalValue = agentBase + totalDelta;
                         break;
                     case "Physical DMG":
                     case "Fire DMG":
                     case "Ice DMG":
                     case "Electric DMG":
                     case "Ether DMG":
-                        finalValue = totalPercentBonus + totalFlatBonus;
+                    case "Sheer DMG":
+                        finalValue = agentBase + totalDelta;
                         break;
                     case "Sheer Force":
                         if (agent.ProfessionType == ProfessionType.Rupture)
                         {
-                            finalValue = (agent.Id == 1371)
-                                ? Math.Floor(calculatedATK * 0.30) + Math.Floor(calculatedHP * 0.1) + totalFlatBonus
-                                : Math.Floor(calculatedATK * 0.30) + totalFlatBonus;
+                            // Rupture agents gain extra Sheer Force based on ATK and Max HP
+                            // Formula: floor(floor(ATK) * 0.3) + floor(floor(MaxHP) * 0.1)
+                            finalValue = Math.Floor(Math.Floor(calculatedATK) * 0.3) + Math.Floor(Math.Floor(calculatedHP) * 0.1) + totalDelta;
                         }
                         break;
                     case "Automatic Adrenaline Accumulation":
                         finalValue = agentBase / 100.0;
                         break;
                     default:
-                        finalValue = Math.Floor(agentBase * (1 + totalPercentBonus) + totalFlatBonus);
+                        finalValue = agentBase * (1 + totalRatio / 10000.0) + totalDelta;
                         break;
                 }
 
@@ -485,6 +496,8 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.IceDMGBonusBase: case StatType.IceDMGBonusFlat: return "Ice DMG";
                 case StatType.ElectricDMGBonusBase: case StatType.ElectricDMGBonusFlat: return "Electric DMG";
                 case StatType.EtherDMGBonusBase: case StatType.EtherDMGBonusFlat: return "Ether DMG";
+                case StatType.SheerForceBase: case StatType.SheerForceFlat: return "Sheer Force";
+                case StatType.SheerDMGBonusBase: case StatType.SheerDMGBonusFlat: return "Sheer DMG";
                 default: return "";
             }
         }
@@ -502,6 +515,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 case "Electric DMG":
                 case "Ether DMG":
                 case "Energy Regen":
+                case "Sheer DMG":
                     return true;
                 default:
                     return false;

@@ -14,6 +14,10 @@
         ATKPercent = 12102,      // ATK%
         ATKFlat = 12103,         // ATK [Flat]
 
+        // Sheer Force Stats (Rupture agents)
+        SheerForceBase = 12301,  // Sheer Force [Base]
+        SheerForceFlat = 12302,  // Sheer Force [Flat]
+
         // Impact Stats
         ImpactBase = 12201,      // Impact [Base]
         ImpactPercent = 12202,   // Impact%
@@ -63,5 +67,9 @@
         AutomaticAdrenalineAccumulationBase = 32001, // Automatic Adrenaline Accumulation [Base]
         AutomaticAdrenalineAccumulationPercent = 32002, // Automatic Adrenaline Accumulation%
         AutomaticAdrenalineAccumulationFlat = 32003, // Automatic Adrenaline Accumulation [Flat]
+
+        // Sheer DMG Bonus Stats
+        SheerDMGBonusBase = 32201,   // Sheer DMG Bonus [Base]
+        SheerDMGBonusFlat = 32203,   // Sheer DMG Bonus [Flat]
     }
 }

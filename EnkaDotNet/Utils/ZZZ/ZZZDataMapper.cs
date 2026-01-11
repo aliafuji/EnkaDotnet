@@ -5,6 +5,7 @@ using EnkaDotNet.Models.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
+using EnkaDotNet.Utils.Common;
 
 namespace EnkaDotNet.Utils.ZZZ
 {
@@ -133,7 +134,7 @@ namespace EnkaDotNet.Utils.ZZZ
             {
                 foreach (var skillLevel in model.SkillLevelList)
                 {
-                    if (Enum.IsDefined(typeof(SkillType), skillLevel.Index))
+                    if (EnumHelper.IsDefinedZZZSkillType(skillLevel.Index))
                     {
                         int baseLevel = skillLevel.Level;
                         
@@ -179,6 +180,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 PromotionLevel = model.PromotionLevel,
                 TalentLevel = model.TalentLevel,
                 CoreSkillEnhancement = model.CoreSkillEnhancement,
+                PotentialId = model.UpgradeId,
                 Skins = (model.SkinId != 0)
                     ? new ConcurrentDictionary<string, Skin>(new[] { new KeyValuePair<string, Skin>(model.SkinId.ToString(), _assets.GetAgentSkin(model.Id.ToString(), model.SkinId.ToString())) })
                     : new ConcurrentDictionary<string, Skin>(),
