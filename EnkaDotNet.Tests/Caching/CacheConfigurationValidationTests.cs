@@ -8,7 +8,6 @@ namespace EnkaDotNet.Tests.Caching
     /// <summary>
     /// Unit tests for cache configuration validation.
     /// Feature: persistent-cache
-    /// Validates: Requirements 4.5
     /// </summary>
     public class CacheConfigurationValidationTests
     {

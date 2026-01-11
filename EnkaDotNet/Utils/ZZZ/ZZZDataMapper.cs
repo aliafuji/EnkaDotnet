@@ -137,20 +137,16 @@ namespace EnkaDotNet.Utils.ZZZ
                     if (EnumHelper.IsDefinedZZZSkillType(skillLevel.Index))
                     {
                         int baseLevel = skillLevel.Level;
+                        int finalLevel = baseLevel;
                         
-                        int finalLevel = 0;
-
-                        if ((SkillType)skillLevel.Index != SkillType.CoreSkill)
-                        {
-                            finalLevel = baseLevel;
-                        } 
-                        else
+                        SkillType skillType = (SkillType)skillLevel.Index;
+                        if (skillType != SkillType.CoreSkill)
                         {
                             int mindscapeBonus = CalculateMindscapeSkillBonus(model.TalentLevel);
                             finalLevel = baseLevel + mindscapeBonus;
                         }
                         
-                        skillLevels.TryAdd((SkillType)skillLevel.Index, finalLevel);
+                        skillLevels.TryAdd(skillType, finalLevel);
                     }
                 }
             }
