@@ -210,7 +210,7 @@ namespace EnkaDotNet.Assets
             }
         }
 
-        protected async Task<T> FetchAndDeserializeAssetAsync<T>(string assetKey)
+        protected async Task<T> FetchAndDeserializeAssetAsync<T>(string assetKey) where T : class
         {
             string cacheKey = $"{GameIdentifier}_{assetKey}";
 
