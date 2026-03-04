@@ -606,7 +606,6 @@ namespace EnkaDotNet
             }
             catch (Exception ex)
             {
-                Logger.LogError(EnkaEventIds.AssetLoadFailed, ex, "Failed to preload assets.");
                 activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
                 throw;
             }
@@ -687,7 +686,7 @@ namespace EnkaDotNet
         /// <see cref="CreateAsync"/>.
         /// </para>
         /// </summary>
-        private class DefaultHttpClientFactory : IHttpClientFactory, IDisposable
+        private sealed class DefaultHttpClientFactory : IHttpClientFactory, IDisposable
         {
             private readonly ConcurrentDictionary<string, HttpClient> _clients = new ConcurrentDictionary<string, HttpClient>();
             private bool _disposed;
@@ -726,6 +725,7 @@ namespace EnkaDotNet
                 foreach (var client in _clients.Values)
                     client.Dispose();
                 _clients.Clear();
+                GC.SuppressFinalize(this);
             }
         }
     }

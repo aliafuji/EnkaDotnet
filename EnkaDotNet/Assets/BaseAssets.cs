@@ -172,11 +172,14 @@ namespace EnkaDotNet.Assets
                         _logger.LogWarning(ex,
                             "Network error fetching '{AssetKey}' for {GameIdentifier}. Loading from local fallback: {Path}",
                             assetKey, GameIdentifier, localPath);
+#if NET8_0_OR_GREATER
+                        return await File.ReadAllTextAsync(localPath).ConfigureAwait(false);
+#else
                         return File.ReadAllText(localPath);
+#endif
                     }
                 }
 
-                _logger.LogError(ex, "FAILED to fetch '{AssetKey}' for {GameIdentifier} (Network Error). URL: {Url}", assetKey, GameIdentifier, url);
                 throw;
             }
         }

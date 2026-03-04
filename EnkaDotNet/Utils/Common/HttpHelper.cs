@@ -84,72 +84,17 @@ namespace EnkaDotNet.Utils.Common
             {
                 ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
                     .Handle<HttpRequestException>()
-                    .HandleResult(r =>
-                    {
-                        foreach (var code in _options.RetryOnStatusCodes)
-                        {
-                            if (r.StatusCode == code) return true;
-                        }
-                        return false;
-                    }),
+                    .HandleResult(IsRetryableStatusCode),
                 MaxRetryAttempts = _options.MaxRetries,
-                DelayGenerator = args =>
-                {
-                    // 429: respect Retry-After header instead of exponential backoff
-                    if (args.Outcome.Result?.StatusCode == (HttpStatusCode)429)
-                    {
-                        var rateLimitDelay = GetRetryAfterDelay(
-                            args.Outcome.Result.Headers.RetryAfter,
-                            TimeSpan.FromMilliseconds(_options.RetryDelayMs));
-                        return new ValueTask<TimeSpan?>(rateLimitDelay);
-                    }
-
-                    TimeSpan delay = TimeSpan.FromMilliseconds(_options.RetryDelayMs);
-                    if (_options.UseExponentialBackoff)
-                    {
-                        delay = TimeSpan.FromMilliseconds(
-                            Math.Min(Math.Pow(2, args.AttemptNumber) * _options.RetryDelayMs, _options.MaxRetryDelayMs));
-                    }
-                    delay += TimeSpan.FromMilliseconds(_jitterer.Next(0, (int)(delay.TotalMilliseconds * 0.2)));
-                    return new ValueTask<TimeSpan?>(delay);
-                },
-                OnRetry = args =>
-                {
-                    string urlForLog = args.Context.Properties.TryGetValue(RelativeUrlKey, out var u) ? u : "Unknown URL";
-                    bool is429 = args.Outcome.Result?.StatusCode == (HttpStatusCode)429;
-
-                    EnkaTelemetry.RetryCount.Add(1);
-
-                    if (is429)
-                    {
-                        _logger.LogWarning(EnkaEventIds.RetryAttempt,
-                            "Request to {Url} rate-limited (429). Waiting {Delay} (Retry-After), then retry {Attempt}/{Max}.",
-                            urlForLog, args.RetryDelay, args.AttemptNumber + 1, _options.MaxRetries);
-                    }
-                    else
-                    {
-                        _logger.LogWarning(EnkaEventIds.RetryAttempt, args.Outcome.Exception,
-                            "Request to {Url} failed. Delaying {Delay}, then retry {Attempt}/{Max}. Status: {StatusCode}",
-                            urlForLog, args.RetryDelay, args.AttemptNumber + 1, _options.MaxRetries,
-                            args.Outcome.Result?.StatusCode);
-                    }
-                    return new ValueTask();
-                }
+                DelayGenerator = ComputeRetryDelay,
+                OnRetry = OnRetryAttempt
             };
 
             var circuitBreakerOptions = new CircuitBreakerStrategyOptions<HttpResponseMessage>
             {
                 ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
                     .Handle<HttpRequestException>()
-                    .HandleResult(r =>
-                    {
-                        foreach (var code in _options.RetryOnStatusCodes)
-                        {
-                            if (r.StatusCode == code && r.StatusCode != (HttpStatusCode)429) return true;
-                        }
-                        return false;
-                    }),
-                // Open circuit after FailureThreshold consecutive failures within SamplingDuration
+                    .HandleResult(IsCircuitBreakerStatusCode),
                 FailureRatio = 1.0,
                 MinimumThroughput = _options.CircuitBreakerFailureThreshold,
                 SamplingDuration = TimeSpan.FromSeconds(60),
@@ -173,12 +118,71 @@ namespace EnkaDotNet.Utils.Common
                 }
             };
 
-            // Pipeline order: Retry (outer) → CircuitBreaker (inner) → Action
-            // The CB tracks raw action failures; retry sees both CB exceptions and action outcomes.
             _resiliencePipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
                 .AddRetry(retryOptions)
                 .AddCircuitBreaker(circuitBreakerOptions)
                 .Build();
+        }
+
+        private bool IsRetryableStatusCode(HttpResponseMessage response)
+        {
+            foreach (var code in _options.RetryOnStatusCodes)
+            {
+                if (response.StatusCode == code) return true;
+            }
+            return false;
+        }
+
+        private bool IsCircuitBreakerStatusCode(HttpResponseMessage response)
+        {
+            foreach (var code in _options.RetryOnStatusCodes)
+            {
+                if (response.StatusCode == code && response.StatusCode != (HttpStatusCode)429) return true;
+            }
+            return false;
+        }
+
+        private ValueTask<TimeSpan?> ComputeRetryDelay(RetryDelayGeneratorArguments<HttpResponseMessage> args)
+        {
+            if (args.Outcome.Result?.StatusCode == (HttpStatusCode)429)
+            {
+                var rateLimitDelay = GetRetryAfterDelay(
+                    args.Outcome.Result.Headers.RetryAfter,
+                    TimeSpan.FromMilliseconds(_options.RetryDelayMs));
+                return new ValueTask<TimeSpan?>(rateLimitDelay);
+            }
+
+            TimeSpan delay = TimeSpan.FromMilliseconds(_options.RetryDelayMs);
+            if (_options.UseExponentialBackoff)
+            {
+                delay = TimeSpan.FromMilliseconds(
+                    Math.Min(Math.Pow(2, args.AttemptNumber) * _options.RetryDelayMs, _options.MaxRetryDelayMs));
+            }
+            delay += TimeSpan.FromMilliseconds(_jitterer.Next(0, (int)(delay.TotalMilliseconds * 0.2)));
+            return new ValueTask<TimeSpan?>(delay);
+        }
+
+        private ValueTask OnRetryAttempt(OnRetryArguments<HttpResponseMessage> args)
+        {
+            string urlForLog = args.Context.Properties.TryGetValue(RelativeUrlKey, out var u) ? u : "Unknown URL";
+            bool is429 = args.Outcome.Result?.StatusCode == (HttpStatusCode)429;
+
+            EnkaTelemetry.RetryCount.Add(1);
+
+            if (is429)
+            {
+                _logger.LogWarning(EnkaEventIds.RetryAttempt,
+                    "Request to {Url} rate-limited (429). Waiting {Delay} (Retry-After), then retry {Attempt}/{Max}.",
+                    urlForLog, args.RetryDelay, args.AttemptNumber + 1, _options.MaxRetries);
+            }
+            else
+            {
+                _logger.LogWarning(EnkaEventIds.RetryAttempt, args.Outcome.Exception,
+                    "Request to {Url} failed. Delaying {Delay}, then retry {Attempt}/{Max}. Status: {StatusCode}",
+                    urlForLog, args.RetryDelay, args.AttemptNumber + 1, _options.MaxRetries,
+                    args.Outcome.Result?.StatusCode);
+            }
+            return new ValueTask();
         }
 
         public async Task<T> Get<T>(string relativeUrl, bool bypassCache = false, CancellationToken cancellationToken = default) where T : class
@@ -247,7 +251,6 @@ namespace EnkaDotNet.Utils.Common
                     resilienceContext
                 ).ConfigureAwait(false);
 
-                // After all retries: if still 429, raise RateLimitException
                 if (response.StatusCode == (HttpStatusCode)429)
                 {
                     _logger.LogWarning(EnkaEventIds.RateLimited,
@@ -280,7 +283,7 @@ namespace EnkaDotNet.Utils.Common
                     throw new EnkaNetworkException($"Failed to deserialize JSON response from {relativeUrl}, but content was not empty.");
 
                 if (response.IsSuccessStatusCode && _options.EnableCaching)
-                    CacheSuccessfulResponse(cacheKey, jsonString, response, relativeUrl);
+                    _ = CacheSuccessfulResponse(cacheKey, jsonString, response, relativeUrl);
 
                 activity?.SetTag("enka.status_code", (int)response.StatusCode);
                 return deserializedObject!;
@@ -302,7 +305,7 @@ namespace EnkaDotNet.Utils.Common
             }
         }
 
-        private TimeSpan GetRetryAfterDelay(RetryConditionHeaderValue? retryAfterHeader, TimeSpan defaultDelay)
+        private static TimeSpan GetRetryAfterDelay(RetryConditionHeaderValue? retryAfterHeader, TimeSpan defaultDelay)
         {
             if (retryAfterHeader != null)
             {
@@ -317,7 +320,7 @@ namespace EnkaDotNet.Utils.Common
             return defaultDelay;
         }
 
-        private async void CacheSuccessfulResponse(string cacheKey, string jsonString, HttpResponseMessage response, string relativeUrl)
+        private async Task CacheSuccessfulResponse(string cacheKey, string jsonString, HttpResponseMessage response, string relativeUrl)
         {
             DateTimeOffset expiration = CalculateExpiration(response, _options.CacheDurationMinutes);
             var newCacheEntry = new CacheEntry { JsonResponse = jsonString, Expiration = expiration };
@@ -364,7 +367,7 @@ namespace EnkaDotNet.Utils.Common
                 foreach (var key in _trackedCacheKeys.Keys)
                 {
                     try { await _cache.RemoveAsync(key, cancellationToken).ConfigureAwait(false); }
-                    catch { }
+                    catch (Exception removeEx) { _logger.LogTrace(removeEx, "Skipping failed per-key cache removal for {Key}.", key); }
                 }
                 _trackedCacheKeys.Clear();
             }
