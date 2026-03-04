@@ -16,7 +16,7 @@
 		<RepositoryUrl>https://github.com/aliafuji/EnkaDotnet</RepositoryUrl>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-		<Version>1.6.4</Version>
+		<Version>1.6.5</Version>
 		<ApplicationIcon>image.ico</ApplicationIcon>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 		<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
@@ -65,6 +65,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="9.0.4" />
 		<PackageReference Include="Polly" Version="8.5.2" />

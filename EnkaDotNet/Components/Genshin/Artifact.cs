@@ -14,7 +14,7 @@ namespace EnkaDotNet.Components.Genshin
 
         public KeyValuePair<string, string> FormattedMainStat =>
              MainStat != null ? FormatStat(MainStat.Type, MainStat.Value)
-             : new KeyValuePair<string, string>(Options?.Raw ?? false ? "None" : "None", "0");
+             : new KeyValuePair<string, string>("None", "0");
 
         public List<KeyValuePair<string, string>> FormattedSubStats
         {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,15 +45,19 @@ namespace EnkaDotNet
         private readonly EnkaProfileServiceHandler _enkaProfileServiceHandler;
         private readonly EnkaDataMapper _enkaDataMapper;
 
-        private readonly ConcurrentDictionary<string, IGenshinAssets> _genshinAssetsCache = new ConcurrentDictionary<string, IGenshinAssets>();
-        private readonly ConcurrentDictionary<string, IHSRAssets> _hsrAssetsCache = new ConcurrentDictionary<string, IHSRAssets>();
-        private readonly ConcurrentDictionary<string, IZZZAssets> _zzzAssetsCache = new ConcurrentDictionary<string, IZZZAssets>();
+        private readonly ConcurrentDictionary<string, Lazy<Task<IGenshinAssets>>> _genshinAssetsCache = new ConcurrentDictionary<string, Lazy<Task<IGenshinAssets>>>();
+        private readonly ConcurrentDictionary<string, Lazy<Task<IHSRAssets>>> _hsrAssetsCache = new ConcurrentDictionary<string, Lazy<Task<IHSRAssets>>>();
+        private readonly ConcurrentDictionary<string, Lazy<Task<IZZZAssets>>> _zzzAssetsCache = new ConcurrentDictionary<string, Lazy<Task<IZZZAssets>>>();
+
+        private readonly ConcurrentDictionary<string, Lazy<Task<GenshinServiceHandler>>> _genshinHandlerCache = new ConcurrentDictionary<string, Lazy<Task<GenshinServiceHandler>>>();
+        private readonly ConcurrentDictionary<string, Lazy<Task<HSRServiceHandler>>> _hsrHandlerCache = new ConcurrentDictionary<string, Lazy<Task<HSRServiceHandler>>>();
+        private readonly ConcurrentDictionary<string, Lazy<Task<ZZZServiceHandler>>> _zzzHandlerCache = new ConcurrentDictionary<string, Lazy<Task<ZZZServiceHandler>>>();
 
         private readonly IHttpClientFactory _httpClientFactory;
 
         private const string DEFAULT_LANGUAGE = "en";
-        private static readonly int maxConcurrency = Meth.Clamp(Environment.ProcessorCount, 1, 8);
-        private static readonly SemaphoreSlim _preloadSemaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+        private static readonly int maxConcurrency = MathHelper.Clamp(Environment.ProcessorCount, 1, 8);
+
 
         /// <inheritdoc/>
         public EnkaClientOptions Options => _options.Clone();
@@ -122,7 +127,6 @@ namespace EnkaDotNet
             httpHelperHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd(options.UserAgent ?? Constants.DefaultUserAgent);
             httpHelperHttpClient.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 
-            // Create the appropriate cache provider based on options
             IEnkaCache enkaCache;
             if (options.CacheProvider == CacheProvider.Custom && customCache != null)
             {
@@ -130,12 +134,10 @@ namespace EnkaDotNet
             }
             else if (options.CacheProvider == CacheProvider.Memory && cache != null)
             {
-                // Use provided memory cache for backward compatibility
                 enkaCache = CacheFactory.CreateCache(options, cache);
             }
             else
             {
-                // Create cache based on provider setting
                 enkaCache = CacheFactory.CreateCache(options, cache, customCache);
             }
 
@@ -161,123 +163,133 @@ namespace EnkaDotNet
             return client;
         }
 
-        private async Task<IGenshinAssets> GetGenshinAssetsAsync(string language)
+        private Task<IGenshinAssets> GetGenshinAssetsAsync(string language)
         {
             language = (language ?? DEFAULT_LANGUAGE).ToLowerInvariant();
-            if (!_genshinAssetsCache.TryGetValue(language, out var assets))
-            {
-                try
-                {
-                    var assetsFactoryFunc = _serviceProvider?.GetService<Func<string, Task<IGenshinAssets>>>();
-                    if (assetsFactoryFunc != null)
-                    {
-                        assets = await assetsFactoryFunc(language).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        var logger = _loggerFactory.CreateLogger<GenshinAssets>();
-                        var httpClient = _httpClientFactory.CreateClient("GenshinAssetClient");
-                        assets = await AssetsFactory.CreateGenshinAssetsAsync(language, httpClient, logger).ConfigureAwait(false);
-                    }
-                    _genshinAssetsCache.TryAdd(language, assets);
-                }
-                catch (OperationCanceledException ex)
-                {
-                    Logger.LogError(ex, "Timeout while fetching Genshin assets for language {Language}", language);
-                    throw new EnkaNetworkException($"Timeout while fetching Genshin assets for language {language}", ex);
-                }
-            }
-            return assets;
+            return _genshinAssetsCache.GetOrAdd(language, lang =>
+                new Lazy<Task<IGenshinAssets>>(() => LoadGenshinAssetsAsync(lang))
+            ).Value;
         }
 
-        private async Task<GenshinServiceHandler> GetGenshinHandlerAsync(string language)
+        private async Task<IGenshinAssets> LoadGenshinAssetsAsync(string language)
         {
-            var langAssets = await GetGenshinAssetsAsync(language).ConfigureAwait(false);
-            return new GenshinServiceHandler(langAssets, _options, _httpHelper, Logger);
+            try
+            {
+                var assetsFactoryFunc = _serviceProvider?.GetService<Func<string, Task<IGenshinAssets>>>();
+                if (assetsFactoryFunc != null)
+                {
+                    return await assetsFactoryFunc(language).ConfigureAwait(false);
+                }
+                var logger = _loggerFactory.CreateLogger<GenshinAssets>();
+                var httpClient = _httpClientFactory.CreateClient("GenshinAssetClient");
+                return await AssetsFactory.CreateGenshinAssetsAsync(language, httpClient, logger, _options.AssetFallbackDirectory).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex)
+            {
+                _genshinAssetsCache.TryRemove(language, out _);
+                Logger.LogError(ex, "Timeout while fetching Genshin assets for language {Language}", language);
+                throw new EnkaNetworkException($"Timeout while fetching Genshin assets for language {language}", ex);
+            }
         }
 
-        private async Task<IHSRAssets> GetHSRAssetsAsync(string language)
+        private Task<GenshinServiceHandler> GetGenshinHandlerAsync(string language)
         {
             language = (language ?? DEFAULT_LANGUAGE).ToLowerInvariant();
-            if (!_hsrAssetsCache.TryGetValue(language, out var assets))
-            {
-                try
+            return _genshinHandlerCache.GetOrAdd(language, lang =>
+                new Lazy<Task<GenshinServiceHandler>>(async () =>
                 {
-                    var assetsFactoryFunc = _serviceProvider?.GetService<Func<string, Task<IHSRAssets>>>();
-                    if (assetsFactoryFunc != null)
-                    {
-                        assets = await assetsFactoryFunc(language).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        var logger = _loggerFactory.CreateLogger<HSRAssets>();
-                        var httpClient = _httpClientFactory.CreateClient("HSRAssetClient");
-                        assets = await AssetsFactory.CreateHSRAssetsAsync(language, httpClient, logger).ConfigureAwait(false);
-                    }
-                    _hsrAssetsCache.TryAdd(language, assets);
-                }
-                catch (OperationCanceledException ex)
-                {
-                    Logger.LogError(ex, "Timeout while fetching HSR assets for language {Language}", language);
-                    throw new EnkaNetworkException($"Timeout while fetching HSR assets for language {language}", ex);
-                }
-            }
-            return assets;
+                    var langAssets = await GetGenshinAssetsAsync(lang).ConfigureAwait(false);
+                    return new GenshinServiceHandler(langAssets, _options, _httpHelper, Logger);
+                })
+            ).Value;
         }
 
-        private async Task<HSRServiceHandler> GetHSRHandlerAsync(string language)
-        {
-            var langAssets = await GetHSRAssetsAsync(language).ConfigureAwait(false);
-            return new HSRServiceHandler(langAssets, _options, _httpHelper, Logger);
-        }
-
-        private async Task<IZZZAssets> GetZZZAssetsAsync(string language)
+        private Task<IHSRAssets> GetHSRAssetsAsync(string language)
         {
             language = (language ?? DEFAULT_LANGUAGE).ToLowerInvariant();
-            if (!_zzzAssetsCache.TryGetValue(language, out var assets))
-            {
-                try
-                {
-                    var assetsFactoryFunc = _serviceProvider?.GetService<Func<string, Task<IZZZAssets>>>();
-                    if (assetsFactoryFunc != null)
-                    {
-                        assets = await assetsFactoryFunc(language).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        var logger = _loggerFactory.CreateLogger<ZZZAssets>();
-                        var httpClient = _httpClientFactory.CreateClient("ZZZAssetClient");
-                        assets = await AssetsFactory.CreateZZZAssetsAsync(language, httpClient, logger).ConfigureAwait(false);
-                    }
-                    _zzzAssetsCache.TryAdd(language, assets);
-                }
-                catch (OperationCanceledException ex)
-                {
-                    Logger.LogError(ex, "Timeout while fetching ZZZ assets for language {Language}", language);
-                    throw new EnkaNetworkException($"Timeout while fetching ZZZ assets for language {language}", ex);
-                }
-            }
-            return assets;
+            return _hsrAssetsCache.GetOrAdd(language, lang =>
+                new Lazy<Task<IHSRAssets>>(() => LoadHSRAssetsAsync(lang))
+            ).Value;
         }
 
-        private async Task<ZZZServiceHandler> GetZZZHandlerAsync(string language)
+        private async Task<IHSRAssets> LoadHSRAssetsAsync(string language)
         {
-            var langAssets = await GetZZZAssetsAsync(language).ConfigureAwait(false);
-            return new ZZZServiceHandler(langAssets, _options, _httpHelper, Logger);
+            try
+            {
+                var assetsFactoryFunc = _serviceProvider?.GetService<Func<string, Task<IHSRAssets>>>();
+                if (assetsFactoryFunc != null)
+                {
+                    return await assetsFactoryFunc(language).ConfigureAwait(false);
+                }
+                var logger = _loggerFactory.CreateLogger<HSRAssets>();
+                var httpClient = _httpClientFactory.CreateClient("HSRAssetClient");
+                return await AssetsFactory.CreateHSRAssetsAsync(language, httpClient, logger, _options.AssetFallbackDirectory).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex)
+            {
+                _hsrAssetsCache.TryRemove(language, out _);
+                Logger.LogError(ex, "Timeout while fetching HSR assets for language {Language}", language);
+                throw new EnkaNetworkException($"Timeout while fetching HSR assets for language {language}", ex);
+            }
+        }
+
+        private Task<HSRServiceHandler> GetHSRHandlerAsync(string language)
+        {
+            language = (language ?? DEFAULT_LANGUAGE).ToLowerInvariant();
+            return _hsrHandlerCache.GetOrAdd(language, lang =>
+                new Lazy<Task<HSRServiceHandler>>(async () =>
+                {
+                    var langAssets = await GetHSRAssetsAsync(lang).ConfigureAwait(false);
+                    return new HSRServiceHandler(langAssets, _options, _httpHelper, Logger);
+                })
+            ).Value;
+        }
+
+        private Task<IZZZAssets> GetZZZAssetsAsync(string language)
+        {
+            language = (language ?? DEFAULT_LANGUAGE).ToLowerInvariant();
+            return _zzzAssetsCache.GetOrAdd(language, lang =>
+                new Lazy<Task<IZZZAssets>>(() => LoadZZZAssetsAsync(lang))
+            ).Value;
+        }
+
+        private async Task<IZZZAssets> LoadZZZAssetsAsync(string language)
+        {
+            try
+            {
+                var assetsFactoryFunc = _serviceProvider?.GetService<Func<string, Task<IZZZAssets>>>();
+                if (assetsFactoryFunc != null)
+                {
+                    return await assetsFactoryFunc(language).ConfigureAwait(false);
+                }
+                var logger = _loggerFactory.CreateLogger<ZZZAssets>();
+                var httpClient = _httpClientFactory.CreateClient("ZZZAssetClient");
+                return await AssetsFactory.CreateZZZAssetsAsync(language, httpClient, logger, _options.AssetFallbackDirectory).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex)
+            {
+                _zzzAssetsCache.TryRemove(language, out _);
+                Logger.LogError(ex, "Timeout while fetching ZZZ assets for language {Language}", language);
+                throw new EnkaNetworkException($"Timeout while fetching ZZZ assets for language {language}", ex);
+            }
+        }
+
+        private Task<ZZZServiceHandler> GetZZZHandlerAsync(string language)
+        {
+            language = (language ?? DEFAULT_LANGUAGE).ToLowerInvariant();
+            return _zzzHandlerCache.GetOrAdd(language, lang =>
+                new Lazy<Task<ZZZServiceHandler>>(async () =>
+                {
+                    var langAssets = await GetZZZAssetsAsync(lang).ConfigureAwait(false);
+                    return new ZZZServiceHandler(langAssets, _options, _httpHelper, Logger);
+                })
+            ).Value;
         }
 
         private async Task<T> ExecuteApiCallAsync<T>(Func<Task<T>> apiCall)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
-            try
-            {
-                return await apiCall().ConfigureAwait(false);
-            }
-            catch (OperationCanceledException ex)
-            {
-                Logger.LogError(ex, "The API request timed out.");
-                throw new EnkaNetworkException("The request timed out.", ex);
-            }
+            return await apiCall().ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
@@ -372,15 +384,11 @@ namespace EnkaDotNet
         public Task<Dictionary<string, List<GenshinBuild>>> GetGenshinBuildsByUsernameAsync(string username, string hoyoHash, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
             ExecuteApiCallAsync(async () =>
             {
-                // Fetch raw builds from the API
                 var rawBuilds = await _enkaProfileServiceHandler.GetRawBuildsByUsernameAsync(username, hoyoHash, bypassCache, cancellationToken).ConfigureAwait(false);
                 
-                // Get the Genshin handler with the appropriate language assets
-                var handler = await GetGenshinHandlerAsync(language).ConfigureAwait(false);
                 var assets = await GetGenshinAssetsAsync(language).ConfigureAwait(false);
                 var dataMapper = new Utils.Genshin.DataMapper(assets, _options);
                 
-                // Map raw builds to GenshinBuild components
                 var result = new Dictionary<string, List<GenshinBuild>>();
                 
                 foreach (var kvp in rawBuilds)
@@ -399,7 +407,6 @@ namespace EnkaDotNet
                             CharacterId = rawBuild.AvatarId
                         };
                         
-                        // Parse the avatar_data to get the character
                         if (rawBuild.AvatarData.ValueKind != System.Text.Json.JsonValueKind.Undefined &&
                             rawBuild.AvatarData.ValueKind != System.Text.Json.JsonValueKind.Null)
                         {
@@ -439,14 +446,11 @@ namespace EnkaDotNet
         public Task<Dictionary<string, List<HSRBuild>>> GetHSRBuildsByUsernameAsync(string username, string hoyoHash, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
             ExecuteApiCallAsync(async () =>
             {
-                // Fetch raw builds from the API
                 var rawBuilds = await _enkaProfileServiceHandler.GetRawBuildsByUsernameAsync(username, hoyoHash, bypassCache, cancellationToken).ConfigureAwait(false);
                 
-                // Get the HSR assets with the appropriate language
                 var assets = await GetHSRAssetsAsync(language).ConfigureAwait(false);
                 var dataMapper = new Utils.HSR.HSRDataMapper(assets, _options);
                 
-                // Map raw builds to HSRBuild components
                 var result = new Dictionary<string, List<HSRBuild>>();
                 
                 foreach (var kvp in rawBuilds)
@@ -465,7 +469,6 @@ namespace EnkaDotNet
                             CharacterId = rawBuild.AvatarId
                         };
                         
-                        // Parse the avatar_data to get the character
                         if (rawBuild.AvatarData.ValueKind != System.Text.Json.JsonValueKind.Undefined &&
                             rawBuild.AvatarData.ValueKind != System.Text.Json.JsonValueKind.Null)
                         {
@@ -505,14 +508,11 @@ namespace EnkaDotNet
         public Task<Dictionary<string, List<ZZZBuild>>> GetZZZBuildsByUsernameAsync(string username, string hoyoHash, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
             ExecuteApiCallAsync(async () =>
             {
-                // Fetch raw builds from the API
                 var rawBuilds = await _enkaProfileServiceHandler.GetRawBuildsByUsernameAsync(username, hoyoHash, bypassCache, cancellationToken).ConfigureAwait(false);
                 
-                // Get the ZZZ assets with the appropriate language
                 var assets = await GetZZZAssetsAsync(language).ConfigureAwait(false);
                 var dataMapper = new Utils.ZZZ.ZZZDataMapper(assets, _options);
                 
-                // Map raw builds to ZZZBuild components
                 var result = new Dictionary<string, List<ZZZBuild>>();
                 
                 foreach (var kvp in rawBuilds)
@@ -531,7 +531,6 @@ namespace EnkaDotNet
                             AgentId = rawBuild.AvatarId
                         };
                         
-                        // Parse the avatar_data to get the agent
                         if (rawBuild.AvatarData.ValueKind != System.Text.Json.JsonValueKind.Undefined &&
                             rawBuild.AvatarData.ValueKind != System.Text.Json.JsonValueKind.Null)
                         {
@@ -572,38 +571,56 @@ namespace EnkaDotNet
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
 
-            var tasks = new List<Task>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var langList = new List<string>();
             foreach (var lang in languages)
             {
                 if (string.IsNullOrWhiteSpace(lang)) continue;
+                var normalized = lang.Trim().ToLowerInvariant();
+                if (seen.Add(normalized))
+                    langList.Add(normalized);
+            }
 
-                await _preloadSemaphore.WaitAsync().ConfigureAwait(false);
+            if (langList.Count == 0) return;
 
-                tasks.Add(Task.Run(async () =>
-                {
-                    try
-                    {
-                        Logger.LogInformation("Preloading assets for language: {Language}", lang);
-                        await GetGenshinAssetsAsync(lang).ConfigureAwait(false);
-                        await GetHSRAssetsAsync(lang).ConfigureAwait(false);
-                        await GetZZZAssetsAsync(lang).ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        _preloadSemaphore.Release();
-                    }
-                }));
+            Logger.LogInformation(EnkaEventIds.AssetPreloadStart,
+                "Preloading assets for {Count} language(s): {Languages}",
+                langList.Count, string.Join(", ", langList));
+
+            using var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+            using var activity = EnkaTelemetry.ActivitySource.StartActivity("EnkaClient.PreloadAssets");
+            activity?.SetTag("enka.languages", string.Join(",", langList));
+
+            var tasks = new List<Task>(langList.Count * 3);
+            foreach (var lang in langList)
+            {
+                tasks.Add(RunWithSemaphoreAsync(semaphore, () => GetGenshinAssetsAsync(lang)));
+                tasks.Add(RunWithSemaphoreAsync(semaphore, () => GetHSRAssetsAsync(lang)));
+                tasks.Add(RunWithSemaphoreAsync(semaphore, () => GetZZZAssetsAsync(lang)));
             }
 
             try
             {
                 await Task.WhenAll(tasks).ConfigureAwait(false);
-                Logger.LogInformation("Finished preloading all specified assets.");
+                Logger.LogInformation(EnkaEventIds.AssetPreloadDone, "Finished preloading all specified assets.");
             }
-            catch (EnkaNetworkException ex)
+            catch (Exception ex)
             {
-                Logger.LogError(ex, "Failed to preload assets due to a network timeout.");
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
                 throw;
+            }
+        }
+
+        private static async Task RunWithSemaphoreAsync(SemaphoreSlim semaphore, Func<Task> load)
+        {
+            await semaphore.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await load().ConfigureAwait(false);
+            }
+            finally
+            {
+                semaphore.Release();
             }
         }
 
@@ -622,7 +639,10 @@ namespace EnkaDotNet
             _genshinAssetsCache.Clear();
             _hsrAssetsCache.Clear();
             _zzzAssetsCache.Clear();
-            Logger.LogInformation("Cleared EnkaClient language asset caches");
+            _genshinHandlerCache.Clear();
+            _hsrHandlerCache.Clear();
+            _zzzHandlerCache.Clear();
+            Logger.LogInformation("Cleared EnkaClient language asset and handler caches");
         }
 
         protected virtual void Dispose(bool disposing)
@@ -631,6 +651,14 @@ namespace EnkaDotNet
             {
                 if (disposing)
                 {
+                    (_httpHelper as IDisposable)?.Dispose();
+                    (_httpClientFactory as IDisposable)?.Dispose();
+                    _genshinAssetsCache.Clear();
+                    _hsrAssetsCache.Clear();
+                    _zzzAssetsCache.Clear();
+                    _genshinHandlerCache.Clear();
+                    _hsrHandlerCache.Clear();
+                    _zzzHandlerCache.Clear();
                 }
                 _disposed = true;
             }
@@ -644,27 +672,60 @@ namespace EnkaDotNet
         }
 
         /// <summary>
-        /// A basic implementation of IHttpClientFactory for use when one is not provided
-        /// Warning: This implementation is not recommended for production use as it lacks advanced features like configurable handlers and retry policies
+        /// A fallback <see cref="IHttpClientFactory"/> used when the caller does not provide one.
+        /// <para>
+        /// On .NET 5+, uses <c>SocketsHttpHandler</c> with <c>PooledConnectionLifetime</c> to get
+        /// proper connection pooling and periodic DNS refresh matching the behaviour of the
+        /// ASP.NET Core <c>IHttpClientFactory</c> for singleton instances.
+        /// </para>
+        /// <para>
+        /// On netstandard2.0, <c>SocketsHttpHandler</c> is unavailable a plain singleton
+        /// <c>HttpClient</c> is used instead. DNS changes will not be picked up until the process
+        /// restarts. For production netstandard2.0 scenarios supply your own
+        /// <c>IHttpClientFactory</c> via the <c>httpClientFactory</c> parameter of
+        /// <see cref="CreateAsync"/>.
+        /// </para>
         /// </summary>
-        private class DefaultHttpClientFactory : IHttpClientFactory
+        private sealed class DefaultHttpClientFactory : IHttpClientFactory, IDisposable
         {
+            private readonly ConcurrentDictionary<string, HttpClient> _clients = new ConcurrentDictionary<string, HttpClient>();
+            private bool _disposed;
+
             public HttpClient CreateClient(string name)
             {
+                if (_disposed) throw new ObjectDisposedException(nameof(DefaultHttpClientFactory));
+                return _clients.GetOrAdd(name, CreateHttpClient);
+            }
+
+            private static HttpClient CreateHttpClient(string name)
+            {
+#if NET5_0_OR_GREATER
+                var handler = new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+                    MaxConnectionsPerServer = 10,
+                    EnableMultipleHttp2Connections = true,
+                };
+                var client = new HttpClient(handler);
+#else
                 var client = new HttpClient();
-                if (name == "EnkaProfileClient")
-                {
+#endif
+                if (name == "EnkaProfileClient" || name == "DefaultEnkaClient")
                     client.BaseAddress = new Uri(Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
-                }
-                else if (name == "GenshinAssetClient" || name == "HSRAssetClient" || name == "ZZZAssetClient")
-                {
-                }
-                else if (name == "DefaultEnkaClient")
-                {
-                    client.BaseAddress = new Uri(Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
-                }
+
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(Constants.DefaultUserAgent);
                 return client;
+            }
+
+            public void Dispose()
+            {
+                if (_disposed) return;
+                _disposed = true;
+                foreach (var client in _clients.Values)
+                    client.Dispose();
+                _clients.Clear();
+                GC.SuppressFinalize(this);
             }
         }
     }

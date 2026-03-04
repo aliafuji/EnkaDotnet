@@ -8,6 +8,7 @@ using EnkaDotNet.Utils.Common;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -96,20 +97,10 @@ namespace EnkaDotNet.DIExtensions
             });
 
             services.TryAddSingleton<EnkaClient>();
-            
-            services.TryAddSingleton<IEnkaClient>(sp =>
-            {
-                var client = sp.GetRequiredService<EnkaClient>();
-                var options = sp.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
-                
-                if (options.PreloadLanguages != null && options.PreloadLanguages.Count > 0)
-                {
-                    client.PreloadAssetsAsync(options.PreloadLanguages)
-                          .GetAwaiter()
-                          .GetResult();
-                }
-                return client;
-            });
+
+            services.TryAddSingleton<IEnkaClient>(sp => sp.GetRequiredService<EnkaClient>());
+
+            services.AddHostedService<EnkaClientStartupService>();
 
             return services;
         }

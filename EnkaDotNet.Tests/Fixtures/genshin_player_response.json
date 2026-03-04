@@ -1,0 +1,18 @@
+{
+  "playerInfo": {
+    "nickname": "TestPlayer",
+    "level": 60,
+    "signature": "Test signature",
+    "worldLevel": 8,
+    "nameCardId": 210001,
+    "finishAchievementNum": 500,
+    "towerFloorIndex": 12,
+    "towerLevelIndex": 3,
+    "towerStarIndex": 36,
+    "theaterActIndex": 10,
+    "theaterStarIndex": 48
+  },
+  "avatarInfoList": [],
+  "uid": "800000001",
+  "ttl": 60
+}

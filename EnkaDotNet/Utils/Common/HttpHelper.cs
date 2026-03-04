@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Retry;
 #if NET8_0_OR_GREATER
 using EnkaDotNet.Serialization;
@@ -33,17 +35,13 @@ namespace EnkaDotNet.Utils.Common
         private readonly ILogger<HttpHelper> _logger;
         private bool _disposed = false;
         private readonly ConcurrentDictionary<string, bool> _trackedCacheKeys;
-        private ResiliencePipeline<HttpResponseMessage> _resiliencePipeline;
-        private static readonly Random _jitterer = new Random();
+        private ResiliencePipeline<HttpResponseMessage> _resiliencePipeline = null!;
+
         private static readonly ResiliencePropertyKey<string> RelativeUrlKey = new ResiliencePropertyKey<string>("relativeUrl");
 
         /// <summary>
         /// Initializes a new instance of the HttpHelper class with IEnkaCache support.
         /// </summary>
-        /// <param name="httpClient">The HTTP client for making requests.</param>
-        /// <param name="cache">The cache provider to use.</param>
-        /// <param name="options">The client options.</param>
-        /// <param name="logger">The logger instance.</param>
         public HttpHelper(
             HttpClient httpClient,
             IEnkaCache cache,
@@ -57,17 +55,12 @@ namespace EnkaDotNet.Utils.Common
             _logger = logger ?? NullLogger<HttpHelper>.Instance;
             _trackedCacheKeys = new ConcurrentDictionary<string, bool>();
             _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
-
             InitializeResiliencePipeline();
         }
 
         /// <summary>
         /// Initializes a new instance of the HttpHelper class with IMemoryCache for backward compatibility.
         /// </summary>
-        /// <param name="httpClient">The HTTP client for making requests.</param>
-        /// <param name="memoryCache">The memory cache instance (legacy support).</param>
-        /// <param name="options">The client options.</param>
-        /// <param name="logger">The logger instance.</param>
         public HttpHelper(
             HttpClient httpClient,
             IMemoryCache memoryCache,
@@ -80,63 +73,120 @@ namespace EnkaDotNet.Utils.Common
             _logger = logger ?? NullLogger<HttpHelper>.Instance;
             _trackedCacheKeys = new ConcurrentDictionary<string, bool>();
             _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
-
-            // Wrap the IMemoryCache in a MemoryCacheAdapter for unified interface
             var defaultTtl = TimeSpan.FromMinutes(_options.CacheDurationMinutes);
             _cache = new MemoryCacheAdapter(memoryCache, defaultTtl);
-
             InitializeResiliencePipeline();
         }
 
-        /// <summary>
-        /// Initializes the resilience pipeline for HTTP requests.
-        /// </summary>
         private void InitializeResiliencePipeline()
-
         {
             var retryOptions = new RetryStrategyOptions<HttpResponseMessage>
             {
                 ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
                     .Handle<HttpRequestException>()
-                    .HandleResult(r =>
-                    {
-                        foreach (var code in _options.RetryOnStatusCodes)
-                        {
-                            if (r.StatusCode == code && r.StatusCode != (HttpStatusCode)429)
-                            {
-                                return true;
-                            }
-                        }
-                        return false;
-                    }),
+                    .HandleResult(IsRetryableStatusCode),
                 MaxRetryAttempts = _options.MaxRetries,
-                DelayGenerator = args =>
+                DelayGenerator = ComputeRetryDelay,
+                OnRetry = OnRetryAttempt
+            };
+
+            var circuitBreakerOptions = new CircuitBreakerStrategyOptions<HttpResponseMessage>
+            {
+                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                    .Handle<HttpRequestException>()
+                    .HandleResult(IsCircuitBreakerStatusCode),
+                FailureRatio = 1.0,
+                MinimumThroughput = _options.CircuitBreakerFailureThreshold,
+                SamplingDuration = TimeSpan.FromSeconds(60),
+                BreakDuration = TimeSpan.FromSeconds(_options.CircuitBreakerBreakDurationSeconds),
+                OnOpened = args =>
                 {
-                    TimeSpan delay = TimeSpan.FromMilliseconds(_options.RetryDelayMs);
-                    if (_options.UseExponentialBackoff)
-                    {
-                        delay = TimeSpan.FromMilliseconds(Math.Min(Math.Pow(2, args.AttemptNumber) * _options.RetryDelayMs, _options.MaxRetryDelayMs));
-                    }
-                    delay += TimeSpan.FromMilliseconds(_jitterer.Next(0, (int)(delay.TotalMilliseconds * 0.2)));
-                    return new ValueTask<TimeSpan?>(delay);
+                    _logger.LogWarning(EnkaEventIds.CircuitOpen,
+                        "Circuit breaker opened. Fast-failing for {BreakDuration}s.",
+                        args.BreakDuration.TotalSeconds);
+                    return new ValueTask();
                 },
-                OnRetry = args =>
+                OnClosed = args =>
                 {
-                    string urlForLog = "Unknown URL";
-                    if (args.Context.Properties.TryGetValue(RelativeUrlKey, out var url))
-                    {
-                        urlForLog = url;
-                    }
-                    _logger.LogWarning(args.Outcome.Exception,
-                        "Request to {Url} failed. Delaying for {Delay}, then making retry {AttemptNumber}/{MaxRetries}. Status: {StatusCode}",
-                        urlForLog, args.RetryDelay, args.AttemptNumber + 1, _options.MaxRetries, args.Outcome.Result?.StatusCode);
+                    _logger.LogInformation(EnkaEventIds.CircuitClosed, "Circuit breaker closed.");
+                    return new ValueTask();
+                },
+                OnHalfOpened = args =>
+                {
+                    _logger.LogInformation(EnkaEventIds.CircuitHalfOpen, "Circuit breaker half-open, probing.");
                     return new ValueTask();
                 }
             };
 
             _resiliencePipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
                 .AddRetry(retryOptions)
+                .AddCircuitBreaker(circuitBreakerOptions)
                 .Build();
+        }
+
+        private bool IsRetryableStatusCode(HttpResponseMessage response)
+        {
+            foreach (var code in _options.RetryOnStatusCodes)
+            {
+                if (response.StatusCode == code) return true;
+            }
+            return false;
+        }
+
+        private bool IsCircuitBreakerStatusCode(HttpResponseMessage response)
+        {
+            foreach (var code in _options.RetryOnStatusCodes)
+            {
+                if (response.StatusCode == code && response.StatusCode != (HttpStatusCode)429) return true;
+            }
+            return false;
+        }
+
+        private ValueTask<TimeSpan?> ComputeRetryDelay(RetryDelayGeneratorArguments<HttpResponseMessage> args)
+        {
+            if (args.Outcome.Result?.StatusCode == (HttpStatusCode)429)
+            {
+                var rateLimitDelay = GetRetryAfterDelay(
+                    args.Outcome.Result.Headers.RetryAfter,
+                    TimeSpan.FromMilliseconds(_options.RetryDelayMs));
+                return new ValueTask<TimeSpan?>(rateLimitDelay);
+            }
+
+            TimeSpan delay = TimeSpan.FromMilliseconds(_options.RetryDelayMs);
+            if (_options.UseExponentialBackoff)
+            {
+                delay = TimeSpan.FromMilliseconds(
+                    Math.Min(Math.Pow(2, args.AttemptNumber) * _options.RetryDelayMs, _options.MaxRetryDelayMs));
+            }
+#if NET6_0_OR_GREATER
+            delay += TimeSpan.FromMilliseconds(Random.Shared.Next(0, (int)(delay.TotalMilliseconds * 0.2)));
+#else
+            delay += TimeSpan.FromMilliseconds(new Random().Next(0, (int)(delay.TotalMilliseconds * 0.2)));
+#endif
+            return new ValueTask<TimeSpan?>(delay);
+        }
+
+        private ValueTask OnRetryAttempt(OnRetryArguments<HttpResponseMessage> args)
+        {
+            string urlForLog = args.Context.Properties.TryGetValue(RelativeUrlKey, out var u) ? u : "Unknown URL";
+            bool is429 = args.Outcome.Result?.StatusCode == (HttpStatusCode)429;
+
+            EnkaTelemetry.RetryCount.Add(1);
+
+            if (is429)
+            {
+                _logger.LogWarning(EnkaEventIds.RetryAttempt,
+                    "Request to {Url} rate-limited (429). Waiting {Delay} (Retry-After), then retry {Attempt}/{Max}.",
+                    urlForLog, args.RetryDelay, args.AttemptNumber + 1, _options.MaxRetries);
+            }
+            else
+            {
+                _logger.LogWarning(EnkaEventIds.RetryAttempt, args.Outcome.Exception,
+                    "Request to {Url} failed. Delaying {Delay}, then retry {Attempt}/{Max}. Status: {StatusCode}",
+                    urlForLog, args.RetryDelay, args.AttemptNumber + 1, _options.MaxRetries,
+                    args.Outcome.Result?.StatusCode);
+            }
+            return new ValueTask();
         }
 
         public async Task<T> Get<T>(string relativeUrl, bool bypassCache = false, CancellationToken cancellationToken = default) where T : class
@@ -150,21 +200,33 @@ namespace EnkaDotNet.Utils.Common
                 var cachedEntry = await _cache.GetAsync<CacheEntry>(cacheKey, cancellationToken).ConfigureAwait(false);
                 if (cachedEntry != null && !cachedEntry.IsExpired)
                 {
-                    _logger.Log(LogLevel.Trace, "Cache hit for {Url}", relativeUrl);
+                    _logger.LogTrace(EnkaEventIds.CacheHit, "Cache hit for {Url}", relativeUrl);
+                    EnkaTelemetry.CacheHits.Add(1);
                     _trackedCacheKeys.TryAdd(cacheKey, true);
 #if NET8_0_OR_GREATER
-                    return JsonSerializer.Deserialize<T>(cachedEntry.JsonResponse, EnkaJsonContext.Default.Options) ?? throw new EnkaNetworkException($"Failed to deserialize cached JSON response from {relativeUrl} (result was null)");
+                    return JsonSerializer.Deserialize<T>(cachedEntry.JsonResponse, EnkaJsonContext.Default.Options)
+                        ?? throw new EnkaNetworkException($"Failed to deserialize cached JSON response from {relativeUrl} (result was null)");
 #else
 #pragma warning disable IL2026, IL3050
-                    return JsonSerializer.Deserialize<T>(cachedEntry.JsonResponse) ?? throw new EnkaNetworkException($"Failed to deserialize cached JSON response from {relativeUrl} (result was null)");
+                    return JsonSerializer.Deserialize<T>(cachedEntry.JsonResponse)
+                        ?? throw new EnkaNetworkException($"Failed to deserialize cached JSON response from {relativeUrl} (result was null)");
 #pragma warning restore IL2026, IL3050
 #endif
                 }
+                EnkaTelemetry.CacheMisses.Add(1);
+                _logger.LogTrace(EnkaEventIds.CacheMiss, "Cache miss for {Url}", relativeUrl);
             }
 
-            HttpResponseMessage response = null;
-            string jsonString = null;
-            ResilienceContext resilienceContext = null;
+            HttpResponseMessage? response = null;
+            string? jsonString = null;
+            ResilienceContext? resilienceContext = null;
+            var sw = Stopwatch.StartNew();
+
+            using var activity = EnkaTelemetry.ActivitySource.StartActivity("EnkaHttp.Get");
+            activity?.SetTag("enka.url", relativeUrl);
+
+            EnkaTelemetry.RequestCount.Add(1);
+            _logger.LogTrace(EnkaEventIds.RequestStart, "Sending request to {Url}", relativeUrl);
 
             try
             {
@@ -174,93 +236,85 @@ namespace EnkaDotNet.Utils.Common
                 response = await _resiliencePipeline.ExecuteAsync(
                     async (ctx, ct) =>
                     {
-                        using (var request = new HttpRequestMessage(HttpMethod.Get, ctx.Properties.GetValue(RelativeUrlKey, "ERROR_NO_URL_IN_CONTEXT")))
-                        {
-                            _logger.Log(LogLevel.Trace, "Sending request via Polly to {BaseAddress}{Url}.", _httpClient.BaseAddress, ctx.Properties.GetValue(RelativeUrlKey, ""));
-                            HttpResponseMessage httpResponse = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
+                        using var request = new HttpRequestMessage(HttpMethod.Get, ctx.Properties.GetValue(RelativeUrlKey, "ERROR_NO_URL_IN_CONTEXT"));
+                        HttpResponseMessage httpResponse = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
 
-                            if (httpResponse.StatusCode == (HttpStatusCode)429)
-                            {
-                                TimeSpan retryAfterDelay = GetRetryAfterDelay(httpResponse.Headers.RetryAfter, TimeSpan.FromSeconds(_options.RetryDelayMs));
-                                _logger.LogWarning("API returned 429 Too Many Requests for URL: {Url}. Throwing RateLimitException. Retry-After: {Delay}.", ctx.Properties.GetValue(RelativeUrlKey, ""), retryAfterDelay);
-                                throw new RateLimitException($"API rate limit exceeded for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}. Retry-After: {httpResponse.Headers.RetryAfter}", httpResponse.Headers.RetryAfter);
-                            }
+                        if (httpResponse.StatusCode == (HttpStatusCode)424)
+                            throw new GameMaintenanceException($"API returned 424 Failed Dependency for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}.");
 
-                            if (httpResponse.StatusCode == (HttpStatusCode)424)
-                            {
-                                throw new GameMaintenanceException($"API returned 424 Failed Dependency for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}. Game may be under maintenance or API access restricted.");
-                            }
+                        if (httpResponse.StatusCode == HttpStatusCode.NotFound)
+                            throw new PlayerNotFoundException(ExtractUidFromUrl(ctx.Properties.GetValue(RelativeUrlKey, "")),
+                                $"API returned 404 for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}");
 
-                            if (httpResponse.StatusCode == HttpStatusCode.NotFound)
-                            {
-                                int uid = ExtractUidFromUrl(ctx.Properties.GetValue(RelativeUrlKey, ""));
-                                throw new PlayerNotFoundException(uid, $"API returned 404 Not Found for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}");
-                            }
-                            if (httpResponse.StatusCode == HttpStatusCode.Forbidden)
-                            {
-                                int uid = ExtractUidFromUrl(ctx.Properties.GetValue(RelativeUrlKey, ""));
-                                throw new ProfilePrivateException(uid, $"API returned 403 Forbidden for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}. Profile may be private or API access restricted.");
-                            }
-                            return httpResponse;
-                        }
+                        if (httpResponse.StatusCode == HttpStatusCode.Forbidden)
+                            throw new ProfilePrivateException(ExtractUidFromUrl(ctx.Properties.GetValue(RelativeUrlKey, "")),
+                                $"API returned 403 for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}. Profile may be private.");
+
+                        return httpResponse;
                     },
                     resilienceContext
                 ).ConfigureAwait(false);
+
+                if (response.StatusCode == (HttpStatusCode)429)
+                {
+                    _logger.LogWarning(EnkaEventIds.RateLimited,
+                        "Rate limit (429) persisted after exhausting retries for {Url}. Retry-After: {RetryAfter}",
+                        relativeUrl, response.Headers.RetryAfter);
+                    activity?.SetStatus(ActivityStatusCode.Error, "RateLimited");
+                    throw new RateLimitException(
+                        $"API rate limit exceeded for URL: {relativeUrl}. Retry-After: {response.Headers.RetryAfter}",
+                        response.Headers.RetryAfter);
+                }
 
                 cancellationToken.ThrowIfCancellationRequested();
                 response.EnsureSuccessStatusCode();
 
                 jsonString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                _logger.Log(LogLevel.Trace, "Received {ByteCount} bytes from {Url}", jsonString.Length, relativeUrl);
 
                 if (string.IsNullOrWhiteSpace(jsonString))
-                {
                     _logger.LogWarning("Received empty or whitespace JSON response from {Url}", relativeUrl);
-                }
 
                 cancellationToken.ThrowIfCancellationRequested();
+
 #if NET8_0_OR_GREATER
-                T deserializedObject = JsonSerializer.Deserialize<T>(jsonString, EnkaJsonContext.Default.Options);
+                T? deserializedObject = JsonSerializer.Deserialize<T>(jsonString, EnkaJsonContext.Default.Options);
 #else
 #pragma warning disable IL2026, IL3050
-                T deserializedObject = JsonSerializer.Deserialize<T>(jsonString);
+                T? deserializedObject = JsonSerializer.Deserialize<T>(jsonString);
 #pragma warning restore IL2026, IL3050
 #endif
                 if (deserializedObject == null && !string.IsNullOrWhiteSpace(jsonString))
-                {
-                    throw new EnkaNetworkException($"Failed to deserialize JSON response from {relativeUrl}, but content was not empty. Result was null.");
-                }
+                    throw new EnkaNetworkException($"Failed to deserialize JSON response from {relativeUrl}, but content was not empty.");
 
                 if (response.IsSuccessStatusCode && _options.EnableCaching)
-                {
-                    CacheSuccessfulResponse(cacheKey, jsonString, response, relativeUrl);
-                }
-                return deserializedObject;
+                    _ = CacheSuccessfulResponse(cacheKey, jsonString, response, relativeUrl);
+
+                activity?.SetTag("enka.status_code", (int)response.StatusCode);
+                return deserializedObject!;
             }
             catch (JsonException ex)
             {
-                string snippet = jsonString?.Length > 200 ? jsonString.Substring(0, 200) + "..." : jsonString ?? "Response content was null or unreadable.";
-                _logger.LogError(ex, "Failed to parse JSON response from {Url}. Snippet: {Snippet}", relativeUrl, snippet);
+                string snippet = jsonString?.Length > 200 ? jsonString.Substring(0, 200) + "..." : jsonString ?? "null";
+                _logger.LogError(ex, "Failed to parse JSON from {Url}. Snippet: {Snippet}", relativeUrl, snippet);
+                activity?.SetStatus(ActivityStatusCode.Error, "JsonParseFailed");
                 throw new EnkaNetworkException($"Failed to parse JSON response from {relativeUrl}. Snippet: {snippet}", ex);
             }
             finally
             {
+                sw.Stop();
+                EnkaTelemetry.RequestDurationMs.Record(sw.Elapsed.TotalMilliseconds);
                 response?.Dispose();
                 if (resilienceContext != null)
-                {
                     ResilienceContextPool.Shared.Return(resilienceContext);
-                }
             }
         }
 
-        private TimeSpan GetRetryAfterDelay(RetryConditionHeaderValue retryAfterHeader, TimeSpan defaultDelay)
+        private static TimeSpan GetRetryAfterDelay(RetryConditionHeaderValue? retryAfterHeader, TimeSpan defaultDelay)
         {
             if (retryAfterHeader != null)
             {
                 if (retryAfterHeader.Delta.HasValue)
-                {
                     return retryAfterHeader.Delta.Value > TimeSpan.Zero ? retryAfterHeader.Delta.Value : defaultDelay;
-                }
                 if (retryAfterHeader.Date.HasValue)
                 {
                     var delay = retryAfterHeader.Date.Value - DateTimeOffset.UtcNow;
@@ -270,15 +324,10 @@ namespace EnkaDotNet.Utils.Common
             return defaultDelay;
         }
 
-        private async void CacheSuccessfulResponse(string cacheKey, string jsonString, HttpResponseMessage response, string relativeUrl)
+        private async Task CacheSuccessfulResponse(string cacheKey, string jsonString, HttpResponseMessage response, string relativeUrl)
         {
             DateTimeOffset expiration = CalculateExpiration(response, _options.CacheDurationMinutes);
-            var newCacheEntry = new CacheEntry
-            {
-                JsonResponse = jsonString,
-                Expiration = expiration
-            };
-            
+            var newCacheEntry = new CacheEntry { JsonResponse = jsonString, Expiration = expiration };
             var ttl = expiration - DateTimeOffset.UtcNow;
             if (ttl > TimeSpan.Zero)
             {
@@ -286,7 +335,6 @@ namespace EnkaDotNet.Utils.Common
                 {
                     await _cache.SetAsync(cacheKey, newCacheEntry, ttl).ConfigureAwait(false);
                     _trackedCacheKeys.TryAdd(cacheKey, true);
-                    _logger.Log(LogLevel.Trace, "Stored response in cache for {Url} with expiration: {Expiration}", relativeUrl, expiration);
                 }
                 catch (Exception ex)
                 {
@@ -298,9 +346,7 @@ namespace EnkaDotNet.Utils.Common
         private static DateTimeOffset CalculateExpiration(HttpResponseMessage response, int defaultCacheDurationMinutes)
         {
             if (response.Headers.CacheControl?.MaxAge.HasValue == true)
-            {
                 return DateTimeOffset.UtcNow.Add(response.Headers.CacheControl.MaxAge.Value);
-            }
             if (response.Content?.Headers?.Expires != null)
             {
                 var expiresHeader = response.Content.Headers.Expires.Value;
@@ -309,14 +355,8 @@ namespace EnkaDotNet.Utils.Common
             return DateTimeOffset.UtcNow.AddMinutes(defaultCacheDurationMinutes);
         }
 
-        public void ClearCache()
-        {
-            ClearCacheAsync().GetAwaiter().GetResult();
-        }
+        public void ClearCache() => ClearCacheAsync().GetAwaiter().GetResult();
 
-        /// <summary>
-        /// Clears all entries from the cache asynchronously.
-        /// </summary>
         public async Task ClearCacheAsync(CancellationToken cancellationToken = default)
         {
             try
@@ -328,41 +368,25 @@ namespace EnkaDotNet.Utils.Common
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to clear cache, falling back to tracked keys removal.");
-                
-                // Fallback: remove tracked keys individually
                 foreach (var key in _trackedCacheKeys.Keys)
                 {
-                    try
-                    {
-                        await _cache.RemoveAsync(key, cancellationToken).ConfigureAwait(false);
-                    }
-                    catch
-                    {
-                        // Ignore individual removal errors
-                    }
+                    try { await _cache.RemoveAsync(key, cancellationToken).ConfigureAwait(false); }
+                    catch (Exception removeEx) { _logger.LogTrace(removeEx, "Skipping failed per-key cache removal for {Key}.", key); }
                 }
                 _trackedCacheKeys.Clear();
             }
         }
 
-        public void RemoveFromCache(string relativeUrl)
-        {
-            RemoveFromCacheAsync(relativeUrl).GetAwaiter().GetResult();
-        }
+        public void RemoveFromCache(string relativeUrl) => RemoveFromCacheAsync(relativeUrl).GetAwaiter().GetResult();
 
-        /// <summary>
-        /// Removes a specific entry from the cache asynchronously.
-        /// </summary>
         public async Task RemoveFromCacheAsync(string relativeUrl, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrEmpty(relativeUrl)) return;
             string cacheKey = relativeUrl.ToLowerInvariant();
-            
             try
             {
                 await _cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
                 _trackedCacheKeys.TryRemove(cacheKey, out _);
-                _logger.Log(LogLevel.Trace, "Removed {CacheKey} from cache.", cacheKey);
             }
             catch (Exception ex)
             {
@@ -370,21 +394,14 @@ namespace EnkaDotNet.Utils.Common
             }
         }
 
-        public (long CurrentEntryCount, int ExpiredCountNotAvailable) GetCacheStats()
-        {
-            return GetCacheStatsAsync().GetAwaiter().GetResult();
-        }
+        public (long CurrentEntryCount, int ExpiredCountNotAvailable) GetCacheStats() =>
+            GetCacheStatsAsync().GetAwaiter().GetResult();
 
-        /// <summary>
-        /// Gets cache statistics asynchronously.
-        /// </summary>
         public async Task<(long CurrentEntryCount, int ExpiredCountNotAvailable)> GetCacheStatsAsync(CancellationToken cancellationToken = default)
         {
             try
             {
                 var stats = await _cache.GetStatsAsync(cancellationToken).ConfigureAwait(false);
-                _logger.Log(LogLevel.Trace, "Cache stats - Entries: {Count}, Hits: {Hits}, Misses: {Misses}, HitRate: {HitRate:P2}", 
-                    stats.EntryCount, stats.HitCount, stats.MissCount, stats.HitRate);
                 return (stats.EntryCount, 0);
             }
             catch (Exception ex)
@@ -394,13 +411,8 @@ namespace EnkaDotNet.Utils.Common
             }
         }
 
-        /// <summary>
-        /// Gets detailed cache statistics.
-        /// </summary>
-        public async Task<CacheStatistics> GetDetailedCacheStatsAsync(CancellationToken cancellationToken = default)
-        {
-            return await _cache.GetStatsAsync(cancellationToken).ConfigureAwait(false);
-        }
+        public async Task<CacheStatistics> GetDetailedCacheStatsAsync(CancellationToken cancellationToken = default) =>
+            await _cache.GetStatsAsync(cancellationToken).ConfigureAwait(false);
 
         private int ExtractUidFromUrl(string url)
         {
@@ -409,10 +421,9 @@ namespace EnkaDotNet.Utils.Common
             {
                 for (int i = 0; i < parts.Length; i++)
                 {
-                    bool isUidSegment = parts[i].Equals("uid", StringComparison.OrdinalIgnoreCase);
-                    if (isUidSegment && i + 1 < parts.Length && int.TryParse(parts[i + 1], out int uidAfterSegment)) return uidAfterSegment;
-                    if (i == parts.Length - 1 && int.TryParse(parts[i], out int uidLastSegment)) return uidLastSegment;
-                    if (i == 0 && int.TryParse(parts[i], out int uidFirstSegment)) return uidFirstSegment;
+                    if (parts[i].Equals("uid", StringComparison.OrdinalIgnoreCase) && i + 1 < parts.Length && int.TryParse(parts[i + 1], out int uid1)) return uid1;
+                    if (i == parts.Length - 1 && int.TryParse(parts[i], out int uid2)) return uid2;
+                    if (i == 0 && int.TryParse(parts[i], out int uid3)) return uid3;
                 }
             }
             return 0;
@@ -430,11 +441,8 @@ namespace EnkaDotNet.Utils.Common
             {
                 if (disposing)
                 {
-                    // Dispose the cache if we own it (not the legacy memory cache)
                     if (_legacyMemoryCache == null)
-                    {
                         _cache?.Dispose();
-                    }
                 }
                 _disposed = true;
             }

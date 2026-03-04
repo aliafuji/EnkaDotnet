@@ -1,6 +1,9 @@
 ﻿namespace EnkaDotNet.Utils.Common
 {
-    public static class Meth
+    /// <summary>
+    /// Math utility helpers for portability across target frameworks.
+    /// </summary>
+    public static class MathHelper
     {
         public static int Clamp(int value, int min, int max)
         {

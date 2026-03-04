@@ -16,6 +16,8 @@ namespace EnkaDotNet
         private int _maxRetryDelayMs = 30000;
         private int _timeoutSeconds = 30;
         private int _cacheDurationMinutes = 5;
+        private int _circuitBreakerFailureThreshold = 5;
+        private int _circuitBreakerBreakDurationSeconds = 30;
 
         /// <summary>
         /// Gets or sets the User-Agent string for HTTP requests
@@ -130,10 +132,47 @@ namespace EnkaDotNet
         };
 
         /// <summary>
+        /// Gets or sets the number of consecutive failures before the circuit breaker opens.
+        /// </summary>
+        public int CircuitBreakerFailureThreshold
+        {
+            get => _circuitBreakerFailureThreshold;
+            set
+            {
+                if (value < 1)
+                    throw new ArgumentOutOfRangeException(nameof(CircuitBreakerFailureThreshold), "Must be at least 1.");
+                _circuitBreakerFailureThreshold = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets how long (in seconds) the circuit breaker stays open before attempting recovery.
+        /// </summary>
+        public int CircuitBreakerBreakDurationSeconds
+        {
+            get => _circuitBreakerBreakDurationSeconds;
+            set
+            {
+                if (value < 1)
+                    throw new ArgumentOutOfRangeException(nameof(CircuitBreakerBreakDurationSeconds), "Must be at least 1.");
+                _circuitBreakerBreakDurationSeconds = value;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets a value indicating whether to return raw stat values or formatted display values
         /// This affects how stats are presented in component models
         /// </summary>
         public bool Raw { get; set; } = false;
+
+        /// <summary>
+        /// Optional directory where successfully downloaded asset files are persisted as local copies.
+        /// When set and a network download fails, the library loads from this directory before throwing,
+        /// keeping the application functional while the upstream source is unreachable.
+        /// Defaults to <c>null</c> no files are ever written to disk without this being set.
+        /// The caller is responsible for choosing a path appropriate for their application.
+        /// </summary>
+        public string AssetFallbackDirectory { get; set; } = null;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EnkaClientOptions"/> class
@@ -147,6 +186,7 @@ namespace EnkaDotNet
         {
             var clone = (EnkaClientOptions)MemberwiseClone();
             clone.RetryOnStatusCodes = new List<HttpStatusCode>(RetryOnStatusCodes);
+            clone.PreloadLanguages = new List<string>(PreloadLanguages);
             return clone;
         }
 
@@ -161,9 +201,9 @@ namespace EnkaDotNet
         /// <remarks>
         /// <para>Available providers:</para>
         /// <list type="bullet">
-        ///   <item><description><see cref="Caching.CacheProvider.Memory"/> - In-memory cache (default). Fast but not persistent across application restarts.</description></item>
-        ///   <item><description><see cref="Caching.CacheProvider.SQLite"/> - SQLite-based persistent cache. Data survives application restarts without external dependencies.</description></item>
-        ///   <item><description><see cref="Caching.CacheProvider.Redis"/> - Redis-based distributed cache. Ideal for multiple application instances sharing cache data.</description></item>
+        ///   <item><description><see cref="Caching.CacheProvider.Memory"/> - In memory cache (default). Fast but not persistent across application restarts.</description></item>
+        ///   <item><description><see cref="Caching.CacheProvider.SQLite"/> - SQLite based persistent cache. Data survives application restarts without external dependencies.</description></item>
+        ///   <item><description><see cref="Caching.CacheProvider.Redis"/> - Redis based distributed cache. Ideal for multiple application instances sharing cache data.</description></item>
         ///   <item><description><see cref="Caching.CacheProvider.Custom"/> - Custom cache provider via dependency injection. Implement <see cref="IEnkaCache"/> interface.</description></item>
         /// </list>
         /// </remarks>

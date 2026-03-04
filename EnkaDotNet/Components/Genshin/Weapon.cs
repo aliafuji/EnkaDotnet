@@ -18,7 +18,7 @@ namespace EnkaDotNet.Components.Genshin
 
         public KeyValuePair<string, string> FormattedSecondaryStat =>
             SecondaryStat != null ? FormatStat(SecondaryStat.Type, SecondaryStat.Value)
-            : new KeyValuePair<string, string>(Options?.Raw ?? false ? "None" : "None", "0");
+            : new KeyValuePair<string, string>("None", "0");
 
         private KeyValuePair<string, string> FormatStat(StatType type, double value)
         {

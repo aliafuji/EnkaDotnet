@@ -29,10 +29,10 @@ namespace EnkaDotNet.Assets.ZZZ
         private readonly SemaphoreSlim _loadingSemaphore;
         private bool _disposed = false;
 
-        public ZZZAssets(string language, HttpClient httpClient, ILogger<ZZZAssets> logger)
-            : base(language, "zzz", httpClient, logger)
+        public ZZZAssets(string language, HttpClient httpClient, ILogger<ZZZAssets> logger, string fallbackDirectory = null)
+            : base(language, "zzz", httpClient, logger, fallbackDirectory)
         {
-            int maxConcurrency = Meth.Clamp(Environment.ProcessorCount, 1, 8);
+            int maxConcurrency = MathHelper.Clamp(Environment.ProcessorCount, 1, 8);
             _loadingSemaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
         }
 

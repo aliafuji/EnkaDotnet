@@ -28,10 +28,10 @@ namespace EnkaDotNet.Assets.HSR
         private readonly SemaphoreSlim _loadingSemaphore;
         private bool _disposed = false;
 
-        public HSRAssets(string language, HttpClient httpClient, ILogger<HSRAssets> logger)
-            : base(language, "hsr", httpClient, logger)
+        public HSRAssets(string language, HttpClient httpClient, ILogger<HSRAssets> logger, string fallbackDirectory = null)
+            : base(language, "hsr", httpClient, logger, fallbackDirectory)
         {
-            int maxConcurrency = Meth.Clamp(Environment.ProcessorCount, 1, 8);
+            int maxConcurrency = MathHelper.Clamp(Environment.ProcessorCount, 1, 8);
             _loadingSemaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
         }
 
