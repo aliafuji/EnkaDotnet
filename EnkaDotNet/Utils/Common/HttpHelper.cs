@@ -36,7 +36,7 @@ namespace EnkaDotNet.Utils.Common
         private bool _disposed = false;
         private readonly ConcurrentDictionary<string, bool> _trackedCacheKeys;
         private ResiliencePipeline<HttpResponseMessage> _resiliencePipeline = null!;
-        private static readonly Random _jitterer = new Random();
+
         private static readonly ResiliencePropertyKey<string> RelativeUrlKey = new ResiliencePropertyKey<string>("relativeUrl");
 
         /// <summary>
@@ -158,7 +158,11 @@ namespace EnkaDotNet.Utils.Common
                 delay = TimeSpan.FromMilliseconds(
                     Math.Min(Math.Pow(2, args.AttemptNumber) * _options.RetryDelayMs, _options.MaxRetryDelayMs));
             }
-            delay += TimeSpan.FromMilliseconds(_jitterer.Next(0, (int)(delay.TotalMilliseconds * 0.2)));
+#if NET6_0_OR_GREATER
+            delay += TimeSpan.FromMilliseconds(Random.Shared.Next(0, (int)(delay.TotalMilliseconds * 0.2)));
+#else
+            delay += TimeSpan.FromMilliseconds(new Random().Next(0, (int)(delay.TotalMilliseconds * 0.2)));
+#endif
             return new ValueTask<TimeSpan?>(delay);
         }
 
