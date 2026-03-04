@@ -3,7 +3,7 @@
 Enka.DotNet is a C# wrapper for accessing and processing character data from the Enka.Network API. It provides a simple interface to retrieve detailed information about characters, artifacts, weapons, and player profiles for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero.
 
 [![NuGet](https://img.shields.io/nuget/v/EnkaDotNet.svg)](https://www.nuget.org/packages/EnkaDotNet/)
-[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=aliafuji_EnkaDotnet)](https://sonarcloud.io/summary/new_code?id=aliafuji_EnkaDotnet)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=aliafuji_EnkaDotnet&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=aliafuji_EnkaDotnet)
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=aliafuji_EnkaDotnet&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=aliafuji_EnkaDotnet)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=aliafuji_EnkaDotnet&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=aliafuji_EnkaDotnet)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=aliafuji_EnkaDotnet&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=aliafuji_EnkaDotnet)
