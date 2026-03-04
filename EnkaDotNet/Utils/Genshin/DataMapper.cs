@@ -203,12 +203,12 @@ namespace EnkaDotNet.Utils.Genshin
             if (secondaryStat != null) secondaryStat.Options = this._options;
 
             int refinementValue = -1;
-            if (weapon.AffixMap != null)
+            if (weapon.AffixMap != null && weapon.AffixMap.Count > 0)
             {
-                foreach (var val in weapon.AffixMap.Values)
+                var enumerator = weapon.AffixMap.Values.GetEnumerator();
+                if (enumerator.MoveNext())
                 {
-                    refinementValue = val;
-                    break;
+                    refinementValue = enumerator.Current;
                 }
             }
             int refinementRank = refinementValue + 1;
