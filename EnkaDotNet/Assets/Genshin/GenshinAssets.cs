@@ -24,10 +24,10 @@ namespace EnkaDotNet.Assets.Genshin
         private readonly SemaphoreSlim _loadingSemaphore;
         private bool _disposed = false;
 
-        public GenshinAssets(string language, HttpClient httpClient, ILogger<GenshinAssets> logger)
-            : base(language, "genshin", httpClient, logger)
+        public GenshinAssets(string language, HttpClient httpClient, ILogger<GenshinAssets> logger, string fallbackDirectory = null)
+            : base(language, "genshin", httpClient, logger, fallbackDirectory)
         {
-            int maxConcurrency = Meth.Clamp(Environment.ProcessorCount, 1, 8);
+            int maxConcurrency = MathHelper.Clamp(Environment.ProcessorCount, 1, 8);
             _loadingSemaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
         }
 

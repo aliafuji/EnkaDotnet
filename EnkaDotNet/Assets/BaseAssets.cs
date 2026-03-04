@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -17,6 +18,7 @@ namespace EnkaDotNet.Assets
     public abstract class BaseAssets : IAssets, IDisposable
     {
         private readonly HttpClient _httpClient;
+        private readonly string _fallbackDirectory;
         private readonly ConcurrentDictionary<string, object> _assetCache = new ConcurrentDictionary<string, object>();
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _assetFetchLocks = new ConcurrentDictionary<string, SemaphoreSlim>();
         private static readonly SemaphoreSlim _initializationSemaphore = new SemaphoreSlim(1, 1);
@@ -28,12 +30,13 @@ namespace EnkaDotNet.Assets
         public string Language { get; }
         public string GameIdentifier { get; }
 
-        protected BaseAssets(string language, string gameIdentifier, HttpClient httpClient, ILogger logger)
+        protected BaseAssets(string language, string gameIdentifier, HttpClient httpClient, ILogger logger, string fallbackDirectory = null)
         {
             Language = language ?? throw new ArgumentNullException(nameof(language));
             GameIdentifier = gameIdentifier ?? throw new ArgumentNullException(nameof(gameIdentifier));
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _logger = logger ?? NullLogger.Instance;
+            _fallbackDirectory = fallbackDirectory;
         }
 
         public async Task EnsureInitializedAsync()
@@ -142,25 +145,65 @@ namespace EnkaDotNet.Assets
                 _logger.LogError("No URL defined for asset '{AssetKey}' in game {GameIdentifier}", assetKey, GameIdentifier);
                 throw new InvalidOperationException($"No URL defined for asset '{assetKey}' in game {GameIdentifier}");
             }
+
             try
             {
+                string json;
                 using (var request = new HttpRequestMessage(HttpMethod.Get, url))
                 {
                     request.Headers.UserAgent.ParseAdd(Constants.DefaultUserAgent);
                     HttpResponseMessage response = await _httpClient.SendAsync(request).ConfigureAwait(false);
                     response.EnsureSuccessStatusCode();
-                    return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 }
+
+                if (_fallbackDirectory != null)
+                    _ = SaveAssetToDiskAsync(assetKey, json);
+
+                return json;
             }
-            catch (HttpRequestException ex)
+            catch (Exception ex) when (!(ex is OperationCanceledException))
             {
+                if (_fallbackDirectory != null)
+                {
+                    string localPath = GetFallbackPath(assetKey);
+                    if (File.Exists(localPath))
+                    {
+                        _logger.LogWarning(ex,
+                            "Network error fetching '{AssetKey}' for {GameIdentifier}. Loading from local fallback: {Path}",
+                            assetKey, GameIdentifier, localPath);
+                        return File.ReadAllText(localPath);
+                    }
+                }
+
                 _logger.LogError(ex, "FAILED to fetch '{AssetKey}' for {GameIdentifier} (Network Error). URL: {Url}", assetKey, GameIdentifier, url);
                 throw;
             }
+        }
+
+        private string GetFallbackPath(string assetKey)
+        {
+            return Path.Combine(_fallbackDirectory, GameIdentifier, assetKey);
+        }
+
+        private async Task SaveAssetToDiskAsync(string assetKey, string json)
+        {
+            try
+            {
+                string dir = Path.Combine(_fallbackDirectory, GameIdentifier);
+                Directory.CreateDirectory(dir);
+                string path = Path.Combine(dir, assetKey);
+#if NET8_0_OR_GREATER
+                await File.WriteAllTextAsync(path, json).ConfigureAwait(false);
+#else
+                File.WriteAllText(path, json);
+                await Task.CompletedTask.ConfigureAwait(false);
+#endif
+                _logger.LogTrace("Asset '{AssetKey}' for {GameIdentifier} saved to fallback: {Path}", assetKey, GameIdentifier, path);
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error fetching '{AssetKey}' for {GameIdentifier}. URL: {Url}", assetKey, GameIdentifier, url);
-                throw;
+                _logger.LogWarning(ex, "Failed to save asset '{AssetKey}' for {GameIdentifier} to fallback directory.", assetKey, GameIdentifier);
             }
         }
 

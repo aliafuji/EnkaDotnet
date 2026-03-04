@@ -10,23 +10,23 @@ namespace EnkaDotNet.Assets
 {
     public static class AssetsFactory
     {
-        public static async Task<IGenshinAssets> CreateGenshinAssetsAsync(string language, HttpClient httpClient, ILogger<GenshinAssets> logger = null)
+        public static async Task<IGenshinAssets> CreateGenshinAssetsAsync(string language, HttpClient httpClient, ILogger<GenshinAssets> logger = null, string fallbackDirectory = null)
         {
-            var assets = new GenshinAssets(language, httpClient, logger ?? NullLogger<GenshinAssets>.Instance);
+            var assets = new GenshinAssets(language, httpClient, logger ?? NullLogger<GenshinAssets>.Instance, fallbackDirectory);
             await assets.EnsureInitializedAsync().ConfigureAwait(false);
             return assets;
         }
 
-        public static async Task<IZZZAssets> CreateZZZAssetsAsync(string language, HttpClient httpClient, ILogger<ZZZAssets> logger = null)
+        public static async Task<IZZZAssets> CreateZZZAssetsAsync(string language, HttpClient httpClient, ILogger<ZZZAssets> logger = null, string fallbackDirectory = null)
         {
-            var assets = new ZZZAssets(language, httpClient, logger ?? NullLogger<ZZZAssets>.Instance);
+            var assets = new ZZZAssets(language, httpClient, logger ?? NullLogger<ZZZAssets>.Instance, fallbackDirectory);
             await assets.EnsureInitializedAsync().ConfigureAwait(false);
             return assets;
         }
 
-        public static async Task<IHSRAssets> CreateHSRAssetsAsync(string language, HttpClient httpClient, ILogger<HSRAssets> logger = null)
+        public static async Task<IHSRAssets> CreateHSRAssetsAsync(string language, HttpClient httpClient, ILogger<HSRAssets> logger = null, string fallbackDirectory = null)
         {
-            var assets = new HSRAssets(language, httpClient, logger ?? NullLogger<HSRAssets>.Instance);
+            var assets = new HSRAssets(language, httpClient, logger ?? NullLogger<HSRAssets>.Instance, fallbackDirectory);
             await assets.EnsureInitializedAsync().ConfigureAwait(false);
             return assets;
         }

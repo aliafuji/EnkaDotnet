@@ -170,7 +170,7 @@ namespace EnkaDotNet
         (long CurrentEntryCount, int ExpiredCountNotAvailable) GetCacheStats();
 
         /// <summary>
-        /// Preloads assets for specified games and languages to prevent on-demand loading during the first API call.
+        /// Preloads assets for specified games and languages to prevent on demand loading during the first API call.
         /// </summary>
         /// <param name="languages">A collection of language codes to load assets for (e.g., "en", "ja").</param>
         Task PreloadAssetsAsync(IEnumerable<string> languages);
