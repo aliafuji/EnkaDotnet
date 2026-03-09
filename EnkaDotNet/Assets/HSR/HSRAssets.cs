@@ -367,7 +367,6 @@ namespace EnkaDotNet.Assets.HSR
                 {
                     string localizedSetName = null;
 
-                    // 1) Use the new HSRRelicSetAssetInfo if available (this has the correct text map hash)
                     if (_relicSetData.TryGetValue(setId, out var assetInfo) && !string.IsNullOrEmpty(assetInfo.NameHash))
                     {
                         string fromHash = GetText(assetInfo.NameHash);
@@ -377,7 +376,6 @@ namespace EnkaDotNet.Assets.HSR
                         }
                     }
 
-                    // 2) Fallback to old format
                     if (string.IsNullOrEmpty(localizedSetName))
                     {
                         localizedSetName = GetText($"RelicSet_{setId}_Name") ?? GetText(setId) ?? $"Set {setId}";

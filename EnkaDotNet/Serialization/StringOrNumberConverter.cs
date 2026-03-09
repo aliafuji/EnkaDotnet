@@ -18,11 +18,15 @@ namespace EnkaDotNet.Serialization
                 case JsonTokenType.String:
                     return reader.GetString();
                 case JsonTokenType.Number:
-                    if (reader.TryGetInt64(out long l))
-                        return l.ToString();
-                    if (reader.TryGetDouble(out double d))
-                        return d.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                    return string.Empty;
+            if (reader.TryGetInt64(out long l))
+                return l.ToString();
+            if (reader.TryGetUInt64(out ulong ul))
+                return ul.ToString();
+            if (reader.TryGetDecimal(out decimal m))
+                return m.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (reader.TryGetDouble(out double d))
+                return d.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return string.Empty;
                 case JsonTokenType.Null:
                     return null;
                 default:
