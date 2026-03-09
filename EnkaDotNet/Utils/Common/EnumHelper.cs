@@ -40,7 +40,7 @@ namespace EnkaDotNet.Utils.Common
         {
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
             20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
-            37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53
+            37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54
         };
 
         private static readonly HashSet<int> ValidHSRTraceTypes = new HashSet<int>
@@ -99,6 +99,47 @@ namespace EnkaDotNet.Utils.Common
         public static bool IsDefinedGenshinStatType(int value)
         {
             return ValidGenshinStatTypes.Contains(value);
+        }
+        public static string GetEnumMemberValue(this System.Enum value)
+        {
+            var type = value.GetType();
+            var name = System.Enum.GetName(type, value);
+            if (name == null)
+            {
+                return null;
+            }
+            var field = type.GetField(name);
+            if (field == null)
+            {
+                return null;
+            }
+            var attr = System.Attribute.GetCustomAttribute(field, typeof(System.Runtime.Serialization.EnumMemberAttribute)) as System.Runtime.Serialization.EnumMemberAttribute;
+            return attr?.Value;
+        }
+
+        public static Enums.Language ParseLanguage(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return Enums.Language.English;
+            switch (value.ToLowerInvariant())
+            {
+                case "ru": return Enums.Language.Russian;
+                case "vi": return Enums.Language.Vietnamese;
+                case "th": return Enums.Language.Thai;
+                case "pt": return Enums.Language.Portuguese;
+                case "ko": return Enums.Language.Korean;
+                case "ja": return Enums.Language.Japanese;
+                case "id": return Enums.Language.Indonesian;
+                case "fr": return Enums.Language.French;
+                case "es": return Enums.Language.Spanish;
+                case "de": return Enums.Language.German;
+                case "zh-tw": return Enums.Language.TraditionalChinese;
+                case "zh-cn": return Enums.Language.SimplifiedChinese;
+                case "it": return Enums.Language.Italian;
+                case "tr": return Enums.Language.Turkish;
+                case "en":
+                default:
+                    return Enums.Language.English;
+            }
         }
     }
 }

@@ -100,6 +100,7 @@ namespace EnkaDotNet.Serialization
     [JsonSerializable(typeof(Dictionary<string, HSRLightConeAssetInfo>))]
     [JsonSerializable(typeof(Dictionary<string, HSRRelicItemInfo>))]
     [JsonSerializable(typeof(Dictionary<string, HSRRelicSetInfo>))]
+    [JsonSerializable(typeof(Dictionary<string, HSRRelicSetAssetInfo>))]
     [JsonSerializable(typeof(Dictionary<string, HSRSkillTreeData>))]
     [JsonSerializable(typeof(Dictionary<string, HSRSkillTreePointInfo>))]
     [JsonSerializable(typeof(Dictionary<string, HSRNameCardAssetInfo>))]

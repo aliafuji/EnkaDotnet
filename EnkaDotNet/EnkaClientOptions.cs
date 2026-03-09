@@ -1,8 +1,10 @@
 ﻿using EnkaDotNet.Caching;
 using EnkaDotNet.Utils;
+using EnkaDotNet.Utils.Common;
 using System.Collections.Generic;
 using System.Net;
 using System;
+using EnkaDotNet.Enums;
 
 namespace EnkaDotNet
 {
@@ -186,14 +188,41 @@ namespace EnkaDotNet
         {
             var clone = (EnkaClientOptions)MemberwiseClone();
             clone.RetryOnStatusCodes = new List<HttpStatusCode>(RetryOnStatusCodes);
-            clone.PreloadLanguages = new List<string>(PreloadLanguages);
+            clone.PreloadedLanguages = new List<Language>(PreloadedLanguages ?? new List<Language>());
             return clone;
         }
 
+        private List<Language> _preloadedLanguages = new List<Language>();
+
         /// <summary>
-        /// Preloads languages for assets data
+        /// Preloads languages for assets data (Obsolete, use PreloadedLanguages instead)
         /// </summary>
-        public List<string> PreloadLanguages { get; set; } = new List<string>();
+        [System.Obsolete("Use PreloadedLanguages instead.")]
+        public List<string> PreloadLanguages
+        {
+            get => _preloadedLanguages.ConvertAll(l => l.GetEnumMemberValue() ?? l.ToString().ToLowerInvariant());
+            set
+            {
+                _preloadedLanguages.Clear();
+                if (value != null)
+                {
+                    foreach (var langStr in value)
+                    {
+                        var lang = EnumHelper.ParseLanguage(langStr);
+                        _preloadedLanguages.Add(lang);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Preloads languages for assets data uses Enum
+        /// </summary>
+        public List<Language> PreloadedLanguages
+        {
+            get => _preloadedLanguages;
+            set => _preloadedLanguages = value ?? new List<Language>();
+        }
 
         /// <summary>
         /// Gets or sets the cache provider to use for storing cached API responses.

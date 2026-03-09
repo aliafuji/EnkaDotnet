@@ -22,7 +22,8 @@
         Warlock = 5,  // The Nihility
         Knight = 6,   // The Preservation
         Priest = 7,   // The Abundance
-        Memory = 8    // The Remembrance
+        Memory = 8,   // The Remembrance
+        Elation = 9   // The Elation
     }
 
     public enum SkillType
@@ -133,7 +134,10 @@
         // Imaginary DMG & RES
         ImaginaryAddedRatio,        // ImaginaryAddedRatio (Imaginary DMG Boost)
         ImaginaryResistance,        // ImaginaryResistance
-        ImaginaryResistanceDelta    // ImaginaryResistanceDelta
+        ImaginaryResistanceDelta,   // ImaginaryResistanceDelta
+
+        // Elation DMG
+        ElationDamageAddedRatio     // ElationDamageAddedRatio (Elation DMG Boost)
     }
 
     public enum Rarity
@@ -167,6 +171,7 @@
                 case PathType.Knight: return "Preservation";
                 case PathType.Priest: return "Abundance";
                 case PathType.Memory: return "Remembrance";
+                case PathType.Elation: return "Elation";
                 default: return "Unknown Path";
             }
         }
@@ -243,6 +248,7 @@
                 case StatPropertyType.WindAddedRatio: return "Wind DMG";
                 case StatPropertyType.QuantumAddedRatio: return "Quantum DMG";
                 case StatPropertyType.ImaginaryAddedRatio: return "Imaginary DMG";
+                case StatPropertyType.ElationDamageAddedRatio: return "Elation DMG";
                 case StatPropertyType.PhysicalResistance:
                 case StatPropertyType.PhysicalResistanceDelta: return "Physical RES";
                 case StatPropertyType.FireResistance:
@@ -291,6 +297,7 @@
                 case StatPropertyType.WindAddedRatio:
                 case StatPropertyType.QuantumAddedRatio:
                 case StatPropertyType.ImaginaryAddedRatio:
+                case StatPropertyType.ElationDamageAddedRatio:
                 case StatPropertyType.PhysicalResistance:
                 case StatPropertyType.FireResistance:
                 case StatPropertyType.IceResistance:

@@ -67,7 +67,8 @@ namespace EnkaDotNet.Utils.HSR
             { "ThunderResistance", true },
             { "WindResistance", true },
             { "QuantumResistance", true },
-            { "ImaginaryResistance", true }
+            { "ImaginaryResistance", true },
+            { "ElationDamageAddedRatio", true }
         };
 
 
@@ -90,7 +91,8 @@ namespace EnkaDotNet.Utils.HSR
             { "LightningDamageBoost", "Lightning DMG" },
             { "WindDamageBoost", "Wind DMG" },
             { "QuantumDamageBoost", "Quantum DMG" },
-            { "ImaginaryDamageBoost", "Imaginary DMG" }
+            { "ImaginaryDamageBoost", "Imaginary DMG" },
+            { "ElationDamageBoost", "Elation DMG" }
         };
 
 
@@ -123,6 +125,7 @@ namespace EnkaDotNet.Utils.HSR
             PropertyTypeToDisplayName["WindAddedRatio"] = "Wind DMG";
             PropertyTypeToDisplayName["QuantumAddedRatio"] = "Quantum DMG";
             PropertyTypeToDisplayName["ImaginaryAddedRatio"] = "Imaginary DMG";
+            PropertyTypeToDisplayName["ElationDamageAddedRatio"] = "Elation DMG";
 
 
             PropertyTypeToDisplayName["HPDelta"] = "HP";
@@ -271,6 +274,7 @@ namespace EnkaDotNet.Utils.HSR
                 case "WindAddedRatio": return StatPropertyType.WindAddedRatio;
                 case "QuantumAddedRatio": return StatPropertyType.QuantumAddedRatio;
                 case "ImaginaryAddedRatio": return StatPropertyType.ImaginaryAddedRatio;
+                case "ElationDamageAddedRatio": return StatPropertyType.ElationDamageAddedRatio;
 
                 // Elemental Resistance
                 case "PhysicalResistance": return StatPropertyType.PhysicalResistance;

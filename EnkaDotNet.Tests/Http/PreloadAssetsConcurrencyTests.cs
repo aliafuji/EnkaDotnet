@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using EnkaDotNet.Enums;
 using EnkaDotNet.Assets;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Assets.HSR;
@@ -64,7 +65,7 @@ namespace EnkaDotNet.Tests.Http
 
             var concurrent = new Task[10];
             for (int i = 0; i < 10; i++)
-                concurrent[i] = client.PreloadAssetsAsync(new[] { "en" });
+                concurrent[i] = client.PreloadAssetsAsync(new[] { Language.English });
 
             await Task.WhenAll(concurrent);
 
@@ -86,7 +87,7 @@ namespace EnkaDotNet.Tests.Http
                 lang => Task.FromResult(mockHSR.Object),
                 lang => Task.FromResult(mockZZZ.Object));
 
-            await client.PreloadAssetsAsync(new[] { "en", "ja", "zh-cn" });
+            await client.PreloadAssetsAsync(new[] { Language.English, Language.Japanese, Language.SimplifiedChinese });
 
             Assert.Equal(3, genshinCount);
         }
@@ -104,8 +105,8 @@ namespace EnkaDotNet.Tests.Http
                 lang => Task.FromResult(mockHSR.Object),
                 lang => Task.FromResult(mockZZZ.Object));
 
-            // "en", "EN", and "  en  " all normalise to "en"
-            await client.PreloadAssetsAsync(new[] { "en", "EN", "  en  " });
+            // Test if passing the same enum multiple times dedupes correctly
+            await client.PreloadAssetsAsync(new[] { Language.English, Language.English, Language.English });
 
             Assert.Equal(1, genshinCount);
         }

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using EnkaDotNet.Serialization;
 
 namespace EnkaDotNet.Models.HSR
 {
@@ -42,6 +43,7 @@ namespace EnkaDotNet.Models.HSR
         public List<HSRPropertyInfo> Props { get; set; }
 
         [JsonPropertyName("setName")]
+        [JsonConverter(typeof(StringOrNumberConverter))]
         public string SetName { get; set; }
 
         [JsonPropertyName("setID")]

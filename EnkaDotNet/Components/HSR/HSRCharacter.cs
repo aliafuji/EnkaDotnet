@@ -33,6 +33,7 @@ namespace EnkaDotNet.Components.HSR
         public int Rank { get; internal set; }
         public List<HSRSkillTree> SkillTreeList { get; internal set; } = new List<HSRSkillTree>();
         public bool IsAssist { get; internal set; }
+        public int? DressedSkinId { get; internal set; }
         public int Position { get; internal set; }
         public ElementType Element { get; internal set; }
         public PathType Path { get; internal set; }

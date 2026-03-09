@@ -70,7 +70,7 @@ builder.Services.AddEnkaNetClient(options =>
     options.CacheDurationMinutes = 10;
 
     // Warm up assets at startup (runs via IHostedService, never blocks DI thread)
-    options.PreloadLanguages = new List<string> { "en", "ja" };
+    options.PreloadedLanguages = new List<Language> { Language.English, Language.Japanese };
 });
 ```
 
@@ -115,6 +115,40 @@ client.ClearCache();
 // Get cache statistics
 var (count, _) = client.GetCacheStats();
 ```
+
+## Language
+
+All game API methods accept a `Language` enum for type safe language selection:
+
+```csharp
+// Using Language enum (recommended)
+var playerInfo = await client.GetZZZPlayerInfoAsync(uid, Language.Japanese);
+var hsrInfo    = await client.GetHSRPlayerInfoAsync(uid, Language.TraditionalChinese);
+var giInfo     = await client.GetGenshinPlayerInfoAsync(uid, Language.German);
+
+// Using string (still supported)
+var playerInfo = await client.GetZZZPlayerInfoAsync(uid, language: "ja");
+```
+
+**Available languages:**
+
+| Enum Value | String Code |
+|---|---|
+| `Language.English` | `en` |
+| `Language.Russian` | `ru` |
+| `Language.Vietnamese` | `vi` |
+| `Language.Thai` | `th` |
+| `Language.Portuguese` | `pt` |
+| `Language.Korean` | `ko` |
+| `Language.Japanese` | `ja` |
+| `Language.Indonesian` | `id` |
+| `Language.French` | `fr` |
+| `Language.Spanish` | `es` |
+| `Language.German` | `de` |
+| `Language.TraditionalChinese` | `zh-tw` |
+| `Language.SimplifiedChinese` | `zh-cn` |
+| `Language.Italian` | `it` |
+| `Language.Turkish` | `tr` |
 
 ## HTTP Resiliency
 
@@ -163,13 +197,13 @@ Preloading warms up the in-memory asset cache at startup so the first real reque
 // Direct instantiation
 await using var client = await EnkaClient.CreateAsync(new EnkaClientOptions
 {
-    PreloadLanguages = new List<string> { "en", "ja" }
+    PreloadedLanguages = new List<Language> { Language.English, Language.Japanese }
 });
 
 // DI (runs asynchronously via IHostedService)
 builder.Services.AddEnkaNetClient(options =>
 {
-    options.PreloadLanguages = new List<string> { "en", "ja" };
+    options.PreloadedLanguages = new List<Language> { Language.English, Language.Japanese };
 });
 ```
 
@@ -187,8 +221,8 @@ By default (`null`) nothing is ever written to disk.
 
 ### Where do the files go?
 
-The path is set by **your application** — the library just reads and writes to wherever you point it.
-The NuGet package folder (`~/.nuget/packages/enkadotnet/`) is read-only and shared; files are never written there.
+The path is set by **your application**, the library just reads and writes to wherever you point it.
+The NuGet package folder (`~/.nuget/packages/enkadotnet/`) is read only and shared, files are never written there.
 
 | App type | Recommended path | Resolves to (example) |
 |---|---|---|
@@ -207,7 +241,7 @@ builder.Services.AddEnkaNetClient(options =>
     options.AssetFallbackDirectory =
         Path.Combine(builder.Environment.ContentRootPath, "enka_assets");
 
-    options.PreloadLanguages = new List<string> { "en", "ja" };
+    options.PreloadedLanguages = new List<Language> { Language.English, Language.Japanese };
 });
 ```
 

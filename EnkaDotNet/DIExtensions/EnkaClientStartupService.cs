@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using EnkaDotNet.Enums;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -25,10 +26,10 @@ namespace EnkaDotNet.DIExtensions
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            if (_options.PreloadLanguages == null || _options.PreloadLanguages.Count == 0)
+            if (_options.PreloadedLanguages == null || _options.PreloadedLanguages.Count == 0)
                 return Task.CompletedTask;
 
-            return _client.PreloadAssetsAsync(_options.PreloadLanguages);
+            return _client.PreloadAssetsAsync(_options.PreloadedLanguages);
         }
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

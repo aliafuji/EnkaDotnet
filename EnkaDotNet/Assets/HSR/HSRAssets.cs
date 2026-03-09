@@ -22,6 +22,7 @@ namespace EnkaDotNet.Assets.HSR
         private readonly ConcurrentDictionary<string, HSRRelicSetInfo> _relicSets = new ConcurrentDictionary<string, HSRRelicSetInfo>();
         private readonly ConcurrentDictionary<string, HSRSkillAssetInfo> _skills = new ConcurrentDictionary<string, HSRSkillAssetInfo>();
         private readonly ConcurrentDictionary<string, HSREidolonAssetInfo> _eidolons = new ConcurrentDictionary<string, HSREidolonAssetInfo>();
+        private readonly ConcurrentDictionary<string, HSRRelicSetAssetInfo> _relicSetData = new ConcurrentDictionary<string, HSRRelicSetAssetInfo>();
 
         private HSRMetaData _metaData;
         private ConcurrentDictionary<string, HSRSkillTreePointInfo> _skillTreeData;
@@ -51,7 +52,8 @@ namespace EnkaDotNet.Assets.HSR
                 LoadWithSemaphore(LoadSkills),
                 LoadWithSemaphore(LoadAvatars),
                 LoadWithSemaphore(LoadEidolons),
-                LoadWithSemaphore(LoadSkillTree)
+                LoadWithSemaphore(LoadSkillTree),
+                LoadWithSemaphore(LoadRelicSets)
             };
             await Task.WhenAll(tasks).ConfigureAwait(false);
         }
@@ -211,6 +213,26 @@ namespace EnkaDotNet.Assets.HSR
             }
         }
 
+        private async Task LoadRelicSets()
+        {
+            _relicSetData.Clear();
+            try
+            {
+                var relicSetMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRRelicSetAssetInfo>>("relic_set.json").ConfigureAwait(false);
+                if (relicSetMap != null)
+                {
+                    foreach (var kvp in relicSetMap)
+                    {
+                        _relicSetData[kvp.Key] = kvp.Value;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error loading Honkai: Star Rail relic_set.json asset. Relic set names may not resolve correctly.");
+            }
+        }
+
         private async Task LoadSkills()
         {
             _skills.Clear();
@@ -343,7 +365,24 @@ namespace EnkaDotNet.Assets.HSR
             {
                 if (info != null && (info.SetName == $"Set {setId}" || string.IsNullOrEmpty(info.SetName)))
                 {
-                    string localizedSetName = GetText($"RelicSet_{setId}_Name") ?? GetText(setId) ?? $"Set {setId}";
+                    string localizedSetName = null;
+
+                    // 1) Use the new HSRRelicSetAssetInfo if available (this has the correct text map hash)
+                    if (_relicSetData.TryGetValue(setId, out var assetInfo) && !string.IsNullOrEmpty(assetInfo.NameHash))
+                    {
+                        string fromHash = GetText(assetInfo.NameHash);
+                        if (!string.IsNullOrEmpty(fromHash) && fromHash != assetInfo.NameHash)
+                        {
+                            localizedSetName = fromHash;
+                        }
+                    }
+
+                    // 2) Fallback to old format
+                    if (string.IsNullOrEmpty(localizedSetName))
+                    {
+                        localizedSetName = GetText($"RelicSet_{setId}_Name") ?? GetText(setId) ?? $"Set {setId}";
+                    }
+
                     info.SetName = localizedSetName;
                 }
                 return info;
@@ -651,6 +690,7 @@ namespace EnkaDotNet.Assets.HSR
                 case "KNIGHT": return PathType.Knight;
                 case "PRIEST": return PathType.Priest;
                 case "MEMORY": return PathType.Memory;
+                case "ELATION": return PathType.Elation;
                 default: return PathType.Unknown;
             }
         }

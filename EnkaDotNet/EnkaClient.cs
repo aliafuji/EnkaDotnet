@@ -16,6 +16,7 @@ using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Exceptions;
 using EnkaDotNet.Internal;
+using EnkaDotNet.Enums;
 using EnkaDotNet.Models.EnkaProfile;
 using EnkaDotNet.Models.Genshin;
 using EnkaDotNet.Models.HSR;
@@ -155,9 +156,9 @@ namespace EnkaDotNet
 
             var client = new EnkaClient(Microsoft.Extensions.Options.Options.Create(options), httpHelper, dummyServiceProvider, httpClientFactory);
 
-            if (options.PreloadLanguages != null && options.PreloadLanguages.Count > 0)
+            if (options.PreloadedLanguages != null && options.PreloadedLanguages.Count > 0)
             {
-                await client.PreloadAssetsAsync(options.PreloadLanguages).ConfigureAwait(false);
+                await client.PreloadAssetsAsync(options.PreloadedLanguages).ConfigureAwait(false);
             }
 
             return client;
@@ -566,8 +567,63 @@ namespace EnkaDotNet
                 return result;
             });
 
+        private static string ResolveLanguage(Language language)
+            => language.GetEnumMemberValue() ?? language.ToString().ToLowerInvariant();
+
         /// <inheritdoc/>
-        public async Task PreloadAssetsAsync(IEnumerable<string> languages)
+        public Task<ApiResponse> GetGenshinRawUserResponseAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetGenshinRawUserResponseAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<PlayerInfo> GetGenshinPlayerInfoAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetGenshinPlayerInfoAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<IReadOnlyList<Character>> GetGenshinCharactersAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetGenshinCharactersAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<(PlayerInfo PlayerInfo, IReadOnlyList<Character> Characters)> GetGenshinUserProfileAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetGenshinUserProfileAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<HSRApiResponse> GetHSRRawUserResponseAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetHSRRawUserResponseAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<HSRPlayerInfo> GetHSRPlayerInfoAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetHSRPlayerInfoAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<IReadOnlyList<HSRCharacter>> GetHSRCharactersAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetHSRCharactersAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<ZZZApiResponse> GetZZZRawUserResponseAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetZZZRawUserResponseAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<ZZZPlayerInfo> GetZZZPlayerInfoAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetZZZPlayerInfoAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<IReadOnlyList<ZZZAgent>> GetZZZAgentsAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetZZZAgentsAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<Dictionary<string, List<GenshinBuild>>> GetGenshinBuildsByUsernameAsync(string username, string hoyoHash, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetGenshinBuildsByUsernameAsync(username, hoyoHash, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<Dictionary<string, List<HSRBuild>>> GetHSRBuildsByUsernameAsync(string username, string hoyoHash, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetHSRBuildsByUsernameAsync(username, hoyoHash, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<Dictionary<string, List<ZZZBuild>>> GetZZZBuildsByUsernameAsync(string username, string hoyoHash, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetZZZBuildsByUsernameAsync(username, hoyoHash, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public async Task PreloadAssetsAsync(IEnumerable<Language> languages)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
 
@@ -575,8 +631,7 @@ namespace EnkaDotNet
             var langList = new List<string>();
             foreach (var lang in languages)
             {
-                if (string.IsNullOrWhiteSpace(lang)) continue;
-                var normalized = lang.Trim().ToLowerInvariant();
+                var normalized = lang.GetEnumMemberValue() ?? lang.ToString().ToLowerInvariant();
                 if (seen.Add(normalized))
                     langList.Add(normalized);
             }

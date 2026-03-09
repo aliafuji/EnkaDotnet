@@ -94,13 +94,18 @@ namespace EnkaDotNet.Utils.HSR
                 Rank = avatarDetail.Rank,
                 Position = avatarDetail.Position,
                 IsAssist = avatarDetail.IsAssist,
+                DressedSkinId = avatarDetail.DressedSkinId,
                 Enhanced = avatarDetail.Enhanced,
                 Name = _assets.GetCharacterName(avatarDetail.AvatarId),
                 Element = _assets.GetCharacterElement(avatarDetail.AvatarId),
                 Path = _assets.GetCharacterPath(avatarDetail.AvatarId),
                 Rarity = _assets.GetCharacterRarity(avatarDetail.AvatarId),
-                IconUrl = _assets.GetCharacterIconUrl(avatarDetail.AvatarId),
-                AvatarIconUrl = _assets.GetCharacterAvatarIconUrl(avatarDetail.AvatarId),
+                IconUrl = avatarDetail.DressedSkinId.HasValue && avatarDetail.DressedSkinId.Value > 0
+                    ? $"{EnkaDotNet.Utils.Constants.DEFAULT_HSR_ASSET_CDN_URL}SpriteOutput/AvatarDrawCard/AvatarSkin/{avatarDetail.DressedSkinId.Value}.png"
+                    : _assets.GetCharacterIconUrl(avatarDetail.AvatarId),
+                AvatarIconUrl = avatarDetail.DressedSkinId.HasValue && avatarDetail.DressedSkinId.Value > 0
+                    ? $"{EnkaDotNet.Utils.Constants.DEFAULT_HSR_ASSET_CDN_URL}SpriteOutput/AvatarRoundIcon/AvatarSkin/{avatarDetail.DressedSkinId.Value}.png"
+                    : _assets.GetCharacterAvatarIconUrl(avatarDetail.AvatarId),
                 Options = this._options
             };
 
@@ -254,16 +259,23 @@ namespace EnkaDotNet.Utils.HSR
 
         private string GetLocalizedRelicSetName(string setNameHash, int setId)
         {
-            if (!string.IsNullOrEmpty(setNameHash) && setNameHash != setId.ToString())
+            if (!string.IsNullOrEmpty(setNameHash))
             {
                 string localizedName = _assets.GetLocalizedText(setNameHash);
-                if (localizedName != setNameHash)
+                if (!string.IsNullOrEmpty(localizedName) && localizedName != setNameHash)
                 {
                     return localizedName;
                 }
             }
             string nameFromAssets = _assets.GetRelicSetName(setId);
-            return !string.IsNullOrEmpty(nameFromAssets) ? nameFromAssets : $"Set_{setId}";
+            if (!string.IsNullOrEmpty(nameFromAssets)
+                && !nameFromAssets.StartsWith("RelicSet_")
+                && !nameFromAssets.StartsWith("Set "))
+            {
+                return nameFromAssets;
+            }
+
+            return nameFromAssets ?? $"Set_{setId}";
         }
 
         public HSRRelic MapRelicModelToRelic(HSRRelicModel relicModel)
