@@ -94,13 +94,18 @@ namespace EnkaDotNet.Utils.HSR
                 Rank = avatarDetail.Rank,
                 Position = avatarDetail.Position,
                 IsAssist = avatarDetail.IsAssist,
+                DressedSkinId = avatarDetail.DressedSkinId,
                 Enhanced = avatarDetail.Enhanced,
                 Name = _assets.GetCharacterName(avatarDetail.AvatarId),
                 Element = _assets.GetCharacterElement(avatarDetail.AvatarId),
                 Path = _assets.GetCharacterPath(avatarDetail.AvatarId),
                 Rarity = _assets.GetCharacterRarity(avatarDetail.AvatarId),
-                IconUrl = _assets.GetCharacterIconUrl(avatarDetail.AvatarId),
-                AvatarIconUrl = _assets.GetCharacterAvatarIconUrl(avatarDetail.AvatarId),
+                IconUrl = avatarDetail.DressedSkinId.HasValue && avatarDetail.DressedSkinId.Value > 0
+                    ? $"{EnkaDotNet.Utils.Constants.DEFAULT_HSR_ASSET_CDN_URL}SpriteOutput/AvatarDrawCard/AvatarSkin/{avatarDetail.DressedSkinId.Value}.png"
+                    : _assets.GetCharacterIconUrl(avatarDetail.AvatarId),
+                AvatarIconUrl = avatarDetail.DressedSkinId.HasValue && avatarDetail.DressedSkinId.Value > 0
+                    ? $"{EnkaDotNet.Utils.Constants.DEFAULT_HSR_ASSET_CDN_URL}SpriteOutput/AvatarRoundIcon/AvatarSkin/{avatarDetail.DressedSkinId.Value}.png"
+                    : _assets.GetCharacterAvatarIconUrl(avatarDetail.AvatarId),
                 Options = this._options
             };
 
@@ -130,7 +135,11 @@ namespace EnkaDotNet.Utils.HSR
             if (avatarDetail.Equipment != null)
             {
                 character.Equipment = MapLightCone(avatarDetail.Equipment);
-                if (character.Equipment != null) character.Equipment.Options = this._options;
+                if (character.Equipment != null)
+                {
+                    character.Equipment.Options = this._options;
+                    character.Equipment.Assets = this._assets;
+                }
             }
 
             if (avatarDetail.SkillTreeList != null)
@@ -195,8 +204,9 @@ namespace EnkaDotNet.Utils.HSR
                     {
                         var relic = MapRelicModelToRelic(relicModel);
                         relic.Options = this._options;
-                        if (relic.MainStat != null) relic.MainStat.Options = this._options;
-                        foreach (var subStat in relic.SubStats) subStat.Options = this._options;
+                        relic.Assets = this._assets;
+                        if (relic.MainStat != null) { relic.MainStat.Options = this._options; relic.MainStat.Assets = this._assets; }
+                        foreach (var subStat in relic.SubStats) { subStat.Options = this._options; subStat.Assets = this._assets; }
                         character.RelicList.Add(relic);
                     }
                 }
@@ -245,7 +255,8 @@ namespace EnkaDotNet.Utils.HSR
                         PropertyType = HSRStatPropertyUtils.MapToStatPropertyType(prop.Type),
                         Value = prop.Value,
                         IsPercentage = isPercentage,
-                        Options = this._options
+                        Options = this._options,
+                        Assets = this._assets
                     });
                 }
             }
@@ -254,16 +265,23 @@ namespace EnkaDotNet.Utils.HSR
 
         private string GetLocalizedRelicSetName(string setNameHash, int setId)
         {
-            if (!string.IsNullOrEmpty(setNameHash) && setNameHash != setId.ToString())
+            if (!string.IsNullOrEmpty(setNameHash))
             {
                 string localizedName = _assets.GetLocalizedText(setNameHash);
-                if (localizedName != setNameHash)
+                if (!string.IsNullOrEmpty(localizedName) && localizedName != setNameHash)
                 {
                     return localizedName;
                 }
             }
             string nameFromAssets = _assets.GetRelicSetName(setId);
-            return !string.IsNullOrEmpty(nameFromAssets) ? nameFromAssets : $"Set_{setId}";
+            if (!string.IsNullOrEmpty(nameFromAssets)
+                && !nameFromAssets.StartsWith("RelicSet_")
+                && !nameFromAssets.StartsWith("Set "))
+            {
+                return nameFromAssets;
+            }
+
+            return nameFromAssets ?? $"Set_{setId}";
         }
 
         public HSRRelic MapRelicModelToRelic(HSRRelicModel relicModel)
@@ -298,17 +316,18 @@ namespace EnkaDotNet.Utils.HSR
                         Value = mainProp.Value,
                         BaseValue = mainProp.Value,
                         IsPercentage = isPercentage,
-                        Options = this._options
+                        Options = this._options,
+                        Assets = this._assets
                     };
                 }
                 else
                 {
-                    relic.MainStat = new HSRStatProperty { Type = "None", PropertyType = StatPropertyType.None, Options = this._options };
+                    relic.MainStat = new HSRStatProperty { Type = "None", PropertyType = StatPropertyType.None, Options = this._options, Assets = this._assets };
                 }
             }
             else
             {
-                relic.MainStat = new HSRStatProperty { Type = "None", PropertyType = StatPropertyType.None, Options = this._options };
+                relic.MainStat = new HSRStatProperty { Type = "None", PropertyType = StatPropertyType.None, Options = this._options, Assets = this._assets };
             }
 
             if (relicModel.Flat?.Props != null && relicModel.Flat.Props.Count > 1)
@@ -326,7 +345,8 @@ namespace EnkaDotNet.Utils.HSR
                             Value = subProp.Value,
                             BaseValue = subProp.Value,
                             IsPercentage = isPercentage,
-                            Options = this._options
+                            Options = this._options,
+                            Assets = this._assets
                         });
                     }
                 }

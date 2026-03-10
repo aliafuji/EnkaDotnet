@@ -33,6 +33,7 @@ namespace EnkaDotNet.Components.HSR
         public int Rank { get; internal set; }
         public List<HSRSkillTree> SkillTreeList { get; internal set; } = new List<HSRSkillTree>();
         public bool IsAssist { get; internal set; }
+        public int? DressedSkinId { get; internal set; }
         public int Position { get; internal set; }
         public ElementType Element { get; internal set; }
         public PathType Path { get; internal set; }
@@ -77,7 +78,7 @@ namespace EnkaDotNet.Components.HSR
 
             foreach (var kvp in Stats)
             {
-                string key = raw ? kvp.Key : HSRStatPropertyUtils.GetFinalStatDisplayName(kvp.Key);
+                string key = raw ? kvp.Key : HSRStatPropertyUtils.GetFinalStatDisplayName(kvp.Key, _assets);
                 string value = kvp.Value.Formatted;
                 formattedStats[key] = value;
             }
@@ -130,7 +131,7 @@ namespace EnkaDotNet.Components.HSR
                         {
                             string propertyType = kvp.Key;
                             double rawValue = kvp.Value;
-                            string displayName = raw ? propertyType : HSRStatPropertyUtils.GetDisplayName(propertyType);
+                            string displayName = raw ? propertyType : HSRStatPropertyUtils.GetDisplayName(propertyType, _assets);
                             string formattedValue = raw ? rawValue.ToString(CultureInfo.InvariantCulture) : HSRStatPropertyUtils.FormatPropertyValue(propertyType, rawValue);
 
                             currentSetBonus.Effects.Add(new SetBonusEffectDetail

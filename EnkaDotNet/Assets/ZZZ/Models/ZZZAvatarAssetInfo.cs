@@ -54,6 +54,9 @@ namespace EnkaDotNet.Assets.ZZZ.Models
         [JsonPropertyName("Accent")]
         public string Accent { get; set; }
 
+        [JsonPropertyName("AccentExtra")]
+        public string AccentExtra { get; set; }
+
         [JsonPropertyName("Mindscape")]
         public string Mindscape { get; set; }
     }

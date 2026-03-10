@@ -240,6 +240,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 ProfessionType = _assets.GetWeaponType(model.Id),
                 ImageUrl = _assets.GetWeaponIconUrl(model.Id),
                 Options = this._options,
+                Assets = this._assets,
                 MainStat = mainStat,
                 SecondaryStat = secondaryStat
             };
@@ -293,6 +294,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 SuitName = _assets.GetDriveDiscSuitName(suitId),
                 IconUrl = _assets.GetDriveDiscSuitIconUrl(suitId),
                 Options = this._options,
+                Assets = this._assets,
                 MainStat = mainStat,
                 SubStatsRaw = subStats
             };

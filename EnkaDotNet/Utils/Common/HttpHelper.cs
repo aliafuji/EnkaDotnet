@@ -40,43 +40,41 @@ namespace EnkaDotNet.Utils.Common
         private static readonly ResiliencePropertyKey<string> RelativeUrlKey = new ResiliencePropertyKey<string>("relativeUrl");
 
         /// <summary>
-        /// Initializes a new instance of the HttpHelper class with IEnkaCache support.
+        /// Initializes a new instance of the HttpHelper class.
         /// </summary>
         public HttpHelper(
             HttpClient httpClient,
-            IEnkaCache cache,
             IOptions<EnkaClientOptions> options,
-            ILogger<HttpHelper> logger)
+            ILogger<HttpHelper> logger,
+            IEnkaCache? cache = null,
+            IMemoryCache? memoryCache = null)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-            _legacyMemoryCache = null;
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
             _logger = logger ?? NullLogger<HttpHelper>.Instance;
             _trackedCacheKeys = new ConcurrentDictionary<string, bool>();
+
+            if (cache != null)
+            {
+                _cache = cache;
+                _legacyMemoryCache = null;
+            }
+            else if (memoryCache != null)
+            {
+                _legacyMemoryCache = memoryCache;
+                var defaultTtl = TimeSpan.FromMinutes(_options.CacheDurationMinutes);
+                _cache = new MemoryCacheAdapter(memoryCache, defaultTtl);
+            }
+            else
+            {
+                _legacyMemoryCache = null;
+                _cache = new MemoryCacheAdapter(new MemoryCache(new MemoryCacheOptions()), TimeSpan.FromMinutes(_options.CacheDurationMinutes));
+            }
+
             _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
             InitializeResiliencePipeline();
         }
 
-        /// <summary>
-        /// Initializes a new instance of the HttpHelper class with IMemoryCache for backward compatibility.
-        /// </summary>
-        public HttpHelper(
-            HttpClient httpClient,
-            IMemoryCache memoryCache,
-            IOptions<EnkaClientOptions> options,
-            ILogger<HttpHelper> logger)
-        {
-            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            _legacyMemoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
-            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-            _logger = logger ?? NullLogger<HttpHelper>.Instance;
-            _trackedCacheKeys = new ConcurrentDictionary<string, bool>();
-            _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
-            var defaultTtl = TimeSpan.FromMinutes(_options.CacheDurationMinutes);
-            _cache = new MemoryCacheAdapter(memoryCache, defaultTtl);
-            InitializeResiliencePipeline();
-        }
 
         private void InitializeResiliencePipeline()
         {

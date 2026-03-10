@@ -22,6 +22,7 @@ namespace EnkaDotNet.Assets.HSR
         private readonly ConcurrentDictionary<string, HSRRelicSetInfo> _relicSets = new ConcurrentDictionary<string, HSRRelicSetInfo>();
         private readonly ConcurrentDictionary<string, HSRSkillAssetInfo> _skills = new ConcurrentDictionary<string, HSRSkillAssetInfo>();
         private readonly ConcurrentDictionary<string, HSREidolonAssetInfo> _eidolons = new ConcurrentDictionary<string, HSREidolonAssetInfo>();
+        private readonly ConcurrentDictionary<string, HSRRelicSetAssetInfo> _relicSetData = new ConcurrentDictionary<string, HSRRelicSetAssetInfo>();
 
         private HSRMetaData _metaData;
         private ConcurrentDictionary<string, HSRSkillTreePointInfo> _skillTreeData;
@@ -51,7 +52,8 @@ namespace EnkaDotNet.Assets.HSR
                 LoadWithSemaphore(LoadSkills),
                 LoadWithSemaphore(LoadAvatars),
                 LoadWithSemaphore(LoadEidolons),
-                LoadWithSemaphore(LoadSkillTree)
+                LoadWithSemaphore(LoadSkillTree),
+                LoadWithSemaphore(LoadRelicSets)
             };
             await Task.WhenAll(tasks).ConfigureAwait(false);
         }
@@ -211,6 +213,26 @@ namespace EnkaDotNet.Assets.HSR
             }
         }
 
+        private async Task LoadRelicSets()
+        {
+            _relicSetData.Clear();
+            try
+            {
+                var relicSetMap = await FetchAndDeserializeAssetAsync<Dictionary<string, HSRRelicSetAssetInfo>>("relic_set.json").ConfigureAwait(false);
+                if (relicSetMap != null)
+                {
+                    foreach (var kvp in relicSetMap)
+                    {
+                        _relicSetData[kvp.Key] = kvp.Value;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error loading Honkai: Star Rail relic_set.json asset. Relic set names may not resolve correctly.");
+            }
+        }
+
         private async Task LoadSkills()
         {
             _skills.Clear();
@@ -339,19 +361,48 @@ namespace EnkaDotNet.Assets.HSR
 
         public HSRRelicSetInfo GetRelicSetInfo(string setId)
         {
-            if (_relicSets.TryGetValue(setId, out var info))
+            if (!_relicSets.TryGetValue(setId, out var info))
             {
-                if (info != null && (info.SetName == $"Set {setId}" || string.IsNullOrEmpty(info.SetName)))
-                {
-                    string localizedSetName = GetText($"RelicSet_{setId}_Name") ?? GetText(setId) ?? $"Set {setId}";
-                    info.SetName = localizedSetName;
-                }
-                return info;
+                return null;
             }
-            return null;
+
+            if (info != null && (info.SetName == $"Set {setId}" || string.IsNullOrEmpty(info.SetName)))
+            {
+                info.SetName = ResolveRelicSetName(setId);
+            }
+
+            return info;
+        }
+
+        private string ResolveRelicSetName(string setId)
+        {
+            if (_relicSetData.TryGetValue(setId, out var assetInfo) && !string.IsNullOrEmpty(assetInfo.NameHash))
+            {
+                string fromHash = GetText(assetInfo.NameHash);
+                if (!string.IsNullOrEmpty(fromHash) && fromHash != assetInfo.NameHash)
+                {
+                    return fromHash;
+                }
+            }
+
+            return GetText($"RelicSet_{setId}_Name") ?? GetText(setId) ?? $"Set {setId}";
         }
 
         public Dictionary<string, HSRRelicSetInfo> GetAllRelicSets() => new Dictionary<string, HSRRelicSetInfo>(_relicSets);
+
+        public string GetPropertyDisplayName(string propertyType)
+        {
+            if (string.IsNullOrEmpty(propertyType))
+                return propertyType ?? string.Empty;
+
+            string localized = GetText(propertyType);
+            if (!string.IsNullOrEmpty(localized) && localized != propertyType)
+            {
+                return localized;
+            }
+
+            return HSRStatPropertyUtils.GetDisplayName(propertyType);
+        }
 
         public string GetLightConeName(int lightConeId)
         {
@@ -651,6 +702,7 @@ namespace EnkaDotNet.Assets.HSR
                 case "KNIGHT": return PathType.Knight;
                 case "PRIEST": return PathType.Priest;
                 case "MEMORY": return PathType.Memory;
+                case "ELATION": return PathType.Elation;
                 default: return PathType.Unknown;
             }
         }

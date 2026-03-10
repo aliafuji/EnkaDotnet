@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
 using EnkaDotNet.Utils.ZZZ;
 
@@ -26,13 +27,14 @@ namespace EnkaDotNet.Components.ZZZ
         public IReadOnlyList<ZZZStat> SubStatsRaw { get; internal set; } = new List<ZZZStat>();
 
         internal EnkaClientOptions Options { get; set; }
+        internal IZZZAssets Assets { get; set; }
 
         public KeyValuePair<string, string> FormattedMainStat
         {
             get
             {
                 bool raw = Options?.Raw ?? false;
-                string key = raw ? MainStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(MainStat.Type);
+                string key = raw ? MainStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(MainStat.Type, Assets);
                 string value;
                 if (MainStat.IsPercentage && !raw) value = (MainStat.Value / 100.0).ToString("F1", CultureInfo.InvariantCulture) + "%";
                 else if (MainStat.IsEnergyRegen && !raw) value = (MainStat.Value / 100.0).ToString("F1", CultureInfo.InvariantCulture) + "%";
@@ -50,7 +52,7 @@ namespace EnkaDotNet.Components.ZZZ
                 var formattedList = new List<KeyValuePair<string, string>>();
                 foreach (var stat in SubStatsRaw)
                 {
-                    string key = raw ? stat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(stat.Type);
+                    string key = raw ? stat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(stat.Type, Assets);
                     double totalValue = stat.Value * stat.Level;
                     string value;
                     if (stat.IsPercentage && !raw) value = (totalValue / 100.0).ToString("F1", CultureInfo.InvariantCulture) + "%";

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using EnkaDotNet.Enums;
 using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Components.Genshin;
@@ -164,6 +165,45 @@ namespace EnkaDotNet
         /// <returns>A dictionary mapping agent IDs to lists of builds for that agent.</returns>
         Task<Dictionary<string, List<ZZZBuild>>> GetZZZBuildsByUsernameAsync(string username, string hoyoHash, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default);
 
+        /// <inheritdoc cref="GetGenshinRawUserResponseAsync(int, string, bool, CancellationToken)"/>
+        Task<ApiResponse> GetGenshinRawUserResponseAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetGenshinPlayerInfoAsync(int, string, bool, CancellationToken)"/>
+        Task<PlayerInfo> GetGenshinPlayerInfoAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetGenshinCharactersAsync(int, string, bool, CancellationToken)"/>
+        Task<IReadOnlyList<Character>> GetGenshinCharactersAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetGenshinUserProfileAsync(int, string, bool, CancellationToken)"/>
+        Task<(PlayerInfo PlayerInfo, IReadOnlyList<Character> Characters)> GetGenshinUserProfileAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetHSRRawUserResponseAsync(int, string, bool, CancellationToken)"/>
+        Task<HSRApiResponse> GetHSRRawUserResponseAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetHSRPlayerInfoAsync(int, string, bool, CancellationToken)"/>
+        Task<HSRPlayerInfo> GetHSRPlayerInfoAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetHSRCharactersAsync(int, string, bool, CancellationToken)"/>
+        Task<IReadOnlyList<HSRCharacter>> GetHSRCharactersAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetZZZRawUserResponseAsync(int, string, bool, CancellationToken)"/>
+        Task<ZZZApiResponse> GetZZZRawUserResponseAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetZZZPlayerInfoAsync(int, string, bool, CancellationToken)"/>
+        Task<ZZZPlayerInfo> GetZZZPlayerInfoAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetZZZAgentsAsync(int, string, bool, CancellationToken)"/>
+        Task<IReadOnlyList<ZZZAgent>> GetZZZAgentsAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetGenshinBuildsByUsernameAsync(string, string, string, bool, CancellationToken)"/>
+        Task<Dictionary<string, List<GenshinBuild>>> GetGenshinBuildsByUsernameAsync(string username, string hoyoHash, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetHSRBuildsByUsernameAsync(string, string, string, bool, CancellationToken)"/>
+        Task<Dictionary<string, List<HSRBuild>>> GetHSRBuildsByUsernameAsync(string username, string hoyoHash, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetZZZBuildsByUsernameAsync(string, string, string, bool, CancellationToken)"/>
+        Task<Dictionary<string, List<ZZZBuild>>> GetZZZBuildsByUsernameAsync(string username, string hoyoHash, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Gets statistics about the current state of the cache.
         /// </summary>
@@ -172,8 +212,8 @@ namespace EnkaDotNet
         /// <summary>
         /// Preloads assets for specified games and languages to prevent on demand loading during the first API call.
         /// </summary>
-        /// <param name="languages">A collection of language codes to load assets for (e.g., "en", "ja").</param>
-        Task PreloadAssetsAsync(IEnumerable<string> languages);
+        /// <param name="languages">A collection of language enum values to load assets for.</param>
+        Task PreloadAssetsAsync(IEnumerable<Language> languages);
 
         /// <summary>
         /// Clears all entries from the cache.

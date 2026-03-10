@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using EnkaDotNet.Serialization;
 
 namespace EnkaDotNet.Models.HSR
 {
@@ -31,6 +32,9 @@ namespace EnkaDotNet.Models.HSR
 
         [JsonPropertyName("_assist")]
         public bool IsAssist { get; set; }
+
+        [JsonPropertyName("dressedSkinId")]
+        public int? DressedSkinId { get; set; }
 
         [JsonPropertyName("enhanceId")]
         public bool Enhanced { get; set; }
@@ -69,6 +73,7 @@ namespace EnkaDotNet.Models.HSR
         public List<HSRPropertyInfo> Props { get; set; }
 
         [JsonPropertyName("name")]
+        [JsonConverter(typeof(StringOrNumberConverter))]
         public string Name { get; set; }
     }
 

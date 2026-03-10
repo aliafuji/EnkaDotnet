@@ -1,4 +1,5 @@
-﻿using EnkaDotNet.Enums.Genshin;
+﻿using EnkaDotNet.Assets.Genshin;
+using EnkaDotNet.Enums.Genshin;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -7,6 +8,84 @@ namespace EnkaDotNet.Utils.Genshin
 {
     public static class GenshinStatUtils
     {
+        /// <summary>
+        /// Maps StatType enum values to their text map keys for localization.
+        /// </summary>
+        private static readonly Dictionary<StatType, string> StatTypeToFightPropKey = new Dictionary<StatType, string>
+        {
+            { StatType.BaseHP, "FIGHT_PROP_BASE_HP" },
+            { StatType.HP_Flat, "FIGHT_PROP_HP" },
+            { StatType.HP, "FIGHT_PROP_MAX_HP" },
+            { StatType.HPPercentage, "FIGHT_PROP_HP_PERCENT" },
+            { StatType.BaseAttack, "FIGHT_PROP_BASE_ATTACK" },
+            { StatType.Attack_Flat, "FIGHT_PROP_ATTACK" },
+            { StatType.Attack, "FIGHT_PROP_CUR_ATTACK" },
+            { StatType.AttackPercentage, "FIGHT_PROP_ATTACK_PERCENT" },
+            { StatType.BaseDefense, "FIGHT_PROP_BASE_DEFENSE" },
+            { StatType.Defense_Flat, "FIGHT_PROP_DEFENSE" },
+            { StatType.Defense, "FIGHT_PROP_CUR_DEFENSE" },
+            { StatType.DefensePercentage, "FIGHT_PROP_DEFENSE_PERCENT" },
+            { StatType.BaseSpeed, "FIGHT_PROP_BASE_SPEED" },
+            { StatType.Speed, "FIGHT_PROP_CUR_SPEED" },
+            { StatType.SpeedPercentage, "FIGHT_PROP_SPEED_PERCENT" },
+            { StatType.CriticalRate, "FIGHT_PROP_CRITICAL" },
+            { StatType.AntiCritical, "FIGHT_PROP_ANTI_CRITICAL" },
+            { StatType.CriticalDamage, "FIGHT_PROP_CRITICAL_HURT" },
+            { StatType.EnergyRecharge, "FIGHT_PROP_CHARGE_EFFICIENCY" },
+            { StatType.AddHurt, "FIGHT_PROP_ADD_HURT" },
+            { StatType.SubHurt, "FIGHT_PROP_SUB_HURT" },
+            { StatType.HealingBonus, "FIGHT_PROP_HEAL_ADD" },
+            { StatType.IncomingHealingBonus, "FIGHT_PROP_HEALED_ADD" },
+            { StatType.ElementalMastery, "FIGHT_PROP_ELEMENT_MASTERY" },
+            { StatType.PhysicalResistance, "FIGHT_PROP_PHYSICAL_SUB_HURT" },
+            { StatType.PhysicalDamageBonus, "FIGHT_PROP_PHYSICAL_ADD_HURT" },
+            { StatType.DefenseIgnoreRatio, "FIGHT_PROP_DEFENCE_IGNORE_RATIO" },
+            { StatType.DefenseIgnoreDelta, "FIGHT_PROP_DEFENCE_IGNORE_DELTA" },
+            { StatType.PyroDamageBonus, "FIGHT_PROP_FIRE_ADD_HURT" },
+            { StatType.ElectroDamageBonus, "FIGHT_PROP_ELEC_ADD_HURT" },
+            { StatType.HydroDamageBonus, "FIGHT_PROP_WATER_ADD_HURT" },
+            { StatType.DendroDamageBonus, "FIGHT_PROP_GRASS_ADD_HURT" },
+            { StatType.AnemoDamageBonus, "FIGHT_PROP_WIND_ADD_HURT" },
+            { StatType.GeoDamageBonus, "FIGHT_PROP_ROCK_ADD_HURT" },
+            { StatType.CryoDamageBonus, "FIGHT_PROP_ICE_ADD_HURT" },
+            { StatType.HeadAddHurt, "FIGHT_PROP_HIT_HEAD_ADD_HURT" },
+            { StatType.PyroResistance, "FIGHT_PROP_FIRE_SUB_HURT" },
+            { StatType.ElectroResistance, "FIGHT_PROP_ELEC_SUB_HURT" },
+            { StatType.HydroResistance, "FIGHT_PROP_WATER_SUB_HURT" },
+            { StatType.DendroResistance, "FIGHT_PROP_GRASS_SUB_HURT" },
+            { StatType.AnemoResistance, "FIGHT_PROP_WIND_SUB_HURT" },
+            { StatType.GeoResistance, "FIGHT_PROP_ROCK_SUB_HURT" },
+            { StatType.CryoResistance, "FIGHT_PROP_ICE_SUB_HURT" },
+            { StatType.EffectHit, "FIGHT_PROP_EFFECT_HIT" },
+            { StatType.EffectResist, "FIGHT_PROP_EFFECT_RESIST" },
+            { StatType.FreezeResist, "FIGHT_PROP_FREEZE_RESIST" },
+            { StatType.DizzyResist, "FIGHT_PROP_DIZZY_RESIST" },
+            { StatType.FreezeShorten, "FIGHT_PROP_FREEZE_SHORTEN" },
+            { StatType.DizzyShorten, "FIGHT_PROP_DIZZY_SHORTEN" },
+            { StatType.CooldownReduction, "FIGHT_PROP_SKILL_CD_MINUS_RATIO" },
+            { StatType.ShieldStrength, "FIGHT_PROP_SHIELD_COST_MINUS_RATIO" },
+            { StatType.CurrentHP, "FIGHT_PROP_CUR_HP" },
+            { StatType.ElementalReactionCritRate, "FIGHT_PROP_ELEM_REACT_CRITICAL" },
+            { StatType.ElementalReactionCritDamage, "FIGHT_PROP_ELEM_REACT_CRITICAL_HURT" }
+        };
+
+        /// <summary>
+        /// Gets the localized display name for a stat type using the text map.
+        /// Falls back to the hardcoded English name if the localized text is not found.
+        /// </summary>
+        public static string GetDisplayName(StatType statType, IGenshinAssets assets)
+        {
+            if (assets != null && StatTypeToFightPropKey.TryGetValue(statType, out string fightPropKey))
+            {
+                string localized = assets.GetText(fightPropKey);
+                if (!string.IsNullOrEmpty(localized) && localized != fightPropKey)
+                {
+                    return localized;
+                }
+            }
+            return GetDisplayName(statType);
+        }
+
         private static readonly Dictionary<StatType, string> StatTypeToDisplayName = new Dictionary<StatType, string>
         {
             { StatType.BaseHP, "Base HP" },

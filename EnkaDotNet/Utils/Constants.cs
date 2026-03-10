@@ -78,7 +78,7 @@ namespace EnkaDotNet.Utils
         /// </summary>
         public static readonly IReadOnlyDictionary<string, string> HSRAssetFileUrls = new Dictionary<string, string>()
         {
-            { "text_map.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/hsr.json" },
+            { "text_map.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/hsr/hsr.json" },
             { "characters.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_characters.json" },
             { "lightcones.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_weps.json" },
             { "relics.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_relics.json" },
@@ -86,7 +86,8 @@ namespace EnkaDotNet.Utils
             { "skills.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_skills.json" },
             { "ranks.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_ranks.json" },
             { "skill_tree.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/hsr/skill_tree.json" },
-            { "meta.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_meta.json" }
+            { "meta.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_meta.json" },
+            { "relic_set.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/hsr/relic_set.json" }
         };
 
         /// <summary>

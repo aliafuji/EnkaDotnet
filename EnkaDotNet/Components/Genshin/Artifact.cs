@@ -1,4 +1,5 @@
-﻿using EnkaDotNet.Enums.Genshin;
+﻿using EnkaDotNet.Assets.Genshin;
+using EnkaDotNet.Enums.Genshin;
 using EnkaDotNet.Utils.Genshin;
 using System.Collections.Generic;
 
@@ -7,6 +8,7 @@ namespace EnkaDotNet.Components.Genshin
     public class Artifact : EquipmentBase
     {
         internal EnkaClientOptions Options { get; set; }
+        internal IGenshinAssets Assets { get; set; }
         public string SetName { get; internal set; } = string.Empty;
         public ArtifactSlot Slot { get; internal set; }
         public StatProperty MainStat { get; internal set; }
@@ -36,7 +38,7 @@ namespace EnkaDotNet.Components.Genshin
         private KeyValuePair<string, string> FormatStat(StatType type, double value)
         {
             bool raw = Options?.Raw ?? false;
-            string key = raw ? type.ToString() : GenshinStatUtils.GetDisplayName(type);
+            string key = raw ? type.ToString() : GenshinStatUtils.GetDisplayName(type, Assets);
             string formattedValue = GenshinStatUtils.FormatValue(type, value, raw);
             return new KeyValuePair<string, string>(key, formattedValue);
         }

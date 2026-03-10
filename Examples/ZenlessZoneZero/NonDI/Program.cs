@@ -87,7 +87,7 @@ namespace ZZZStatsViewer
                     {
                         foreach (var color in agent.Colors)
                         {
-                            Console.WriteLine($"Color Accent: {color.Accent} - Mindscape Color: {color.Mindscape}");
+                            Console.WriteLine($"Colors -> Accent: {color.Accent} | AccentExtra: {color.AccentExtra} | Mindscape: {color.Mindscape}");
                         }
                     }
 

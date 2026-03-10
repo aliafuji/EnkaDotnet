@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Globalization;
+using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Utils.HSR;
 
@@ -8,6 +9,7 @@ namespace EnkaDotNet.Components.HSR
     public class HSRStatProperty
     {
         internal EnkaClientOptions Options { get; set; }
+        internal IHSRAssets Assets { get; set; }
 
         public string Type { get; set; } = string.Empty;
         public StatPropertyType PropertyType { get; set; }
@@ -42,7 +44,7 @@ namespace EnkaDotNet.Components.HSR
         public override string ToString()
         {
             bool raw = Options?.Raw ?? false;
-            string key = raw ? Type : HSRStatPropertyUtils.GetDisplayName(Type);
+            string key = raw ? Type : HSRStatPropertyUtils.GetDisplayName(Type, Assets);
             return $"{key}: {DisplayValue}";
         }
     }

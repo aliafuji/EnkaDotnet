@@ -67,7 +67,8 @@ namespace EnkaDotNet.Utils.HSR
             { "ThunderResistance", true },
             { "WindResistance", true },
             { "QuantumResistance", true },
-            { "ImaginaryResistance", true }
+            { "ImaginaryResistance", true },
+            { "ElationDamageAddedRatio", true }
         };
 
 
@@ -90,7 +91,31 @@ namespace EnkaDotNet.Utils.HSR
             { "LightningDamageBoost", "Lightning DMG" },
             { "WindDamageBoost", "Wind DMG" },
             { "QuantumDamageBoost", "Quantum DMG" },
-            { "ImaginaryDamageBoost", "Imaginary DMG" }
+            { "ImaginaryDamageBoost", "Imaginary DMG" },
+            { "ElationDamageBoost", "Elation DMG" }
+        };
+
+        private static readonly Dictionary<string, string> FinalStatKeyToPropertyType = new Dictionary<string, string>
+        {
+            { "HP", "MaxHP" },
+            { "Attack", "Attack" },
+            { "Defense", "Defence" },
+            { "Speed", "Speed" },
+            { "CritRate", "CriticalChance" },
+            { "CritDMG", "CriticalDamage" },
+            { "BreakEffect", "BreakDamageAddedRatio" },
+            { "HealingBoost", "HealRatioBase" },
+            { "EnergyRegenRate", "SPRatioBase" },
+            { "EffectHitRate", "StatusProbability" },
+            { "EffectResistance", "StatusResistance" },
+            { "PhysicalDamageBoost", "PhysicalAddedRatio" },
+            { "FireDamageBoost", "FireAddedRatio" },
+            { "IceDamageBoost", "IceAddedRatio" },
+            { "LightningDamageBoost", "ThunderAddedRatio" },
+            { "WindDamageBoost", "WindAddedRatio" },
+            { "QuantumDamageBoost", "QuantumAddedRatio" },
+            { "ImaginaryDamageBoost", "ImaginaryAddedRatio" },
+            { "ElationDamageBoost", "ElationDamageAddedRatio" }
         };
 
 
@@ -123,6 +148,7 @@ namespace EnkaDotNet.Utils.HSR
             PropertyTypeToDisplayName["WindAddedRatio"] = "Wind DMG";
             PropertyTypeToDisplayName["QuantumAddedRatio"] = "Quantum DMG";
             PropertyTypeToDisplayName["ImaginaryAddedRatio"] = "Imaginary DMG";
+            PropertyTypeToDisplayName["ElationDamageAddedRatio"] = "Elation DMG";
 
 
             PropertyTypeToDisplayName["HPDelta"] = "HP";
@@ -157,12 +183,30 @@ namespace EnkaDotNet.Utils.HSR
                 : propertyType;
         }
 
+        public static string GetDisplayName(string propertyType, Assets.HSR.IHSRAssets assets)
+        {
+            if (assets != null)
+            {
+                return assets.GetPropertyDisplayName(propertyType);
+            }
+            return GetDisplayName(propertyType);
+        }
+
 
         public static string GetFinalStatDisplayName(string finalStatKey)
         {
             return FinalStatKeyToDisplayName.TryGetValue(finalStatKey, out string displayName)
                ? displayName
                : finalStatKey;
+        }
+
+        public static string GetFinalStatDisplayName(string finalStatKey, Assets.HSR.IHSRAssets assets)
+        {
+            if (assets != null && FinalStatKeyToPropertyType.TryGetValue(finalStatKey, out string propertyType))
+            {
+                return assets.GetPropertyDisplayName(propertyType);
+            }
+            return GetFinalStatDisplayName(finalStatKey);
         }
 
 
@@ -271,6 +315,7 @@ namespace EnkaDotNet.Utils.HSR
                 case "WindAddedRatio": return StatPropertyType.WindAddedRatio;
                 case "QuantumAddedRatio": return StatPropertyType.QuantumAddedRatio;
                 case "ImaginaryAddedRatio": return StatPropertyType.ImaginaryAddedRatio;
+                case "ElationDamageAddedRatio": return StatPropertyType.ElationDamageAddedRatio;
 
                 // Elemental Resistance
                 case "PhysicalResistance": return StatPropertyType.PhysicalResistance;

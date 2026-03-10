@@ -41,4 +41,20 @@ namespace EnkaDotNet.Assets.HSR.Models
         [JsonPropertyName("Properties")]
         public Dictionary<string, double> Properties { get; set; }
     }
+
+    public class HSRRelicSetAssetInfo
+    {
+        [JsonPropertyName("icon")]
+        public string Icon { get; set; }
+
+        [JsonPropertyName("is_planar")]
+        public bool IsPlanar { get; set; }
+
+        [JsonPropertyName("name")]
+        [JsonConverter(typeof(Serialization.StringOrNumberConverter))]
+        public string NameHash { get; set; }
+
+        [JsonPropertyName("set_nums")]
+        public List<int> SetNums { get; set; }
+    }
 }

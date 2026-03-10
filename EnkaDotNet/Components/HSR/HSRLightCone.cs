@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Enums.HSR;
 using EnkaDotNet.Utils.HSR;
 
@@ -9,6 +10,7 @@ namespace EnkaDotNet.Components.HSR
     public class HSRLightCone
     {
         internal EnkaClientOptions Options { get; set; }
+        internal IHSRAssets Assets { get; set; }
 
         public int Id { get; internal set; }
         public string Name { get; internal set; } = string.Empty;
@@ -38,7 +40,7 @@ namespace EnkaDotNet.Components.HSR
         private KeyValuePair<string, string> GetFormattedStat(string propertyType, double value)
         {
             bool raw = Options?.Raw ?? false;
-            string key = raw ? propertyType : HSRStatPropertyUtils.GetDisplayName(propertyType);
+            string key = raw ? propertyType : HSRStatPropertyUtils.GetDisplayName(propertyType, Assets);
             string formattedValue = raw ? value.ToString(CultureInfo.InvariantCulture) : Math.Floor(value).ToString(CultureInfo.InvariantCulture);
             return new KeyValuePair<string, string>(key, formattedValue);
         }
