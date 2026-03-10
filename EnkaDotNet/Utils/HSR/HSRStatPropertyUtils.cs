@@ -95,6 +95,29 @@ namespace EnkaDotNet.Utils.HSR
             { "ElationDamageBoost", "Elation DMG" }
         };
 
+        private static readonly Dictionary<string, string> FinalStatKeyToPropertyType = new Dictionary<string, string>
+        {
+            { "HP", "MaxHP" },
+            { "Attack", "Attack" },
+            { "Defense", "Defence" },
+            { "Speed", "Speed" },
+            { "CritRate", "CriticalChance" },
+            { "CritDMG", "CriticalDamage" },
+            { "BreakEffect", "BreakDamageAddedRatio" },
+            { "HealingBoost", "HealRatioBase" },
+            { "EnergyRegenRate", "SPRatioBase" },
+            { "EffectHitRate", "StatusProbability" },
+            { "EffectResistance", "StatusResistance" },
+            { "PhysicalDamageBoost", "PhysicalAddedRatio" },
+            { "FireDamageBoost", "FireAddedRatio" },
+            { "IceDamageBoost", "IceAddedRatio" },
+            { "LightningDamageBoost", "ThunderAddedRatio" },
+            { "WindDamageBoost", "WindAddedRatio" },
+            { "QuantumDamageBoost", "QuantumAddedRatio" },
+            { "ImaginaryDamageBoost", "ImaginaryAddedRatio" },
+            { "ElationDamageBoost", "ElationDamageAddedRatio" }
+        };
+
 
         static HSRStatPropertyUtils()
         {
@@ -160,12 +183,30 @@ namespace EnkaDotNet.Utils.HSR
                 : propertyType;
         }
 
+        public static string GetDisplayName(string propertyType, Assets.HSR.IHSRAssets assets)
+        {
+            if (assets != null)
+            {
+                return assets.GetPropertyDisplayName(propertyType);
+            }
+            return GetDisplayName(propertyType);
+        }
+
 
         public static string GetFinalStatDisplayName(string finalStatKey)
         {
             return FinalStatKeyToDisplayName.TryGetValue(finalStatKey, out string displayName)
                ? displayName
                : finalStatKey;
+        }
+
+        public static string GetFinalStatDisplayName(string finalStatKey, Assets.HSR.IHSRAssets assets)
+        {
+            if (assets != null && FinalStatKeyToPropertyType.TryGetValue(finalStatKey, out string propertyType))
+            {
+                return assets.GetPropertyDisplayName(propertyType);
+            }
+            return GetFinalStatDisplayName(finalStatKey);
         }
 
 

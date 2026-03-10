@@ -26,9 +26,9 @@ namespace EnkaDotNet.Tests.Http
             var cache = new MemoryCache(new MemoryCacheOptions());
             return new HttpHelper(
                 httpClient,
-                cache,
                 Options.Create(opts),
-                NullLogger<HttpHelper>.Instance);
+                NullLogger<HttpHelper>.Instance,
+                memoryCache: cache);
         }
 
         [Fact]

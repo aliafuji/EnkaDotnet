@@ -361,34 +361,48 @@ namespace EnkaDotNet.Assets.HSR
 
         public HSRRelicSetInfo GetRelicSetInfo(string setId)
         {
-            if (_relicSets.TryGetValue(setId, out var info))
+            if (!_relicSets.TryGetValue(setId, out var info))
             {
-                if (info != null && (info.SetName == $"Set {setId}" || string.IsNullOrEmpty(info.SetName)))
-                {
-                    string localizedSetName = null;
-
-                    if (_relicSetData.TryGetValue(setId, out var assetInfo) && !string.IsNullOrEmpty(assetInfo.NameHash))
-                    {
-                        string fromHash = GetText(assetInfo.NameHash);
-                        if (!string.IsNullOrEmpty(fromHash) && fromHash != assetInfo.NameHash)
-                        {
-                            localizedSetName = fromHash;
-                        }
-                    }
-
-                    if (string.IsNullOrEmpty(localizedSetName))
-                    {
-                        localizedSetName = GetText($"RelicSet_{setId}_Name") ?? GetText(setId) ?? $"Set {setId}";
-                    }
-
-                    info.SetName = localizedSetName;
-                }
-                return info;
+                return null;
             }
-            return null;
+
+            if (info != null && (info.SetName == $"Set {setId}" || string.IsNullOrEmpty(info.SetName)))
+            {
+                info.SetName = ResolveRelicSetName(setId);
+            }
+
+            return info;
+        }
+
+        private string ResolveRelicSetName(string setId)
+        {
+            if (_relicSetData.TryGetValue(setId, out var assetInfo) && !string.IsNullOrEmpty(assetInfo.NameHash))
+            {
+                string fromHash = GetText(assetInfo.NameHash);
+                if (!string.IsNullOrEmpty(fromHash) && fromHash != assetInfo.NameHash)
+                {
+                    return fromHash;
+                }
+            }
+
+            return GetText($"RelicSet_{setId}_Name") ?? GetText(setId) ?? $"Set {setId}";
         }
 
         public Dictionary<string, HSRRelicSetInfo> GetAllRelicSets() => new Dictionary<string, HSRRelicSetInfo>(_relicSets);
+
+        public string GetPropertyDisplayName(string propertyType)
+        {
+            if (string.IsNullOrEmpty(propertyType))
+                return propertyType ?? string.Empty;
+
+            string localized = GetText(propertyType);
+            if (!string.IsNullOrEmpty(localized) && localized != propertyType)
+            {
+                return localized;
+            }
+
+            return HSRStatPropertyUtils.GetDisplayName(propertyType);
+        }
 
         public string GetLightConeName(int lightConeId)
         {

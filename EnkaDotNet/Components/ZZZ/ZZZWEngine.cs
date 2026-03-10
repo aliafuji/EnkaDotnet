@@ -1,4 +1,5 @@
-﻿using EnkaDotNet.Enums.ZZZ;
+﻿using EnkaDotNet.Assets.ZZZ;
+using EnkaDotNet.Enums.ZZZ;
 using System;
 using System.Collections.Generic;
 using EnkaDotNet.Utils.ZZZ;
@@ -25,13 +26,14 @@ namespace EnkaDotNet.Components.ZZZ
         public ZZZStat SecondaryStat { get; internal set; } = new ZZZStat();
 
         internal EnkaClientOptions Options { get; set; }
+        internal IZZZAssets Assets { get; set; }
 
         public KeyValuePair<string, string> FormattedMainStat
         {
             get
             {
                 bool raw = Options?.Raw ?? false;
-                string key = raw ? MainStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(MainStat.Type);
+                string key = raw ? MainStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(MainStat.Type, Assets);
                 string value = Math.Floor(MainStat.Value).ToString(CultureInfo.InvariantCulture);
                 return new KeyValuePair<string, string>(key, value);
             }
@@ -42,7 +44,7 @@ namespace EnkaDotNet.Components.ZZZ
             get
             {
                 bool raw = Options?.Raw ?? false;
-                string key = raw ? SecondaryStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(SecondaryStat.Type);
+                string key = raw ? SecondaryStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(SecondaryStat.Type, Assets);
                 string value;
 
                 // Percentage stats are stored in basis points (e.g., 3000 = 30%), divide by 100 for display

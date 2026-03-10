@@ -9,6 +9,62 @@ namespace EnkaDotNet.Utils.ZZZ
 {
     public static class ZZZStatsHelpers
     {
+        /// <summary>
+        /// Maps stat category keys to their locs.json text map keys for localization.
+        /// </summary>
+        private static readonly Dictionary<string, string> CategoryToLocsKey = new Dictionary<string, string>
+        {
+            { "HP", "HpMax" },
+            { "HP%", "HpMax_Ratio" },
+            { "ATK", "Atk" },
+            { "ATK%", "Atk_Ratio" },
+            { "DEF", "Def" },
+            { "DEF%", "Def_Ratio" },
+            { "CRIT Rate", "Crit" },
+            { "CRIT DMG", "CritDmg" },
+            { "Impact", "BreakStun" },
+            { "Energy Regen", "SpRecover" },
+            { "Anomaly Mastery", "ElementAbnormalPower" },
+            { "Anomaly Proficiency", "ElementMystery" },
+            { "Pen Ratio", "PenRatio" },
+            { "PEN", "PenDelta" },
+            { "Physical DMG", "AddedDamageRatio_Physics" },
+            { "Fire DMG", "AddedDamageRatio_Fire" },
+            { "Ice DMG", "AddedDamageRatio_Ice" },
+            { "Electric DMG", "AddedDamageRatio_Elec" },
+            { "Ether DMG", "AddedDamageRatio_Ether" },
+            { "Sheer Force", "SkipDefAtk" },
+            { "Sheer DMG", "SkipDefDamageRatio" },
+            { "Automatic Adrenaline Accumulation", "RpRecover" }
+        };
+
+        /// <summary>
+        /// Gets the localized display name for a stat category.
+        /// Falls back to the hardcoded English name if the localized text is not found or equals the key.
+        /// </summary>
+        public static string GetLocalizedStatCategoryDisplay(string englishCategory, IZZZAssets assets)
+        {
+            if (assets != null && CategoryToLocsKey.TryGetValue(englishCategory, out string locsKey))
+            {
+                string localized = assets.GetLocalizedText(locsKey);
+                if (!string.IsNullOrEmpty(localized) && localized != locsKey)
+                {
+                    return localized;
+                }
+            }
+            return englishCategory;
+        }
+
+        /// <summary>
+        /// Gets the localized display name for a stat type, using the locs.json text map.
+        /// Falls back to the hardcoded English name.
+        /// </summary>
+        public static string GetStatCategoryDisplay(StatType statType, IZZZAssets assets)
+        {
+            string englishCategory = GetStatCategoryDisplay(statType);
+            return GetLocalizedStatCategoryDisplay(englishCategory, assets);
+        }
+
         private const double BASE_CRIT_RATE = 0;
         private const double BASE_CRIT_DMG = 0;
         private const double BASE_ENERGY_REGEN = 0;

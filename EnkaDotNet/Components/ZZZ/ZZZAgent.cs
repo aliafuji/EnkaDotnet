@@ -59,12 +59,13 @@ namespace EnkaDotNet.Components.ZZZ
             foreach (var statPair in calculatedStats)
             {
                 string friendlyKey = statPair.Key;
+                string localizedKey = ZZZStatsHelpers.GetLocalizedStatCategoryDisplay(friendlyKey, this.Assets);
                 double numericValue = statPair.Value.FinalValue;
                 double baseValue = statPair.Value.BaseValue;
                 double addedValue = statPair.Value.AddedValue;
                 bool isPercentageDisplay = ZZZStatsHelpers.IsDisplayPercentageStatForGroup(friendlyKey);
 
-                string displayKey = raw ? ZZZStatsHelpers.GetStatTypeFromFriendlyName(friendlyKey, isPercentageDisplay, friendlyKey == "Energy Regen").ToString() : friendlyKey;
+                string displayKey = raw ? ZZZStatsHelpers.GetStatTypeFromFriendlyName(friendlyKey, isPercentageDisplay, friendlyKey == "Energy Regen").ToString() : localizedKey;
                 string displayValue;
                 string displayBase;
                 string displayAdded;
@@ -175,7 +176,7 @@ namespace EnkaDotNet.Components.ZZZ
                         {
                             var statType = (StatType)propId;
                             double numericValue = prop.Value;
-                            string key = raw ? statType.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(statType);
+                            string key = raw ? statType.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(statType, Assets);
                             string value;
 
                             bool isDisplayPercent = ZZZStatsHelpers.IsDisplayPercentageStat(statType);

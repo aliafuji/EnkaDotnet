@@ -135,7 +135,11 @@ namespace EnkaDotNet.Utils.HSR
             if (avatarDetail.Equipment != null)
             {
                 character.Equipment = MapLightCone(avatarDetail.Equipment);
-                if (character.Equipment != null) character.Equipment.Options = this._options;
+                if (character.Equipment != null)
+                {
+                    character.Equipment.Options = this._options;
+                    character.Equipment.Assets = this._assets;
+                }
             }
 
             if (avatarDetail.SkillTreeList != null)
@@ -200,8 +204,9 @@ namespace EnkaDotNet.Utils.HSR
                     {
                         var relic = MapRelicModelToRelic(relicModel);
                         relic.Options = this._options;
-                        if (relic.MainStat != null) relic.MainStat.Options = this._options;
-                        foreach (var subStat in relic.SubStats) subStat.Options = this._options;
+                        relic.Assets = this._assets;
+                        if (relic.MainStat != null) { relic.MainStat.Options = this._options; relic.MainStat.Assets = this._assets; }
+                        foreach (var subStat in relic.SubStats) { subStat.Options = this._options; subStat.Assets = this._assets; }
                         character.RelicList.Add(relic);
                     }
                 }
@@ -250,7 +255,8 @@ namespace EnkaDotNet.Utils.HSR
                         PropertyType = HSRStatPropertyUtils.MapToStatPropertyType(prop.Type),
                         Value = prop.Value,
                         IsPercentage = isPercentage,
-                        Options = this._options
+                        Options = this._options,
+                        Assets = this._assets
                     });
                 }
             }
@@ -310,17 +316,18 @@ namespace EnkaDotNet.Utils.HSR
                         Value = mainProp.Value,
                         BaseValue = mainProp.Value,
                         IsPercentage = isPercentage,
-                        Options = this._options
+                        Options = this._options,
+                        Assets = this._assets
                     };
                 }
                 else
                 {
-                    relic.MainStat = new HSRStatProperty { Type = "None", PropertyType = StatPropertyType.None, Options = this._options };
+                    relic.MainStat = new HSRStatProperty { Type = "None", PropertyType = StatPropertyType.None, Options = this._options, Assets = this._assets };
                 }
             }
             else
             {
-                relic.MainStat = new HSRStatProperty { Type = "None", PropertyType = StatPropertyType.None, Options = this._options };
+                relic.MainStat = new HSRStatProperty { Type = "None", PropertyType = StatPropertyType.None, Options = this._options, Assets = this._assets };
             }
 
             if (relicModel.Flat?.Props != null && relicModel.Flat.Props.Count > 1)
@@ -338,7 +345,8 @@ namespace EnkaDotNet.Utils.HSR
                             Value = subProp.Value,
                             BaseValue = subProp.Value,
                             IsPercentage = isPercentage,
-                            Options = this._options
+                            Options = this._options,
+                            Assets = this._assets
                         });
                     }
                 }

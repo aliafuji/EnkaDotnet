@@ -183,6 +183,14 @@ namespace EnkaDotNet.Assets.HSR
         HSRRelicSetInfo GetRelicSetInfo(string setId);
 
         /// <summary>
+        /// Gets the localized display name for a stat property type (e.g. "AttackAddedRatio" → "ATK")
+        /// Uses the text map for localization, falling back to hardcoded English values
+        /// </summary>
+        /// <param name="propertyType">The property type key (e.g. "AttackAddedRatio", "CriticalChance")</param>
+        /// <returns>The localized display name</returns>
+        string GetPropertyDisplayName(string propertyType);
+
+        /// <summary>
         /// Gets all loaded relic sets
         /// </summary>
         /// <returns>A dictionary of all relic sets</returns>

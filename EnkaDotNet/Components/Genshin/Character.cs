@@ -1,13 +1,14 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Enums.Genshin;
 using EnkaDotNet.Utils.Genshin;
-
 namespace EnkaDotNet.Components.Genshin
 {
     public class Character
     {
         internal EnkaClientOptions Options { get; set; }
+        internal IGenshinAssets Assets { get; set; }
         public int Id { get; internal set; }
         public string Name { get; internal set; } = string.Empty;
         public int Level { get; internal set; }
@@ -30,9 +31,9 @@ namespace EnkaDotNet.Components.Genshin
             var formatted = new Dictionary<string, string>();
             foreach (var kvp in Stats)
             {
-                string key = raw ? kvp.Key.ToString() : GenshinStatUtils.GetDisplayName(kvp.Key);
+                string key = raw ? kvp.Key.ToString() : GenshinStatUtils.GetDisplayName(kvp.Key, Assets);
                 string value = GenshinStatUtils.FormatValueStats(kvp.Key, kvp.Value, raw);
-                formatted.Add(key, value);
+                formatted[key] = value;
             }
             return formatted;
         }

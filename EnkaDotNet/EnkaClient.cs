@@ -144,9 +144,9 @@ namespace EnkaDotNet
 
             var httpHelper = new HttpHelper(
                 httpHelperHttpClient,
-                enkaCache,
                 Microsoft.Extensions.Options.Options.Create(options),
-                loggerFactory.CreateLogger<HttpHelper>()
+                loggerFactory.CreateLogger<HttpHelper>(),
+                cache: enkaCache
             );
 
             var serviceCollection = new ServiceCollection();

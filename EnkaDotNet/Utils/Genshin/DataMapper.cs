@@ -152,12 +152,13 @@ namespace EnkaDotNet.Utils.Genshin
                 Name = _assets?.GetCharacterName(model.AvatarId) ?? $"Character_{model.AvatarId}",
                 IconUrl = _assets?.GetCharacterIconUrl(model.AvatarId) ?? string.Empty,
                 Options = this._options,
+                Assets = this._assets,
                 ConstellationLevel = unlockedConstellationIds.Count,
                 Constellations = constellations
             };
 
-            if (character.Weapon != null) character.Weapon.Options = this._options;
-            foreach (var artifact in character.Artifacts) artifact.Options = this._options;
+            if (character.Weapon != null) { character.Weapon.Options = this._options; character.Weapon.Assets = this._assets; }
+            foreach (var artifact in character.Artifacts) { artifact.Options = this._options; artifact.Assets = this._assets; }
             foreach (var talent in character.Talents) talent.Options = this._options;
 
             return character;
@@ -200,7 +201,7 @@ namespace EnkaDotNet.Utils.Genshin
             }
 
             var secondaryStat = secondaryStatPropModel != null ? MapStatProperty(secondaryStatPropModel) : null;
-            if (secondaryStat != null) secondaryStat.Options = this._options;
+            if (secondaryStat != null) { secondaryStat.Options = this._options; secondaryStat.Assets = this._assets; }
 
             int refinementValue = -1;
             if (weapon.AffixMap != null && weapon.AffixMap.Count > 0)
@@ -227,14 +228,15 @@ namespace EnkaDotNet.Utils.Genshin
                 Type = weaponType,
                 Name = _assets?.GetWeaponNameFromHash(flat.NameTextMapHash) ?? $"Weapon_{equip.ItemId}",
                 IconUrl = _assets?.GetWeaponIconUrlFromIconName(flat.Icon) ?? string.Empty,
-                Options = this._options
+                Options = this._options,
+                Assets = this._assets
             };
         }
 
         private Artifact MapArtifact(EquipModel equip, ReliquaryModel reliquary, FlatDataModel flat)
         {
-            var mainStat = MapStatProperty(flat.ReliquaryMainstat) ?? new StatProperty { Type = StatType.None, Value = 0, Options = this._options };
-            if (mainStat != null) mainStat.Options = this._options;
+            var mainStat = MapStatProperty(flat.ReliquaryMainstat) ?? new StatProperty { Type = StatType.None, Value = 0, Options = this._options, Assets = this._assets };
+            if (mainStat != null) { mainStat.Options = this._options; mainStat.Assets = this._assets; }
 
             var subStats = new List<StatProperty>();
             if (flat.ReliquarySubstats != null)
@@ -248,7 +250,7 @@ namespace EnkaDotNet.Utils.Genshin
                     }
                 }
             }
-            foreach (var subStat in subStats) subStat.Options = this._options;
+            foreach (var subStat in subStats) { subStat.Options = this._options; subStat.Assets = this._assets; }
 
             return new Artifact
             {
@@ -261,7 +263,8 @@ namespace EnkaDotNet.Utils.Genshin
                 SetName = _assets?.GetArtifactSetNameFromHash(flat.SetNameTextMapHash) ?? "Unknown Set",
                 Name = _assets?.GetArtifactNameFromHash(flat.NameTextMapHash) ?? $"Artifact_{equip.ItemId}",
                 IconUrl = _assets?.GetArtifactIconUrlFromIconName(flat.Icon) ?? string.Empty,
-                Options = this._options
+                Options = this._options,
+                Assets = this._assets
             };
         }
 
@@ -363,7 +366,7 @@ namespace EnkaDotNet.Utils.Genshin
             if (string.IsNullOrEmpty(propIdString)) return null;
             StatType type = MapStatTypeValue(propIdString);
             if (type == StatType.None) return null;
-            return new StatProperty { Type = type, Value = model.StatValue, Options = this._options };
+            return new StatProperty { Type = type, Value = model.StatValue, Options = this._options, Assets = this._assets };
         }
 
         private StatType MapStatTypeKey(string key)
