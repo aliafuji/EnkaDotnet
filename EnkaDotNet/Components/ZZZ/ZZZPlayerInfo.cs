@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using EnkaDotNet.Enums.ZZZ;
 
 namespace EnkaDotNet.Components.ZZZ
@@ -29,5 +29,6 @@ namespace EnkaDotNet.Components.ZZZ
         public int Value { get; internal set; }
         public string Icon { get; internal set; } = string.Empty;
         public string Name { get; internal set; } = string.Empty;
+        public int MedalScore { get; internal set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -69,5 +69,8 @@ namespace EnkaDotNet.Models.ZZZ
 
         [JsonPropertyName("MedalIcon")]
         public int MedalIcon { get; set; }
+
+        [JsonPropertyName("MedalScore")]
+        public int MedalScore { get; set; }
     }
 }

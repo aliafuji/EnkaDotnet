@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using EnkaDotNet.Models.ZZZ;
@@ -49,12 +49,15 @@ namespace EnkaDotNet.Utils.ZZZ
             {
                 foreach (var medalModel in response.PlayerInfo.SocialDetail.MedalList)
                 {
+                    if (medalModel.MedalIcon == 0 && medalModel.MedalType == 0) continue;
+
                     medals.Add(new ZZZMedal
                     {
                         Type = (MedalType)medalModel.MedalType,
                         Value = medalModel.Value,
                         Icon = _assets.GetMedalIconUrl(medalModel.MedalIcon),
-                        Name = _assets.GetMedalName(medalModel.MedalIcon)
+                        Name = _assets.GetMedalName(medalModel.MedalIcon),
+                        MedalScore = medalModel.MedalScore
                     });
                 }
             }
