@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Components.ZZZ;
@@ -205,6 +205,9 @@ namespace EnkaDotNet.Utils.ZZZ
 
         public static bool IsDisplayPercentageStat(StatType statType)
         {
+            if (statType == StatType.AnomalyMasteryPercent || statType == StatType.AutomaticAdrenalineAccumulationPercent)
+                return true;
+
             string category = GetStatCategoryDisplay(statType);
             switch (category)
             {
