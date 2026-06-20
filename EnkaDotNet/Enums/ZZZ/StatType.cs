@@ -62,6 +62,8 @@
         ElectricDMGBonusFlat = 31803, // Electric DMG Bonus [Flat]
         EtherDMGBonusBase = 31901,    // Ether DMG Bonus [Base]
         EtherDMGBonusFlat = 31903,     // Ether DMG Bonus [Flat]
+        WindDMGBonusBase = 32301,     // Wind DMG Bonus [Base]
+        WindDMGBonusFlat = 32303,     // Wind DMG Bonus [Flat]
 
         // Rupture Agent Specific Stats
         AutomaticAdrenalineAccumulationBase = 32001, // Automatic Adrenaline Accumulation [Base]

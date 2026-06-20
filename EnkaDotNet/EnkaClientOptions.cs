@@ -168,6 +168,13 @@ namespace EnkaDotNet
         public bool Raw { get; set; } = false;
 
         /// <summary>
+        /// Gets or sets the grammatical gender used when resolving gendered localized text in
+        /// Zenless Zone Zero (for example, titles containing <c>{M#...}{F#...}</c> tokens).
+        /// Defaults to <see cref="EnkaDotNet.Enums.ZZZ.Gender.Male"/>.
+        /// </summary>
+        public EnkaDotNet.Enums.ZZZ.Gender ZZZGender { get; set; } = EnkaDotNet.Enums.ZZZ.Gender.Male;
+
+        /// <summary>
         /// Optional directory where successfully downloaded asset files are persisted as local copies.
         /// When set and a network download fails, the library loads from this directory before throwing,
         /// keeping the application functional while the upstream source is unreachable.

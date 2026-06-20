@@ -475,6 +475,22 @@ namespace EnkaDotNet.Assets.ZZZ
             }
             return $"Title_{titleId}";
         }
+        public string GetTitleColorA(int titleId)
+        {
+            if (_titles.TryGetValue(titleId.ToString(), out var titleInfo) && !string.IsNullOrEmpty(titleInfo.ColorA))
+            {
+                return $"#{titleInfo.ColorA}";
+            }
+            return string.Empty;
+        }
+        public string GetTitleColorB(int titleId)
+        {
+            if (_titles.TryGetValue(titleId.ToString(), out var titleInfo) && !string.IsNullOrEmpty(titleInfo.ColorB))
+            {
+                return $"#{titleInfo.ColorB}";
+            }
+            return string.Empty;
+        }
         public string GetMedalName(int medalId)
         {
             if (_medals.TryGetValue(medalId.ToString(), out var medalInfo) && !string.IsNullOrEmpty(medalInfo.Name))
@@ -580,6 +596,7 @@ namespace EnkaDotNet.Assets.ZZZ
                 case "PHYSICS": return ElementType.Physical;
                 case "AURICETHER": return ElementType.AuricEther;
                 case "ZHENZHENASSAULT": return ElementType.HonedEdge;
+                case "WIND": return ElementType.Wind;
                 default: return ElementType.Unknown;
             }
         }

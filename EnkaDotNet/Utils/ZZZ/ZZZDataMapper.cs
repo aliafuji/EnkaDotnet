@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using EnkaDotNet.Models.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Assets.ZZZ;
@@ -14,6 +15,21 @@ namespace EnkaDotNet.Utils.ZZZ
         private readonly IZZZAssets _assets;
         private readonly ZZZStatsCalculator _statsCalculator;
         private readonly EnkaClientOptions _options;
+
+        // Matches gendered localized text tokens such as {M#he}{F#she}.
+        private static readonly Regex GenderedTextPattern =
+            new Regex(@"\{([MF])#([^{}]*)\}", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Resolves gendered tokens (e.g. <c>{M#...}{F#...}</c>) in localized text based on the
+        /// configured <see cref="EnkaClientOptions.ZZZGender"/>. Tokens for the other gender are removed.
+        /// </summary>
+        private string ParseGenderedText(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            string token = _options.ZZZGender == Enums.ZZZ.Gender.Female ? "F" : "M";
+            return GenderedTextPattern.Replace(text, m => m.Groups[1].Value == token ? m.Groups[2].Value : string.Empty);
+        }
 
         public ZZZDataMapper(IZZZAssets assets, EnkaClientOptions options)
         {
@@ -82,7 +98,9 @@ namespace EnkaDotNet.Utils.ZZZ
                 ProfilePictureId = profileId,
                 ProfilePictureIcon = _assets.GetProfilePictureIconUrl(profileId),
                 TitleId = titleId,
-                TitleText = _assets.GetTitleText(titleId),
+                TitleText = ParseGenderedText(_assets.GetTitleText(titleId)),
+                TitleColor1 = _assets.GetTitleColorA(titleId),
+                TitleColor2 = _assets.GetTitleColorB(titleId),
                 NameCardId = callingCardId,
                 NameCardIcon = _assets.GetNameCardIconUrl(callingCardId),
                 MainCharacterId = avatarId,
