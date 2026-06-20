@@ -15,6 +15,8 @@ namespace EnkaDotNet.Components.ZZZ
         public string ProfilePictureIcon { get; internal set; } = string.Empty;
         public int TitleId { get; internal set; }
         public string TitleText { get; internal set; } = string.Empty;
+        public string TitleColor1 { get; internal set; } = string.Empty;
+        public string TitleColor2 { get; internal set; } = string.Empty;
         public int NameCardId { get; internal set; }
         public string NameCardIcon { get; internal set; } = string.Empty;
         public int MainCharacterId { get; internal set; }

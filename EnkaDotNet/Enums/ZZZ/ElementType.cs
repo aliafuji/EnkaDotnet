@@ -10,6 +10,7 @@
         Electric,
         Ether,
         AuricEther,
-        HonedEdge
+        HonedEdge,
+        Wind
     }
 }

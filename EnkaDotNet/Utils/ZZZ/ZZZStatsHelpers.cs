@@ -33,6 +33,7 @@ namespace EnkaDotNet.Utils.ZZZ
             { "Ice DMG", "AddedDamageRatio_Ice" },
             { "Electric DMG", "AddedDamageRatio_Elec" },
             { "Ether DMG", "AddedDamageRatio_Ether" },
+            { "Wind DMG", "AddedDamageRatio_Wind" },
             { "Sheer Force", "SkipDefAtk" },
             { "Sheer DMG", "SkipDefDamageRatio" },
             { "Automatic Adrenaline Accumulation", "RpRecover" }
@@ -142,6 +143,8 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.ElectricDMGBonusFlat:
                 case StatType.EtherDMGBonusBase:
                 case StatType.EtherDMGBonusFlat:
+                case StatType.WindDMGBonusBase:
+                case StatType.WindDMGBonusFlat:
                     return true;
                 default: return false;
             }
@@ -172,6 +175,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.IceDMGBonusBase: case StatType.IceDMGBonusFlat: return "Ice DMG";
                 case StatType.ElectricDMGBonusBase: case StatType.ElectricDMGBonusFlat: return "Electric DMG";
                 case StatType.EtherDMGBonusBase: case StatType.EtherDMGBonusFlat: return "Ether DMG";
+                case StatType.WindDMGBonusBase: case StatType.WindDMGBonusFlat: return "Wind DMG";
                 case StatType.SheerForceBase: case StatType.SheerForceFlat: return "Sheer Force";
                 case StatType.SheerDMGBonusBase: case StatType.SheerDMGBonusFlat: return "Sheer DMG";
                 default: return "";
@@ -198,6 +202,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 case "Ice DMG": return StatType.IceDMGBonusFlat;
                 case "Electric DMG": return StatType.ElectricDMGBonusFlat;
                 case "Ether DMG": return StatType.EtherDMGBonusFlat;
+                case "Wind DMG": return StatType.WindDMGBonusFlat;
                 case "Automatic Adrenaline Accumulation": return StatType.AutomaticAdrenalineAccumulationBase;
                 default: return StatType.None;
             }
@@ -219,6 +224,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 case "Ice DMG":
                 case "Electric DMG":
                 case "Ether DMG":
+                case "Wind DMG":
                 case "HP%":
                 case "ATK%":
                 case "DEF%":
@@ -423,6 +429,10 @@ namespace EnkaDotNet.Utils.ZZZ
                         {
                             categoryDict["SetBonus_Flat"] += rawValue;
                         }
+                        else if (statType.ToString().Contains("DMGBonus"))
+                        {
+                            categoryDict["SetBonus_Flat"] += rawValue;
+                        }
                         else if (IsCalculationPercentageStat(statType))
                         {
                             categoryDict["SetBonus_Percent"] += rawValue;
@@ -524,6 +534,7 @@ namespace EnkaDotNet.Utils.ZZZ
                     case "Ice DMG":
                     case "Electric DMG":
                     case "Ether DMG":
+                    case "Wind DMG":
                     case "Sheer DMG":
                         finalValue = agentBase + totalDelta;
                         break;
@@ -578,6 +589,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.IceDMGBonusBase: case StatType.IceDMGBonusFlat: return "Ice DMG";
                 case StatType.ElectricDMGBonusBase: case StatType.ElectricDMGBonusFlat: return "Electric DMG";
                 case StatType.EtherDMGBonusBase: case StatType.EtherDMGBonusFlat: return "Ether DMG";
+                case StatType.WindDMGBonusBase: case StatType.WindDMGBonusFlat: return "Wind DMG";
                 case StatType.SheerForceBase: case StatType.SheerForceFlat: return "Sheer Force";
                 case StatType.SheerDMGBonusBase: case StatType.SheerDMGBonusFlat: return "Sheer DMG";
                 default: return "";
@@ -596,6 +608,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 case "Ice DMG":
                 case "Electric DMG":
                 case "Ether DMG":
+                case "Wind DMG":
                 case "Energy Regen":
                 case "Sheer DMG":
                     return true;

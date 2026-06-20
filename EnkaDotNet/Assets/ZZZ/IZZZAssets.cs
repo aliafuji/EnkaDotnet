@@ -27,6 +27,8 @@ namespace EnkaDotNet.Assets.ZZZ
         string GetPropertyName(int propertyId);
         string FormatPropertyValue(int propertyId, double value);
         string GetTitleText(int titleId);
+        string GetTitleColorA(int titleId);
+        string GetTitleColorB(int titleId);
         string GetMedalName(int medalId);
         string GetMedalIconUrl(int medalId);
         string GetNameCardIconUrl(int nameCardId);
