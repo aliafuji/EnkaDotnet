@@ -16,14 +16,9 @@ namespace EnkaDotNet.Utils.ZZZ
         private readonly ZZZStatsCalculator _statsCalculator;
         private readonly EnkaClientOptions _options;
 
-        // Matches gendered localized text tokens such as {M#he}{F#she}.
         private static readonly Regex GenderedTextPattern =
-            new Regex(@"\{([MF])#([^{}]*)\}", RegexOptions.Compiled);
+            new Regex(@"\{([MF])#([^{}]*)\}", RegexOptions.Compiled, TimeSpan.FromMilliseconds(100));
 
-        /// <summary>
-        /// Resolves gendered tokens (e.g. <c>{M#...}{F#...}</c>) in localized text based on the
-        /// configured <see cref="EnkaClientOptions.ZZZGender"/>. Tokens for the other gender are removed.
-        /// </summary>
         private string ParseGenderedText(string text)
         {
             if (string.IsNullOrEmpty(text)) return text;
