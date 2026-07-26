@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace EnkaDotNet.Assets.HSR
 {
-    public class HSRAssets : BaseAssets, IHSRAssets, IDisposable
+    public class HSRAssets : BaseAssets, IHSRAssets
     {
         private readonly ConcurrentDictionary<string, HSRCharacterAssetInfo> _characters = new ConcurrentDictionary<string, HSRCharacterAssetInfo>();
         private readonly ConcurrentDictionary<string, HSRLightConeAssetInfo> _lightCones = new ConcurrentDictionary<string, HSRLightConeAssetInfo>();
@@ -503,68 +503,79 @@ namespace EnkaDotNet.Assets.HSR
 
         public HSRAvatarMetaStats GetAvatarStats(string avatarId, int promotion)
         {
-            if (_metaData?.AvatarStats != null && _metaData.AvatarStats.TryGetValue(avatarId, out var promoDict))
+            if (_metaData?.AvatarStats != null
+                && _metaData.AvatarStats.TryGetValue(avatarId, out var promoDict)
+                && promoDict != null
+                && promoDict.TryGetValue(promotion.ToString(CultureInfo.InvariantCulture), out var stats))
             {
-                if (promoDict != null && promoDict.TryGetValue(promotion.ToString(CultureInfo.InvariantCulture), out var stats))
-                {
-                    return stats;
-                }
+                return stats;
             }
+
             return null;
         }
 
         public HSREquipmentMetaStats GetEquipmentStats(string equipmentId, int promotion)
         {
-            if (_metaData?.EquipmentStats != null && _metaData.EquipmentStats.TryGetValue(equipmentId, out var promoDict))
+            if (_metaData?.EquipmentStats != null
+                && _metaData.EquipmentStats.TryGetValue(equipmentId, out var promoDict)
+                && promoDict != null
+                && promoDict.TryGetValue(promotion.ToString(CultureInfo.InvariantCulture), out var stats))
             {
-                if (promoDict != null && promoDict.TryGetValue(promotion.ToString(CultureInfo.InvariantCulture), out var stats))
-                {
-                    return stats;
-                }
+                return stats;
             }
+
             return null;
         }
 
         public Dictionary<string, double> GetEquipmentSkillProps(string skillId, int rank)
         {
-            if (_metaData?.EquipmentSkills != null && _metaData.EquipmentSkills.TryGetValue(skillId, out var rankDict))
+            if (_metaData?.EquipmentSkills != null
+                && _metaData.EquipmentSkills.TryGetValue(skillId, out var rankDict)
+                && rankDict != null
+                && rankDict.TryGetValue(rank.ToString(CultureInfo.InvariantCulture), out var skillInfo))
             {
-                if (rankDict != null && rankDict.TryGetValue(rank.ToString(CultureInfo.InvariantCulture), out var skillInfo))
-                {
-                    return skillInfo?.Props ?? new Dictionary<string, double>();
-                }
+                return skillInfo?.Props ?? new Dictionary<string, double>();
             }
+
             return new Dictionary<string, double>();
         }
 
         public HSRRelicMainAffixInfo GetRelicMainAffixInfo(int groupId, int affixId)
         {
-            if (_metaData?.RelicInfo?.MainAffix != null &&
-                _metaData.RelicInfo.MainAffix.TryGetValue(groupId.ToString(CultureInfo.InvariantCulture), out var groupDict))
+            if (_metaData?.RelicInfo?.MainAffix != null
+                && _metaData.RelicInfo.MainAffix.TryGetValue(groupId.ToString(CultureInfo.InvariantCulture), out var groupDict)
+                && groupDict != null
+                && groupDict.TryGetValue(affixId.ToString(CultureInfo.InvariantCulture), out var affixInfo))
             {
-                if (groupDict != null && groupDict.TryGetValue(affixId.ToString(CultureInfo.InvariantCulture), out var affixInfo))
-                    return affixInfo;
+                return affixInfo;
             }
+
             return null;
         }
 
         public HSRRelicSubAffixInfo GetRelicSubAffixInfo(int groupId, int affixId)
         {
-            if (_metaData?.RelicInfo?.SubAffix != null && _metaData.RelicInfo.SubAffix.TryGetValue(groupId.ToString(CultureInfo.InvariantCulture), out var groupDict))
+            if (_metaData?.RelicInfo?.SubAffix != null
+                && _metaData.RelicInfo.SubAffix.TryGetValue(groupId.ToString(CultureInfo.InvariantCulture), out var groupDict)
+                && groupDict != null
+                && groupDict.TryGetValue(affixId.ToString(CultureInfo.InvariantCulture), out var affixInfo))
             {
-                if (groupDict != null && groupDict.TryGetValue(affixId.ToString(CultureInfo.InvariantCulture), out var affixInfo))
-                    return affixInfo;
+                return affixInfo;
             }
+
             return null;
         }
 
         public Dictionary<string, double> GetSkillTreeProps(string pointId, int level)
         {
-            if (_metaData?.SkillTreeInfo != null && _metaData.SkillTreeInfo.TryGetValue(pointId, out var levelDict))
+            if (_metaData?.SkillTreeInfo != null
+                && _metaData.SkillTreeInfo.TryGetValue(pointId, out var levelDict)
+                && levelDict != null
+                && levelDict.TryGetValue(level.ToString(CultureInfo.InvariantCulture), out var skillInfo))
             {
-                if (levelDict != null && levelDict.TryGetValue(level.ToString(CultureInfo.InvariantCulture), out var skillInfo))
-                    return skillInfo?.Props ?? new Dictionary<string, double>();
+                return skillInfo?.Props ?? new Dictionary<string, double>();
             }
+
             return new Dictionary<string, double>();
         }
 

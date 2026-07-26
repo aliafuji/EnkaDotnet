@@ -322,12 +322,9 @@ namespace EnkaDotNet.Utils.Genshin
             foreach (var kvp in fightPropMap)
             {
                 StatType statType = MapStatTypeKey(kvp.Key);
-                if (statType != StatType.None)
+                if (statType != StatType.None && (IsFinalStatKey(kvp.Key) || !stats.ContainsKey(statType)))
                 {
-                    if (IsFinalStatKey(kvp.Key) || !stats.ContainsKey(statType))
-                    {
-                        stats[statType] = kvp.Value;
-                    }
+                    stats[statType] = kvp.Value;
                 }
             }
             return stats;

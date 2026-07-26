@@ -278,7 +278,11 @@ namespace EnkaDotNet.Utils.Common
                 cancellationToken.ThrowIfCancellationRequested();
                 response.EnsureSuccessStatusCode();
 
+#if NET8_0_OR_GREATER
+                jsonString = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+#else
                 jsonString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+#endif
 
                 if (string.IsNullOrWhiteSpace(jsonString))
                     _logger.LogWarning("Received empty or whitespace JSON response from {Url}", relativeUrl);

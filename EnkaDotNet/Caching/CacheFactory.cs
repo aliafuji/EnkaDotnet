@@ -94,18 +94,16 @@ namespace EnkaDotNet.Caching
             return new MemoryCacheAdapter(ownedCache, defaultTtl, jsonOptions: null, ownsMemoryCache: true);
         }
 
-        private static SQLiteCacheOptions WithFallbackTtl(SQLiteCacheOptions cacheOptions, EnkaClientOptions options)
+        private static void WithFallbackTtl(SQLiteCacheOptions cacheOptions, EnkaClientOptions options)
         {
             cacheOptions.DefaultTtl = cacheOptions.ExplicitDefaultTtl
                 ?? TimeSpan.FromMinutes(options.CacheDurationMinutes);
-            return cacheOptions;
         }
 
-        private static RedisCacheOptions WithFallbackTtl(RedisCacheOptions cacheOptions, EnkaClientOptions options)
+        private static void WithFallbackTtl(RedisCacheOptions cacheOptions, EnkaClientOptions options)
         {
             cacheOptions.DefaultTtl = cacheOptions.ExplicitDefaultTtl
                 ?? TimeSpan.FromMinutes(options.CacheDurationMinutes);
-            return cacheOptions;
         }
 
         /// <summary>

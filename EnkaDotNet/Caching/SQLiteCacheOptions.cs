@@ -108,17 +108,14 @@ namespace EnkaDotNet.Caching
 
             // Relative traversal is rejected outright: the resolved location is nowhere near
             // obvious from the configured string, and the provider creates directories for it.
-            var segments = DatabasePath.Split('/', '\\');
-            foreach (var segment in segments)
+            var segments = DatabasePath.Split(new[] { '/', '\\' }, StringSplitOptions.None);
+            if (System.Linq.Enumerable.Any(segments, segment => segment == ".."))
             {
-                if (segment == "..")
-                {
-                    throw new Exceptions.CacheException(
-                        CacheProvider.SQLite,
-                        "SQLite database path cannot contain '..' segments. Use an absolute path or a " +
-                        "path relative to the working directory without traversal.",
-                        "DatabasePath");
-                }
+                throw new Exceptions.CacheException(
+                    CacheProvider.SQLite,
+                    "SQLite database path cannot contain '..' segments. Use an absolute path or a " +
+                    "path relative to the working directory without traversal.",
+                    "DatabasePath");
             }
 
             if (DefaultTtl <= TimeSpan.Zero)

@@ -14,7 +14,7 @@ using EnkaDotNet.Utils.Common;
 
 namespace EnkaDotNet.Assets.Genshin
 {
-    public class GenshinAssets : BaseAssets, IGenshinAssets, IDisposable
+    public class GenshinAssets : BaseAssets, IGenshinAssets
     {
         private readonly ConcurrentDictionary<int, CharacterAssetInfo> _characters = new ConcurrentDictionary<int, CharacterAssetInfo>();
         private readonly ConcurrentDictionary<int, TalentAssetInfo> _talents = new ConcurrentDictionary<int, TalentAssetInfo>();

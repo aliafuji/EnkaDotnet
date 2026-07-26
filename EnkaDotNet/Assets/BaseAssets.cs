@@ -267,7 +267,11 @@ namespace EnkaDotNet.Assets
                     $"Asset '{assetKey}' for {GameIdentifier} reports {declaredLength} bytes, above the {MaxAssetBytes} byte limit.");
             }
 
+#if NET8_0_OR_GREATER
+            using (var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+#else
             using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+#endif
             {
                 var builder = new StringBuilder(declaredLength.HasValue ? (int)Math.Min(declaredLength.Value, 1 << 20) : 1 << 16);
                 var buffer = new byte[81920];
@@ -328,7 +332,7 @@ namespace EnkaDotNet.Assets
                 // truncated file that a later run would happily load as the fallback
                 tempPath = path + ".tmp";
 #if NET8_0_OR_GREATER
-                await File.WriteAllTextAsync(tempPath, json).ConfigureAwait(false);
+                await File.WriteAllTextAsync(tempPath, json, _loadCancellation).ConfigureAwait(false);
                 File.Move(tempPath, path, overwrite: true);
 #else
                 using (var writer = new StreamWriter(tempPath, append: false))
@@ -343,10 +347,7 @@ namespace EnkaDotNet.Assets
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to save asset '{AssetKey}' for {GameIdentifier} to fallback directory.", assetKey, GameIdentifier);
-                if (tempPath != null)
-                {
-                    try { File.Delete(tempPath); } catch (IOException) { } catch (UnauthorizedAccessException) { }
-                }
+                TryDeleteTempFile(tempPath);
             }
         }
 
@@ -395,6 +396,27 @@ namespace EnkaDotNet.Assets
             finally
             {
                 fetchLock.Release();
+            }
+        }
+
+        private void TryDeleteTempFile(string tempPath)
+        {
+            if (string.IsNullOrEmpty(tempPath))
+            {
+                return;
+            }
+
+            try
+            {
+                File.Delete(tempPath);
+            }
+            catch (IOException ex)
+            {
+                _logger.LogTrace(ex, "Could not delete temp asset file {TempPath}", tempPath);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogTrace(ex, "Could not delete temp asset file {TempPath}", tempPath);
             }
         }
 

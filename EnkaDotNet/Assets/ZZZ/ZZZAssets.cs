@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 
 namespace EnkaDotNet.Assets.ZZZ
 {
-    public class ZZZAssets : BaseAssets, IZZZAssets, IDisposable
+    public class ZZZAssets : BaseAssets, IZZZAssets
     {
         private readonly ConcurrentDictionary<string, ZZZAvatarAssetInfo> _avatars = new ConcurrentDictionary<string, ZZZAvatarAssetInfo>();
         private readonly ConcurrentDictionary<string, ZZZWeaponAssetInfo> _weapons = new ConcurrentDictionary<string, ZZZWeaponAssetInfo>();
