@@ -33,7 +33,7 @@ namespace EnkaDotNet.Components.ZZZ
         {
             get
             {
-                bool raw = Options?.Raw ?? false;
+                bool raw = Options?.UseRawStatValues ?? false;
                 string key = raw ? MainStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(MainStat.Type, Assets);
                 string value;
                 if (MainStat.IsPercentage && !raw) value = (MainStat.Value / 100.0).ToString("F1", CultureInfo.InvariantCulture) + "%";
@@ -48,7 +48,7 @@ namespace EnkaDotNet.Components.ZZZ
         {
             get
             {
-                bool raw = Options?.Raw ?? false;
+                bool raw = Options?.UseRawStatValues ?? false;
                 var formattedList = new List<KeyValuePair<string, string>>();
                 foreach (var stat in SubStatsRaw)
                 {

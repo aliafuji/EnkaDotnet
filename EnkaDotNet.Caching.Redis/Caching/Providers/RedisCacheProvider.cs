@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,13 +19,15 @@ namespace EnkaDotNet.Caching.Providers
     /// </summary>
     public class RedisCacheProvider : IEnkaCache
     {
+        private const int DeleteBatchSize = 512;
+
         private readonly RedisCacheOptions _options;
         private readonly IConnectionMultiplexer _redis;
         private readonly IDatabase _db;
         private readonly JsonSerializerOptions? _jsonOptions;
         private long _hitCount;
         private long _missCount;
-        private bool _disposed;
+        private volatile bool _disposed;
         private readonly bool _ownsConnection;
 
         /// <summary>
@@ -45,23 +48,13 @@ namespace EnkaDotNet.Caching.Providers
             // Validate configuration
             _options.Validate();
 
+            ConfigurationOptions configOptions;
             try
             {
-                var configOptions = ConfigurationOptions.Parse(_options.ConnectionString);
+                configOptions = ConfigurationOptions.Parse(_options.ConnectionString);
                 configOptions.ConnectRetry = _options.ConnectRetry;
                 configOptions.ConnectTimeout = (int)_options.ConnectTimeout.TotalMilliseconds;
                 configOptions.AbortOnConnectFail = false;
-
-                _redis = ConnectionMultiplexer.Connect(configOptions);
-                _db = _redis.GetDatabase();
-            }
-            catch (RedisConnectionException ex)
-            {
-                throw new CacheException(
-                    CacheProvider.Redis,
-                    $"Failed to connect to Redis server at '{_options.ConnectionString}'. " +
-                    "Please ensure the Redis server is running and accessible.",
-                    ex);
             }
             catch (ArgumentException ex)
             {
@@ -69,6 +62,22 @@ namespace EnkaDotNet.Caching.Providers
                     CacheProvider.Redis,
                     $"Invalid Redis connection string format: {ex.Message}",
                     "ConnectionString",
+                    ex);
+            }
+
+            try
+            {
+                _redis = ConnectionMultiplexer.Connect(configOptions);
+                _db = _redis.GetDatabase();
+            }
+            catch (RedisConnectionException ex)
+            {
+                // Only the endpoints are reported: the raw connection string routinely carries a
+                // password, and exception text ends up in logs and crash dumps.
+                throw new CacheException(
+                    CacheProvider.Redis,
+                    $"Failed to connect to Redis server at '{DescribeEndpoints(configOptions)}'. " +
+                    "Please ensure the Redis server is running and accessible.",
                     ex);
             }
         }
@@ -89,16 +98,28 @@ namespace EnkaDotNet.Caching.Providers
             _disposed = false;
             _ownsConnection = false;
 
+            _options.Validate();
+
             _db = _redis.GetDatabase();
+        }
+
+        private static string DescribeEndpoints(ConfigurationOptions configOptions)
+        {
+            var endPoints = configOptions.EndPoints;
+            if (endPoints == null || endPoints.Count == 0) return "(no endpoint configured)";
+
+            var described = new string[endPoints.Count];
+            for (int i = 0; i < endPoints.Count; i++)
+            {
+                described[i] = endPoints[i].ToString() ?? "(unknown)";
+            }
+            return string.Join(", ", described);
         }
 
         /// <summary>
         /// Gets the full Redis key with prefix.
         /// </summary>
-        private string GetPrefixedKey(string key)
-        {
-            return string.IsNullOrEmpty(_options.KeyPrefix) ? key : $"{_options.KeyPrefix}{key}";
-        }
+        private string GetPrefixedKey(string key) => _options.KeyPrefix + key;
 
         /// <summary>
         /// Gets the effective JSON serializer options.
@@ -270,14 +291,22 @@ namespace EnkaDotNet.Caching.Providers
                     return;
                 }
 
-                var pattern = string.IsNullOrEmpty(_options.KeyPrefix) ? "*" : $"{_options.KeyPrefix}*";
-
-                // Use SCAN to find all keys with the prefix and delete them
-                var keys = server.Keys(pattern: pattern);
-                foreach (var key in keys)
+                // KeyPrefix is validated as non empty, so this can never widen to every key.
+                var batch = new List<RedisKey>(DeleteBatchSize);
+                foreach (var key in server.Keys(pattern: _options.KeyPrefix + "*"))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    await _db.KeyDeleteAsync(key).ConfigureAwait(false);
+                    batch.Add(key);
+                    if (batch.Count == DeleteBatchSize)
+                    {
+                        await _db.KeyDeleteAsync(batch.ToArray()).ConfigureAwait(false);
+                        batch.Clear();
+                    }
+                }
+
+                if (batch.Count > 0)
+                {
+                    await _db.KeyDeleteAsync(batch.ToArray()).ConfigureAwait(false);
                 }
             }
             catch (RedisConnectionException ex)
@@ -344,8 +373,7 @@ namespace EnkaDotNet.Caching.Providers
                 if (server != null)
                 {
                     // Count keys with our prefix
-                    var pattern = string.IsNullOrEmpty(_options.KeyPrefix) ? "*" : $"{_options.KeyPrefix}*";
-                    var keys = server.Keys(pattern: pattern);
+                    var keys = server.Keys(pattern: _options.KeyPrefix + "*");
                     foreach (var _ in keys)
                     {
                         entryCount++;

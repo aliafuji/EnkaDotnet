@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Components.HSR;
 using Microsoft.Extensions.Options;
@@ -10,7 +11,7 @@ namespace EnkaDotNet.Utils.HSR
     {
         private readonly IHSRAssets _assets;
         private readonly EnkaClientOptions _options;
-        private static readonly Dictionary<string, double> DEFAULT_STATS = new Dictionary<string, double>
+        private static readonly Dictionary<string, double> _defaultStats = new Dictionary<string, double>
         {
             { "HPBase", 0 }, { "HPDelta", 0 }, { "HPAddedRatio", 0 },
             { "AttackBase", 0 }, { "AttackDelta", 0 }, { "AttackAddedRatio", 0 },
@@ -29,8 +30,31 @@ namespace EnkaDotNet.Utils.HSR
             { "ThunderAddedRatio", 0 },
             { "WindAddedRatio", 0 },
             { "QuantumAddedRatio", 0 },
-            { "ImaginaryAddedRatio", 0 }
+            { "ImaginaryAddedRatio", 0 },
+            { "ElationAddedRatio", 0 }
         };
+
+        /// <summary>
+        /// Maps each element's raw added-ratio stat key to the final stat name it is reported as.
+        /// Every key here must also exist in <see cref="_defaultStats"/>, otherwise
+        /// <see cref="AddStatValue"/> discards the incoming value.
+        /// </summary>
+        private static readonly Dictionary<string, string> _elementDamageBoostStats = new Dictionary<string, string>
+        {
+            { "PhysicalAddedRatio", "PhysicalDamageBoost" },
+            { "FireAddedRatio", "FireDamageBoost" },
+            { "IceAddedRatio", "IceDamageBoost" },
+            { "ThunderAddedRatio", "LightningDamageBoost" },
+            { "WindAddedRatio", "WindDamageBoost" },
+            { "QuantumAddedRatio", "QuantumDamageBoost" },
+            { "ImaginaryAddedRatio", "ImaginaryDamageBoost" },
+            { "ElationAddedRatio", "ElationDamageBoost" }
+        };
+
+        /// <summary>
+        /// Number of entries <see cref="CalculateFinalStats"/> writes on top of <see cref="_elementDamageBoostStats"/>.
+        /// </summary>
+        private const int FinalStatCount = 11;
 
         public HSRStatCalculator(IHSRAssets assets, EnkaClientOptions options)
         {
@@ -47,7 +71,7 @@ namespace EnkaDotNet.Utils.HSR
 
         public Dictionary<string, HSRStatValue> CalculateCharacterStats(HSRCharacter character)
         {
-            var stats = new Dictionary<string, double>(DEFAULT_STATS);
+            var stats = new Dictionary<string, double>(_defaultStats);
             AddCharacterBaseStats(stats, character);
             if (character.Equipment != null)
             {
@@ -63,7 +87,7 @@ namespace EnkaDotNet.Utils.HSR
 
         private void AddCharacterBaseStats(Dictionary<string, double> stats, HSRCharacter character)
         {
-            var avatarStats = _assets.GetAvatarStats(character.Id.ToString(), character.Promotion);
+            var avatarStats = _assets.GetAvatarStats(character.Id.ToString(CultureInfo.InvariantCulture), character.Promotion);
             if (avatarStats != null)
             {
                 stats["HPBase"] = avatarStats.HPBase + (avatarStats.HPAdd * (character.Level - 1));
@@ -77,7 +101,7 @@ namespace EnkaDotNet.Utils.HSR
 
         private void AddLightConeBaseStats(Dictionary<string, double> stats, HSRLightCone lightCone)
         {
-            var equipmentStats = _assets.GetEquipmentStats(lightCone.Id.ToString(), lightCone.Promotion);
+            var equipmentStats = _assets.GetEquipmentStats(lightCone.Id.ToString(CultureInfo.InvariantCulture), lightCone.Promotion);
             if (equipmentStats != null)
             {
                 double lcHP = equipmentStats.BaseHP + (equipmentStats.HPAdd * (lightCone.Level - 1));
@@ -103,7 +127,7 @@ namespace EnkaDotNet.Utils.HSR
 
         private void AddLightConeSkillEffects(Dictionary<string, double> stats, HSRLightCone lightCone)
         {
-            var skillEffects = _assets.GetEquipmentSkillProps(lightCone.Id.ToString(), lightCone.Rank);
+            var skillEffects = _assets.GetEquipmentSkillProps(lightCone.Id.ToString(CultureInfo.InvariantCulture), lightCone.Rank);
             if (skillEffects != null)
             {
                 foreach (var effect in skillEffects)
@@ -147,16 +171,13 @@ namespace EnkaDotNet.Utils.HSR
         private void ApplyRelicSetBonuses(Dictionary<string, double> stats, IReadOnlyList<HSRRelic> relics)
         {
             if (relics == null || relics.Count == 0) return;
-            var relicSets = new Dictionary<int, int>();
+            var relicSets = new Dictionary<int, int>(relics.Count);
             foreach (var relic in relics)
             {
                 if (relic.SetId > 0)
                 {
-                    if (!relicSets.ContainsKey(relic.SetId))
-                    {
-                        relicSets[relic.SetId] = 0;
-                    }
-                    relicSets[relic.SetId]++;
+                    relicSets.TryGetValue(relic.SetId, out int pieceCount);
+                    relicSets[relic.SetId] = pieceCount + 1;
                 }
             }
             foreach (var setPair in relicSets)
@@ -194,7 +215,7 @@ namespace EnkaDotNet.Utils.HSR
             foreach (var trace in traces)
             {
                 if (trace.Level <= 0) continue;
-                var traceEffects = _assets.GetSkillTreeProps(trace.PointId.ToString(), trace.Level);
+                var traceEffects = _assets.GetSkillTreeProps(trace.PointId.ToString(CultureInfo.InvariantCulture), trace.Level);
                 if (traceEffects != null)
                 {
                     foreach (var effect in traceEffects)
@@ -208,79 +229,75 @@ namespace EnkaDotNet.Utils.HSR
         private void AddStatValue(Dictionary<string, double> stats, string statType, double value)
         {
             if (string.IsNullOrEmpty(statType) || statType == "None") return;
-            if (stats.ContainsKey(statType))
+
+            // Only keys seeded from _defaultStats are accumulated: anything else is a stat the
+            // library does not model yet and is intentionally ignored rather than surfaced raw.
+            if (stats.TryGetValue(statType, out var current))
             {
-                stats[statType] += value;
+                stats[statType] = current + value;
             }
         }
 
         private Dictionary<string, HSRStatValue> CalculateFinalStats(Dictionary<string, double> stats)
         {
-            var finalStats = new Dictionary<string, HSRStatValue>();
-            double baseHP = stats.ContainsKey("HPBase") ? stats["HPBase"] : 0;
-            double hpAddedRatio = stats.ContainsKey("HPAddedRatio") ? stats["HPAddedRatio"] : 0;
-            double hpDelta = stats.ContainsKey("HPDelta") ? stats["HPDelta"] : 0;
+            var finalStats = new Dictionary<string, HSRStatValue>(FinalStatCount + _elementDamageBoostStats.Count);
+            double baseHP = stats.TryGetValue("HPBase", out var hpBaseValue) ? hpBaseValue : 0;
+            double hpAddedRatio = stats.TryGetValue("HPAddedRatio", out var hpAddedRatioValue) ? hpAddedRatioValue : 0;
+            double hpDelta = stats.TryGetValue("HPDelta", out var hpDeltaValue) ? hpDeltaValue : 0;
             double finalHP = Math.Floor(baseHP * (1.0 + hpAddedRatio) + hpDelta);
             finalStats["HP"] = new HSRStatValue(finalHP, _options, false, 0);
-            double baseAtk = stats.ContainsKey("AttackBase") ? stats["AttackBase"] : 0;
-            double atkAddedRatio = stats.ContainsKey("AttackAddedRatio") ? stats["AttackAddedRatio"] : 0;
-            double atkDelta = stats.ContainsKey("AttackDelta") ? stats["AttackDelta"] : 0;
+            double baseAtk = stats.TryGetValue("AttackBase", out var atkBaseValue) ? atkBaseValue : 0;
+            double atkAddedRatio = stats.TryGetValue("AttackAddedRatio", out var atkAddedRatioValue) ? atkAddedRatioValue : 0;
+            double atkDelta = stats.TryGetValue("AttackDelta", out var atkDeltaValue) ? atkDeltaValue : 0;
             double finalATK = Math.Floor(baseAtk * (1.0 + atkAddedRatio) + atkDelta);
             finalStats["Attack"] = new HSRStatValue(finalATK, _options, false, 0);
-            double baseDef = stats.ContainsKey("DefenceBase") ? stats["DefenceBase"] : 0;
-            double defAddedRatio = stats.ContainsKey("DefenceAddedRatio") ? stats["DefenceAddedRatio"] : 0;
-            double defDelta = stats.ContainsKey("DefenceDelta") ? stats["DefenceDelta"] : 0;
+            double baseDef = stats.TryGetValue("DefenceBase", out var defBaseValue) ? defBaseValue : 0;
+            double defAddedRatio = stats.TryGetValue("DefenceAddedRatio", out var defAddedRatioValue) ? defAddedRatioValue : 0;
+            double defDelta = stats.TryGetValue("DefenceDelta", out var defDeltaValue) ? defDeltaValue : 0;
             double finalDEF = Math.Floor(baseDef * (1.0 + defAddedRatio) + defDelta);
             finalStats["Defense"] = new HSRStatValue(finalDEF, _options, false, 0);
-            double baseSpd = stats.ContainsKey("SpeedBase") ? stats["SpeedBase"] : 0;
-            double spdDelta = stats.ContainsKey("SpeedDelta") ? stats["SpeedDelta"] : 0;
-            double spdAddedRatio = stats.ContainsKey("SpeedAddedRatio") ? stats["SpeedAddedRatio"] : 0;
+            double baseSpd = stats.TryGetValue("SpeedBase", out var spdBaseValue) ? spdBaseValue : 0;
+            double spdDelta = stats.TryGetValue("SpeedDelta", out var spdDeltaValue) ? spdDeltaValue : 0;
+            double spdAddedRatio = stats.TryGetValue("SpeedAddedRatio", out var spdAddedRatioValue) ? spdAddedRatioValue : 0;
             double rawSpeed = (baseSpd * (1.0 + spdAddedRatio) + spdDelta);
             double finalSPD = Math.Floor(rawSpeed * 10) / 10;
             finalStats["Speed"] = new HSRStatValue(finalSPD, _options, false, 1);
-            double criticalChance = stats.ContainsKey("CriticalChance") ? stats["CriticalChance"] : 0;
-            double criticalChanceBase = stats.ContainsKey("CriticalChanceBase") ? stats["CriticalChanceBase"] : 0;
+            double criticalChance = stats.TryGetValue("CriticalChance", out var criticalChanceValue) ? criticalChanceValue : 0;
+            double criticalChanceBase = stats.TryGetValue("CriticalChanceBase", out var criticalChanceBaseValue) ? criticalChanceBaseValue : 0;
             double rawCritRate = (criticalChance + criticalChanceBase) * 100.0;
             double finalCritRate = Math.Floor(rawCritRate * 10) / 10;
             finalStats["CritRate"] = new HSRStatValue(finalCritRate, _options, true, 1);
-            double criticalDamage = stats.ContainsKey("CriticalDamage") ? stats["CriticalDamage"] : 0;
-            double criticalDamageBase = stats.ContainsKey("CriticalDamageBase") ? stats["CriticalDamageBase"] : 0;
+            double criticalDamage = stats.TryGetValue("CriticalDamage", out var criticalDamageValue) ? criticalDamageValue : 0;
+            double criticalDamageBase = stats.TryGetValue("CriticalDamageBase", out var criticalDamageBaseValue) ? criticalDamageBaseValue : 0;
             double rawCritDMG = (criticalDamage + criticalDamageBase) * 100.0;
             double finalCritDMG = Math.Floor(rawCritDMG * 10) / 10;
             finalStats["CritDMG"] = new HSRStatValue(finalCritDMG, _options, true, 1);
-            double breakDamage = stats.ContainsKey("BreakDamageAddedRatio") ? stats["BreakDamageAddedRatio"] : 0;
-            double breakDamageBase = stats.ContainsKey("BreakDamageAddedRatioBase") ? stats["BreakDamageAddedRatioBase"] : 0;
+            double breakDamage = stats.TryGetValue("BreakDamageAddedRatio", out var breakDamageValue) ? breakDamageValue : 0;
+            double breakDamageBase = stats.TryGetValue("BreakDamageAddedRatioBase", out var breakDamageBaseValue) ? breakDamageBaseValue : 0;
             double rawValue = (breakDamage + breakDamageBase) * 100.0;
             double finalBreakEffect = Math.Floor(rawValue * 10) / 10;
             finalStats["BreakEffect"] = new HSRStatValue(finalBreakEffect, _options, true, 1);
-            double healRatio = stats.ContainsKey("HealRatioBase") ? stats["HealRatioBase"] : 0;
+            double healRatio = stats.TryGetValue("HealRatioBase", out var healRatioValue) ? healRatioValue : 0;
             double rawHealingBoost = healRatio * 100.0;
             double finalHealingBoost = Math.Floor(rawHealingBoost * 10) / 10;
             finalStats["HealingBoost"] = new HSRStatValue(finalHealingBoost, _options, true, 1);
-            double spRatio = stats.ContainsKey("SPRatioBase") ? stats["SPRatioBase"] : 0;
+            double spRatio = stats.TryGetValue("SPRatioBase", out var spRatioValue) ? spRatioValue : 0;
             double rawEnergyRegenRate = (1.0 + spRatio) * 100.0;
             double finalEnergyRegenRate = Math.Floor(rawEnergyRegenRate * 10) / 10;
             finalStats["EnergyRegenRate"] = new HSRStatValue(finalEnergyRegenRate, _options, true, 1);
-            double statusProbability = stats.ContainsKey("StatusProbability") ? stats["StatusProbability"] : 0;
-            double statusProbabilityBase = stats.ContainsKey("StatusProbabilityBase") ? stats["StatusProbabilityBase"] : 0;
+            double statusProbability = stats.TryGetValue("StatusProbability", out var statusProbabilityValue) ? statusProbabilityValue : 0;
+            double statusProbabilityBase = stats.TryGetValue("StatusProbabilityBase", out var statusProbabilityBaseValue) ? statusProbabilityBaseValue : 0;
             double rawEffectHitRate = (statusProbability + statusProbabilityBase) * 100.0;
             double finalEffectHitRate = Math.Floor(rawEffectHitRate * 10) / 10;
             finalStats["EffectHitRate"] = new HSRStatValue(finalEffectHitRate, _options, true, 1);
-            double statusResistance = stats.ContainsKey("StatusResistance") ? stats["StatusResistance"] : 0;
-            double statusResistanceBase = stats.ContainsKey("StatusResistanceBase") ? stats["StatusResistanceBase"] : 0;
+            double statusResistance = stats.TryGetValue("StatusResistance", out var statusResistanceValue) ? statusResistanceValue : 0;
+            double statusResistanceBase = stats.TryGetValue("StatusResistanceBase", out var statusResistanceBaseValue) ? statusResistanceBaseValue : 0;
             double rawEffectResistance = (statusResistance + statusResistanceBase) * 100.0;
             double finalEffectResistance = Math.Floor(rawEffectResistance * 10) / 10;
             finalStats["EffectResistance"] = new HSRStatValue(finalEffectResistance, _options, true, 1);
-            Dictionary<string, string> elementMapping = new Dictionary<string, string>
+            foreach (var elem in _elementDamageBoostStats)
             {
-                {"Physical", "PhysicalDamageBoost"}, {"Fire", "FireDamageBoost"}, {"Ice", "IceDamageBoost"},
-                {"Thunder", "LightningDamageBoost"}, {"Wind", "WindDamageBoost"}, {"Quantum", "QuantumDamageBoost"},
-                {"Imaginary", "ImaginaryDamageBoost"}
-            };
-            foreach (var elem in elementMapping)
-            {
-                string propName = $"{elem.Key}AddedRatio";
-                double valueDecimal = stats.ContainsKey(propName) ? stats[propName] : 0;
+                double valueDecimal = stats.TryGetValue(elem.Key, out var elementRatio) ? elementRatio : 0;
                 double valuePercent = valueDecimal * 100.0;
                 double finalValue = Math.Floor(valuePercent * 10) / 10;
                 finalStats[elem.Value] = new HSRStatValue(finalValue, _options, true, 1);

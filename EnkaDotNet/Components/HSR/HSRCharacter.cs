@@ -73,7 +73,7 @@ namespace EnkaDotNet.Components.HSR
 
         public Dictionary<string, string> GetAllStats()
         {
-            bool raw = this.Options?.Raw ?? false;
+            bool raw = this.Options?.UseRawStatValues ?? false;
             var formattedStats = new Dictionary<string, string>();
 
             foreach (var kvp in Stats)
@@ -87,7 +87,7 @@ namespace EnkaDotNet.Components.HSR
 
         public List<HSRRelicSetBonus> GetEquippedRelicSets()
         {
-            bool raw = this.Options?.Raw ?? false;
+            bool raw = this.Options?.UseRawStatValues ?? false;
             if (_assets == null)
             {
                 Console.WriteLine($"Warning: IHSRAssets instance not available in HSRCharacter {Name} ({Id}) for GetEquippedRelicSets.");

@@ -16,7 +16,7 @@ namespace ZZZStatsViewer
                 var options = new EnkaClientOptions
                 {
                     UserAgent = "ZZZStatsViewer/1.0",
-                    Raw = false,
+                    UseRawStatValues = false,
                 };
 
                 var services = new ServiceCollection();

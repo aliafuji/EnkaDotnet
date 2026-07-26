@@ -12,7 +12,7 @@
 
         public override string ToString()
         {
-            bool raw = Options?.Raw ?? false;
+            bool raw = Options?.UseRawStatValues ?? false;
             if (raw) return Id.ToString();
 
             string levelInfo = ExtraLevel > 0 ? $"{BaseLevel}+{ExtraLevel}={Level}" : $"{Level}";

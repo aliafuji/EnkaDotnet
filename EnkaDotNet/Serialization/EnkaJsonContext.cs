@@ -153,7 +153,6 @@ namespace EnkaDotNet.Serialization
     [JsonSerializable(typeof(Dictionary<string, string>))]
     [JsonSerializable(typeof(Dictionary<string, int>))]
     [JsonSerializable(typeof(Dictionary<string, Dictionary<string, string>>))]
-    [JsonSerializable(typeof(Dictionary<string, Dictionary<string, int>>))]
     [JsonSerializable(typeof(Dictionary<string, object>))]
     [JsonSerializable(typeof(List<ZZZAvatarModel>))]
     [JsonSerializable(typeof(List<ZZZMedalModel>))]

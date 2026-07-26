@@ -10,7 +10,7 @@
 
         public override string ToString()
         {
-            bool raw = Options?.Raw ?? false;
+            bool raw = Options?.UseRawStatValues ?? false;
             return raw ? Id.ToString() : $"{Name} (C{Position})";
         }
     }

@@ -298,12 +298,12 @@ namespace EnkaDotNet.Tests.HSR
         }
 
         [Theory]
-        [InlineData(RelicType.HEAD, "Head")]
-        [InlineData(RelicType.HAND, "Hands")]
-        [InlineData(RelicType.BODY, "Body")]
-        [InlineData(RelicType.FOOT, "Feet")]
-        [InlineData(RelicType.NECK, "Planar Sphere")]
-        [InlineData(RelicType.OBJECT, "Link Rope")]
+        [InlineData(RelicType.Head, "Head")]
+        [InlineData(RelicType.Hands, "Hands")]
+        [InlineData(RelicType.Body, "Body")]
+        [InlineData(RelicType.Feet, "Feet")]
+        [InlineData(RelicType.PlanarSphere, "Planar Sphere")]
+        [InlineData(RelicType.LinkRope, "Link Rope")]
         public void GetRelicName_AllRelicTypes_ReturnsCorrectName(RelicType relicType, string expected)
         {
             var result = relicType.GetRelicName();

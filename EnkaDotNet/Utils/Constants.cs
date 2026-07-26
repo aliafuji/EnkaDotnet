@@ -11,49 +11,49 @@ namespace EnkaDotNet.Utils
         /// <summary>
         /// Default API base URL for Genshin Impact data
         /// </summary>
-        public const string DEFAULT_GENSHIN_API_URL = "https://enka.network/api/";
+        public const string DefaultGenshinApiUrl = "https://enka.network/api/";
         /// <summary>
         /// Default CDN base URL for Genshin Impact assets
         /// </summary>
-        public const string DEFAULT_GENSHIN_ASSET_CDN_URL = "https://enka.network/ui/";
+        public const string DefaultGenshinAssetCdnUrl = "https://enka.network/ui/";
 
         /// <summary>
         /// Default API base URL for Zenless Zone Zero data
         /// </summary>
-        public const string DEFAULT_ZZZ_API_URL = "https://enka.network/api/zzz/";
+        public const string DefaultZZZApiUrl = "https://enka.network/api/zzz/";
         /// <summary>
         /// Default CDN base URL for Zenless Zone Zero assets
         /// </summary>
-        public const string DEFAULT_ZZZ_ASSET_CDN_URL = "https://enka.network";
+        public const string DefaultZZZAssetCdnUrl = "https://enka.network";
 
         /// <summary>
         /// Default API base URL for Honkai: Star Rail data
         /// </summary>
-        public const string DEFAULT_HSR_API_URL = "https://enka.network/api/hsr/";
+        public const string DefaultHSRApiUrl = "https://enka.network/api/hsr/";
         /// <summary>
         /// Default CDN base URL for Honkai: Star Rail assets
         /// </summary>
-        public const string DEFAULT_HSR_ASSET_CDN_URL = "https://enka.network/ui/hsr/";
+        public const string DefaultHSRAssetCdnUrl = "https://enka.network/ui/hsr/";
 
         /// <summary>
         /// Default API base URL for Enka.Network user profiles
         /// </summary>
-        public const string DEFAULT_ENKA_PROFILE_API_BASE_URL = "https://enka.network/api/";
+        public const string DefaultEnkaProfileApiBaseUrl = "https://enka.network/api/";
         /// <summary>
         /// Endpoint format for Enka.Network user profiles
         /// </summary>
-        public const string ENKA_PROFILE_ENDPOINT_FORMAT = "profile/{0}/?format=json";
+        public const string EnkaProfileEndpointFormat = "profile/{0}/?format=json";
 
         /// <summary>
         /// Endpoint format for Enka.Network user profile builds
         /// Format parameters: {0} = username, {1} = hoyo hash
         /// </summary>
-        public const string ENKA_BUILDS_ENDPOINT_FORMAT = "profile/{0}/hoyos/{1}/builds/";
+        public const string EnkaBuildsEndpointFormat = "profile/{0}/hoyos/{1}/builds/";
 
         /// <summary>
         /// Default endpoint format for game-specific user information, typically by UID
         /// </summary>
-        public const string DEFAULT_GAME_SPECIFIC_USER_INFO_ENDPOINT_FORMAT = "uid/{0}";
+        public const string DefaultGameSpecificUserInfoEndpointFormat = "uid/{0}";
 
         /// <summary>
         /// Default User-Agent string for HTTP requests

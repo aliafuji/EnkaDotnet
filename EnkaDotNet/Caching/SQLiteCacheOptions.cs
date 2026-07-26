@@ -13,10 +13,28 @@ namespace EnkaDotNet.Caching
         /// </summary>
         public string DatabasePath { get; set; } = "enka_cache.db";
 
+        private TimeSpan _defaultTtl = TimeSpan.FromMinutes(5);
+
         /// <summary>
         /// Gets or sets the default time-to-live for cache entries
         /// </summary>
-        public TimeSpan DefaultTtl { get; set; } = TimeSpan.FromMinutes(5);
+        public TimeSpan DefaultTtl
+        {
+            get => _defaultTtl;
+            set
+            {
+                _defaultTtl = value;
+                ExplicitDefaultTtl = value;
+            }
+        }
+
+        /// <summary>
+        /// The value assigned to <see cref="DefaultTtl"/>, or <c>null</c> when it was never set.
+        /// Lets <see cref="CacheFactory"/> fall back to
+        /// <see cref="EnkaClientOptions.CacheDurationMinutes"/> without having to guess whether a
+        /// five minute TTL was deliberate.
+        /// </summary>
+        internal TimeSpan? ExplicitDefaultTtl { get; private set; }
 
         /// <summary>
         /// Gets or sets the interval for automatic cleanup of expired entries
@@ -86,6 +104,21 @@ namespace EnkaDotNet.Caching
                     $"SQLite database path is invalid: {ex.Message}",
                     "DatabasePath",
                     ex);
+            }
+
+            // Relative traversal is rejected outright: the resolved location is nowhere near
+            // obvious from the configured string, and the provider creates directories for it.
+            var segments = DatabasePath.Split('/', '\\');
+            foreach (var segment in segments)
+            {
+                if (segment == "..")
+                {
+                    throw new Exceptions.CacheException(
+                        CacheProvider.SQLite,
+                        "SQLite database path cannot contain '..' segments. Use an absolute path or a " +
+                        "path relative to the working directory without traversal.",
+                        "DatabasePath");
+                }
             }
 
             if (DefaultTtl <= TimeSpan.Zero)

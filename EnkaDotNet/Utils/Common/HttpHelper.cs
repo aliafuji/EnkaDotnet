@@ -37,7 +37,12 @@ namespace EnkaDotNet.Utils.Common
         private readonly ConcurrentDictionary<string, bool> _trackedCacheKeys;
         private ResiliencePipeline<HttpResponseMessage> _resiliencePipeline = null!;
 
-        private static readonly ResiliencePropertyKey<string> RelativeUrlKey = new ResiliencePropertyKey<string>("relativeUrl");
+        private static readonly ResiliencePropertyKey<string> _relativeUrlKey = new ResiliencePropertyKey<string>("relativeUrl");
+
+        /// <summary>
+        /// Size limit, in serialized characters, for a memory cache this instance creates itself.
+        /// </summary>
+        private const long DefaultMemoryCacheSizeLimit = 64L * 1024 * 1024;
 
         /// <summary>
         /// Initializes a new instance of the HttpHelper class.
@@ -67,8 +72,14 @@ namespace EnkaDotNet.Utils.Common
             }
             else
             {
+                // Nobody supplied a cache, so this instance owns the one it creates and is
+                // responsible for disposing it.
                 _legacyMemoryCache = null;
-                _cache = new MemoryCacheAdapter(new MemoryCache(new MemoryCacheOptions()), TimeSpan.FromMinutes(_options.CacheDurationMinutes));
+                _cache = new MemoryCacheAdapter(
+                    new MemoryCache(new MemoryCacheOptions { SizeLimit = DefaultMemoryCacheSizeLimit }),
+                    TimeSpan.FromMinutes(_options.CacheDurationMinutes),
+                    jsonOptions: null,
+                    ownsMemoryCache: true);
             }
 
             _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
@@ -166,7 +177,7 @@ namespace EnkaDotNet.Utils.Common
 
         private ValueTask OnRetryAttempt(OnRetryArguments<HttpResponseMessage> args)
         {
-            string urlForLog = args.Context.Properties.TryGetValue(RelativeUrlKey, out var u) ? u : "Unknown URL";
+            string urlForLog = args.Context.Properties.TryGetValue(_relativeUrlKey, out var u) ? u : "Unknown URL";
             bool is429 = args.Outcome.Result?.StatusCode == (HttpStatusCode)429;
 
             EnkaTelemetry.RetryCount.Add(1);
@@ -229,24 +240,24 @@ namespace EnkaDotNet.Utils.Common
             try
             {
                 resilienceContext = ResilienceContextPool.Shared.Get(cancellationToken);
-                resilienceContext.Properties.Set(RelativeUrlKey, relativeUrl);
+                resilienceContext.Properties.Set(_relativeUrlKey, relativeUrl);
 
                 response = await _resiliencePipeline.ExecuteAsync(
                     async (ctx, ct) =>
                     {
-                        using var request = new HttpRequestMessage(HttpMethod.Get, ctx.Properties.GetValue(RelativeUrlKey, "ERROR_NO_URL_IN_CONTEXT"));
+                        using var request = new HttpRequestMessage(HttpMethod.Get, ctx.Properties.GetValue(_relativeUrlKey, "ERROR_NO_URL_IN_CONTEXT"));
                         HttpResponseMessage httpResponse = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
 
                         if (httpResponse.StatusCode == (HttpStatusCode)424)
-                            throw new GameMaintenanceException($"API returned 424 Failed Dependency for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}.");
+                            throw new GameMaintenanceException($"API returned 424 Failed Dependency for URL: {ctx.Properties.GetValue(_relativeUrlKey, "")}.");
 
                         if (httpResponse.StatusCode == HttpStatusCode.NotFound)
-                            throw new PlayerNotFoundException(ExtractUidFromUrl(ctx.Properties.GetValue(RelativeUrlKey, "")),
-                                $"API returned 404 for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}");
+                            throw new PlayerNotFoundException(ExtractUidFromUrl(ctx.Properties.GetValue(_relativeUrlKey, "")),
+                                $"API returned 404 for URL: {ctx.Properties.GetValue(_relativeUrlKey, "")}");
 
                         if (httpResponse.StatusCode == HttpStatusCode.Forbidden)
-                            throw new ProfilePrivateException(ExtractUidFromUrl(ctx.Properties.GetValue(RelativeUrlKey, "")),
-                                $"API returned 403 for URL: {ctx.Properties.GetValue(RelativeUrlKey, "")}. Profile may be private.");
+                            throw new ProfilePrivateException(ExtractUidFromUrl(ctx.Properties.GetValue(_relativeUrlKey, "")),
+                                $"API returned 403 for URL: {ctx.Properties.GetValue(_relativeUrlKey, "")}. Profile may be private.");
 
                         return httpResponse;
                     },
@@ -285,17 +296,25 @@ namespace EnkaDotNet.Utils.Common
                     throw new EnkaNetworkException($"Failed to deserialize JSON response from {relativeUrl}, but content was not empty.");
 
                 if (response.IsSuccessStatusCode && _options.EnableCaching)
-                    _ = CacheSuccessfulResponse(cacheKey, jsonString, response, relativeUrl);
+                {
+                    // Expiration is read here, while the response is still alive: the write itself
+                    // is fire and forget so a slow cache backend cannot delay the caller.
+                    var expiration = CalculateExpiration(response, _options.CacheDurationMinutes);
+                    _ = CacheSuccessfulResponseAsync(cacheKey, jsonString, expiration, relativeUrl);
+                }
 
                 activity?.SetTag("enka.status_code", (int)response.StatusCode);
                 return deserializedObject!;
             }
             catch (JsonException ex)
             {
+                // The snippet is player data from the API, so it stays in the caller's own log
+                // sink and out of the exception message, which tends to travel further.
                 string snippet = jsonString?.Length > 200 ? jsonString.Substring(0, 200) + "..." : jsonString ?? "null";
-                _logger.LogError(ex, "Failed to parse JSON from {Url}. Snippet: {Snippet}", relativeUrl, snippet);
+                _logger.LogDebug("Unparsable response body from {Url}: {Snippet}", relativeUrl, snippet);
+                _logger.LogError(ex, "Failed to parse JSON from {Url}", relativeUrl);
                 activity?.SetStatus(ActivityStatusCode.Error, "JsonParseFailed");
-                throw new EnkaNetworkException($"Failed to parse JSON response from {relativeUrl}. Snippet: {snippet}", ex);
+                throw new EnkaNetworkException($"Failed to parse JSON response from {relativeUrl}.", ex);
             }
             finally
             {
@@ -322,9 +341,8 @@ namespace EnkaDotNet.Utils.Common
             return defaultDelay;
         }
 
-        private async Task CacheSuccessfulResponse(string cacheKey, string jsonString, HttpResponseMessage response, string relativeUrl)
+        private async Task CacheSuccessfulResponseAsync(string cacheKey, string jsonString, DateTimeOffset expiration, string relativeUrl)
         {
-            DateTimeOffset expiration = CalculateExpiration(response, _options.CacheDurationMinutes);
             var newCacheEntry = new CacheEntry { JsonResponse = jsonString, Expiration = expiration };
             var ttl = expiration - DateTimeOffset.UtcNow;
             if (ttl > TimeSpan.Zero)

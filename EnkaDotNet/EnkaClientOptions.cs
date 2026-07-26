@@ -29,7 +29,7 @@ namespace EnkaDotNet
         /// <summary>
         /// Gets or sets the base URL for the Enka.Network API
         /// </summary>
-        public string BaseUrl { get; set; } = Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL;
+        public string BaseUrl { get; set; } = Constants.DefaultEnkaProfileApiBaseUrl;
 
         /// <summary>
         /// Gets or sets the timeout for HTTP requests in seconds
@@ -165,7 +165,7 @@ namespace EnkaDotNet
         /// Gets or sets a value indicating whether to return raw stat values or formatted display values
         /// This affects how stats are presented in component models
         /// </summary>
-        public bool Raw { get; set; } = false;
+        public bool UseRawStatValues { get; set; } = false;
 
         /// <summary>
         /// Gets or sets the grammatical gender used when resolving gendered localized text in
@@ -319,5 +319,14 @@ namespace EnkaDotNet
         /// </code>
         /// </example>
         public RedisCacheOptions RedisCache { get; set; } = new RedisCacheOptions();
+
+#nullable enable
+        /// <summary>
+        /// Set by the opt in caching packages to supply the cache instance for their provider.
+        /// Without it <see cref="CacheFactory"/> has no way to build a SQLite or Redis cache,
+        /// because those providers no longer live in this assembly.
+        /// </summary>
+        internal Func<EnkaClientOptions, IEnkaCache>? CacheFactoryOverride { get; set; }
+#nullable restore
     }
 }

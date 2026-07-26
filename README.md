@@ -1,6 +1,6 @@
 # Enka.DotNet
 
-Enka.DotNet is a C# wrapper for accessing and processing character data from the Enka.Network API. It provides a simple interface to retrieve detailed information about characters, artifacts, weapons, and player profiles for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero.
+C# wrapper for the [Enka.Network](https://enka.network/) API. Fetch player profiles, characters, artifacts, weapons, and builds for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero.
 
 [![NuGet](https://img.shields.io/nuget/v/EnkaDotNet.svg)](https://www.nuget.org/packages/EnkaDotNet/)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=aliafuji_EnkaDotnet&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=aliafuji_EnkaDotnet)
@@ -12,128 +12,303 @@ Enka.DotNet is a C# wrapper for accessing and processing character data from the
 
 ## Features
 
-* **Multi-Game Support:** Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero
-* **Strongly Typed Models:** Clear and user-friendly C# models for all entities
-* **Flexible Client Setup:**
-    * **Direct Instantiation:** `await EnkaClient.CreateAsync(options)`
-    * **Dependency Injection:** `services.AddEnkaNetClient(options => { ... })`
-* **HTTP Resiliency:** Polly-powered retry with exponential backoff + jitter, circuit breaker, and 429 Retry After support
-* **Multi-Provider Caching:** Memory (default), SQLite, Redis, or custom `IEnkaCache`
-* **Asset Preloading:** Warm up game assets at startup for zero-latency first requests
-* **Observability:** OpenTelemetry `ActivitySource` + `System.Diagnostics.Metrics` hooks for traces and metrics
+* Multi-game support: Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero
+* Strongly typed models for player, character, and equipment data
+* Direct client creation or dependency injection
+* Polly retries with exponential backoff and jitter, circuit breaker, and 429 `Retry-After` handling
+* Caching: in-memory by default, SQLite and Redis as separate packages
+* Asset preloading at startup
+* OpenTelemetry `ActivitySource` and `System.Diagnostics.Metrics` hooks
 
 ## Supported Games
 
-| Game              | Status   | Method      |
-|-------------------|----------|-------------|
-| Genshin Impact    | ✅ Ready | UID         |
-| Honkai: Star Rail | ✅ Ready | UID         |
-| Zenless Zone Zero | ✅ Ready | UID         |
+| Game              | Status | Method |
+|-------------------|--------|--------|
+| Genshin Impact    | Ready  | UID    |
+| Honkai: Star Rail | Ready  | UID    |
+| Zenless Zone Zero | Ready  | UID    |
 
-## Miscellaneous
+## Enka Profile Features
 
-| Feature             | Status   | Method        |
-|---------------------|----------|---------------|
-| Fetch Basic Profile | ✅ Ready | Enka Username |
-| Genshin Impact      | ✅ Ready | Enka Username |
-| Honkai: Star Rail   | ✅ Ready | Enka Username |
-| Zenless Zone Zero   | ✅ Ready | Enka Username |
+| Feature             | Status | Method        |
+|---------------------|--------|---------------|
+| Fetch Basic Profile | Ready  | Enka Username |
+| Genshin Impact      | Ready  | Enka Username |
+| Honkai: Star Rail   | Ready  | Enka Username |
+| Zenless Zone Zero   | Ready  | Enka Username |
 
 ## Installation
+
+Core package (includes the in-memory cache):
 
 ```bash
 dotnet add package EnkaDotNet
 ```
 
-## Usage & Examples
+SQLite and Redis are optional. They are separate packages so the core package does not pull in `Microsoft.Data.Sqlite` or `StackExchange.Redis` for apps that only need the default memory cache.
 
-Enka.DotNet supports both direct instantiation and Dependency Injection.
+```bash
+dotnet add package EnkaDotNet.Caching.Sqlite
+dotnet add package EnkaDotNet.Caching.Redis
+```
 
-### Direct Instantiation
+| Package                      | Purpose                                      |
+|------------------------------|----------------------------------------------|
+| `EnkaDotNet`                 | Client, models, assets, memory cache         |
+| `EnkaDotNet.Caching.Sqlite`  | Persistent SQLite cache                      |
+| `EnkaDotNet.Caching.Redis`   | Distributed Redis cache                      |
+
+## Migrating from 1.x to 2.0
+
+2.0 is a breaking release. There are no obsolete aliases. Full details are in [CHANGELOG.md](CHANGELOG.md). The changes that affect most users:
+
+1. **Cache packages.** Setting `CacheProvider.SQLite` or `CacheProvider.Redis` alone is no longer enough. Install the matching package and call `UseSqliteCache` / `AddEnkaSqliteCache` (or the Redis equivalents).
+2. **`EnkaClientOptions.Raw`** is now **`UseRawStatValues`**.
+3. **HSR `RelicType`** members are PascalCase. `NECK` is `PlanarSphere`, `OBJECT` is `LinkRope`. Numeric values are unchanged.
+4. **Public constants** in `Constants` are PascalCase (`DefaultGenshinApiUrl`, and so on).
+5. **ZZZ models** `StatSummary`, `FormattedStatValues`, and `Skin` moved from `EnkaDotNet.Enums.ZZZ` to `EnkaDotNet.Components.ZZZ`.
+
+## Quick Start
+
+### Direct instantiation
 
 ```csharp
+using EnkaDotNet;
+using EnkaDotNet.Enums;
+
 var options = new EnkaClientOptions
 {
     EnableCaching = true,
     CacheDurationMinutes = 10,
     UserAgent = "MyApp/1.0"
 };
+
 await using IEnkaClient client = await EnkaClient.CreateAsync(options);
+
+int uid = 800000000; // replace with a real UID
+var (player, characters) = await client.GetGenshinUserProfileAsync(uid, Language.English);
+
+Console.WriteLine($"{player.Nickname} (Lv.{player.Level})");
+foreach (var character in characters)
+{
+    Console.WriteLine($"  {character.Name} Lv.{character.Level}");
+}
 ```
 
-### Dependency Injection (ASP.NET Core / Worker Service)
+### Dependency injection
 
 ```csharp
+using EnkaDotNet;
+using EnkaDotNet.DIExtensions;
+using EnkaDotNet.Enums;
+
 builder.Services.AddEnkaNetClient(options =>
 {
     options.EnableCaching = true;
     options.CacheDurationMinutes = 10;
-
-    // Warm up assets at startup (runs via IHostedService, never blocks DI thread)
+    options.UserAgent = "MyApp/1.0";
     options.PreloadedLanguages = new List<Language> { Language.English, Language.Japanese };
 });
 ```
 
-For detailed runnable examples, see the `Examples/` directory in the repository.
+Inject `IEnkaClient` into your services afterward.
+
+## Examples by Game
+
+Replace the sample UIDs with real ones. Profiles that are private or have no showcase characters return empty character lists.
+
+### Genshin Impact
+
+```csharp
+var (player, characters) = await client.GetGenshinUserProfileAsync(uid, Language.English);
+
+Console.WriteLine($"{player.Nickname} WL{player.WorldLevel}");
+Console.WriteLine(player.Signature);
+
+foreach (var character in characters)
+{
+    Console.WriteLine($"{character.Name} Lv.{character.Level} C{character.ConstellationLevel}");
+    if (character.Weapon != null)
+    {
+        Console.WriteLine($"  Weapon: {character.Weapon.Name} R{character.Weapon.Refinement}");
+    }
+}
+```
+
+### Honkai: Star Rail
+
+```csharp
+var player = await client.GetHSRPlayerInfoAsync(uid, Language.English);
+var characters = await client.GetHSRCharactersAsync(uid, Language.English);
+
+Console.WriteLine($"{player.Nickname} (Lv.{player.Level})");
+
+foreach (var character in characters)
+{
+    Console.WriteLine($"{character.Name} Lv.{character.Level}");
+    foreach (var relic in character.RelicList)
+    {
+        Console.WriteLine($"  {relic.RelicType}: {relic.SetName}");
+    }
+}
+```
+
+### Zenless Zone Zero
+
+```csharp
+var player = await client.GetZZZPlayerInfoAsync(uid, Language.English);
+var agents = await client.GetZZZAgentsAsync(uid, Language.English);
+
+Console.WriteLine($"{player.Nickname} (Lv.{player.Level})");
+
+foreach (var agent in agents)
+{
+    Console.WriteLine($"{agent.Name} Lv.{agent.Level}");
+}
+```
+
+### Enka profile and saved builds
+
+```csharp
+string username = "your_enka_username";
+
+var profile = await client.GetEnkaProfileByUsernameAsync(username);
+Console.WriteLine(profile.Username);
+
+foreach (var account in profile.HoyoAccounts)
+{
+    Console.WriteLine($"{account.Nickname} ({account.Hash})");
+
+    var genshinBuilds = await client.GetGenshinBuildsByUsernameAsync(username, account.Hash);
+    var hsrBuilds = await client.GetHSRBuildsByUsernameAsync(username, account.Hash);
+    var zzzBuilds = await client.GetZZZBuildsByUsernameAsync(username, account.Hash);
+}
+```
+
+Runnable samples live under `Examples/` in the repository (Genshin, HSR, and ZZZ, each with direct and DI variants).
 
 ## Caching
 
-### Cache Providers
+### Memory (default)
 
-Configure the cache provider via `EnkaClientOptions.CacheProvider`:
+Built into the core package. No extra install.
 
 ```csharp
-// In memory (default)
-options.CacheProvider = CacheProvider.Memory;
+using EnkaDotNet.Caching;
 
-// SQLite (persistent across restarts, no external dependency)
-options.CacheProvider = CacheProvider.SQLite;
-options.SQLiteCache = new SQLiteCacheOptions
+var options = new EnkaClientOptions
 {
-    DatabasePath = "enka_cache.db",
-    DefaultTtl = TimeSpan.FromMinutes(10)
-};
-
-// Redis (distributed, for multi instance apps)
-options.CacheProvider = CacheProvider.Redis;
-options.RedisCache = new RedisCacheOptions
-{
-    ConnectionString = "localhost:6379",
-    KeyPrefix = "myapp:enka:"
+    EnableCaching = true,
+    CacheDurationMinutes = 10,
+    CacheProvider = CacheProvider.Memory
 };
 ```
 
-### Runtime Cache Control
+### SQLite
+
+Requires `EnkaDotNet.Caching.Sqlite`.
+
+Direct:
 
 ```csharp
-// Force fresh data for one call
+using EnkaDotNet.Caching;
+
+var options = new EnkaClientOptions
+{
+    EnableCaching = true,
+    CacheDurationMinutes = 10
+};
+
+options.UseSqliteCache(sqlite =>
+{
+    sqlite.DatabasePath = "enka_cache.db";
+    sqlite.DefaultTtl = TimeSpan.FromMinutes(10);
+});
+
+await using var client = await EnkaClient.CreateAsync(options);
+```
+
+DI (call order does not matter):
+
+```csharp
+using EnkaDotNet.Caching;
+using EnkaDotNet.DIExtensions;
+
+builder.Services.AddEnkaNetClient(options =>
+{
+    options.CacheDurationMinutes = 60;
+});
+
+builder.Services.AddEnkaSqliteCache(sqlite =>
+{
+    sqlite.DatabasePath = "enka_cache.db";
+});
+```
+
+### Redis
+
+Requires `EnkaDotNet.Caching.Redis`.
+
+Direct:
+
+```csharp
+using EnkaDotNet.Caching;
+
+var options = new EnkaClientOptions
+{
+    EnableCaching = true
+};
+
+options.UseRedisCache(redis =>
+{
+    // remote servers: add ssl=true and a password
+    redis.ConnectionString = "localhost:6379";
+    redis.KeyPrefix = "myapp:enka:";
+    redis.DefaultTtl = TimeSpan.FromMinutes(10);
+});
+
+await using var client = await EnkaClient.CreateAsync(options);
+```
+
+DI:
+
+```csharp
+builder.Services.AddEnkaNetClient();
+builder.Services.AddEnkaRedisCache(redis =>
+{
+    redis.ConnectionString = "localhost:6379";
+    redis.KeyPrefix = "myapp:enka:";
+});
+```
+
+`KeyPrefix` is required and must not be empty. Clear and stats operations are scoped to that prefix so they do not touch other keys on the same Redis server.
+
+Setting `CacheProvider = CacheProvider.SQLite` (or `Redis`) without installing the package and calling the extension throws an error that names the missing package.
+
+### Runtime cache control
+
+```csharp
 var profile = await client.GetGenshinPlayerInfoAsync(uid, bypassCache: true);
 
-// Clear all cached entries
 client.ClearCache();
 
-// Get cache statistics
 var (count, _) = client.GetCacheStats();
 ```
 
 ## Language
 
-All game API methods accept a `Language` enum for type safe language selection:
+Game methods accept a `Language` enum. String codes still work.
 
 ```csharp
-// Using Language enum (recommended)
-var playerInfo = await client.GetZZZPlayerInfoAsync(uid, Language.Japanese);
-var hsrInfo    = await client.GetHSRPlayerInfoAsync(uid, Language.TraditionalChinese);
-var giInfo     = await client.GetGenshinPlayerInfoAsync(uid, Language.German);
+var zzz = await client.GetZZZPlayerInfoAsync(uid, Language.Japanese);
+var hsr = await client.GetHSRPlayerInfoAsync(uid, Language.TraditionalChinese);
+var gi = await client.GetGenshinPlayerInfoAsync(uid, Language.German);
 
-// Using string (still supported)
-var playerInfo = await client.GetZZZPlayerInfoAsync(uid, language: "ja");
+var zzzAlt = await client.GetZZZPlayerInfoAsync(uid, language: "ja");
 ```
 
-**Available languages:**
-
-| Enum Value | String Code |
-|---|---|
+| Enum | Code |
+|------|------|
 | `Language.English` | `en` |
 | `Language.Russian` | `ru` |
 | `Language.Vietnamese` | `vi` |
@@ -152,126 +327,109 @@ var playerInfo = await client.GetZZZPlayerInfoAsync(uid, language: "ja");
 
 ## HTTP Resiliency
 
-Resiliency is configured via `EnkaClientOptions`:
-
 ```csharp
-options.MaxRetries = 3;                         // Retry attempts (default: 1)
-options.RetryDelayMs = 1000;                    // Base delay in ms (default: 1000)
-options.UseExponentialBackoff = true;           // Exponential backoff with jitter (default: true)
-options.MaxRetryDelayMs = 30000;                // Cap on retry delay (default: 30000)
-options.CircuitBreakerFailureThreshold = 5;     // Failures before circuit opens (default: 5)
-options.CircuitBreakerBreakDurationSeconds = 30; // Seconds circuit stays open (default: 30)
+options.MaxRetries = 3;
+options.RetryDelayMs = 1000;
+options.UseExponentialBackoff = true;
+options.MaxRetryDelayMs = 30000;
+options.CircuitBreakerFailureThreshold = 5;
+options.CircuitBreakerBreakDurationSeconds = 30;
 ```
 
-**429 Too Many Requests** is automatically retried using the `Retry-After` response header as the delay. A `RateLimitException` is only thrown after all retry attempts are exhausted.
+`429 Too Many Requests` retries use the `Retry-After` header when present. A `RateLimitException` is thrown only after retries are exhausted.
 
 ## Observability
 
-The library exposes OpenTelemetry hooks with no additional dependencies. Wire up your own exporters:
+No extra package is required. Point your own OpenTelemetry exporters at the library source and meter:
 
 ```csharp
-// Distributed tracing
 builder.Services.AddOpenTelemetry()
     .WithTracing(t => t.AddSource("EnkaDotNet").AddOtlpExporter());
 
-// Metrics (counters + request duration histogram)
 builder.Services.AddOpenTelemetry()
     .WithMetrics(m => m.AddMeter("EnkaDotNet").AddPrometheusExporter());
 ```
 
-**Exposed metrics:**
-
 | Metric | Description |
-|---|---|
-| `enka.requests.total` | Total API requests made |
-| `enka.cache.hits` | Cache hit count |
-| `enka.cache.misses` | Cache miss count |
-| `enka.retries.total` | Total retry attempts |
-| `enka.request.duration` (ms) | Request duration histogram |
+|--------|-------------|
+| `enka.requests.total` | Total API requests |
+| `enka.cache.hits` | Cache hits |
+| `enka.cache.misses` | Cache misses |
+| `enka.retries.total` | Retry attempts |
+| `enka.request.duration` | Request duration (ms) |
 
 ## Asset Preloading
 
-Preloading warms up the in-memory asset cache at startup so the first real request has zero asset-load latency:
+Load game assets at startup so the first request does not wait on asset downloads.
 
 ```csharp
-// Direct instantiation
 await using var client = await EnkaClient.CreateAsync(new EnkaClientOptions
 {
     PreloadedLanguages = new List<Language> { Language.English, Language.Japanese }
 });
+```
 
-// DI (runs asynchronously via IHostedService)
+With DI, the same option runs through an `IHostedService` and does not block the DI thread:
+
+```csharp
 builder.Services.AddEnkaNetClient(options =>
 {
     options.PreloadedLanguages = new List<Language> { Language.English, Language.Japanese };
 });
 ```
 
-## Asset Fallback (Offline / GitHub Unavailable)
+## Asset Fallback
 
-Set `AssetFallbackDirectory` to make the library resilient to network outages.
-The first time an asset is downloaded successfully it is saved to disk.
-If a subsequent download fails (GitHub down, no internet), the saved copy is served instead.
+Set `AssetFallbackDirectory` to keep a local copy of downloaded assets. Successful downloads are written there. If a later download fails, the saved file is used instead.
 
 ```csharp
-options.AssetFallbackDirectory = "/path/to/your/enka_assets";
+options.AssetFallbackDirectory = "/path/to/enka_assets";
 ```
 
-By default (`null`) nothing is ever written to disk.
+`null` (the default) means nothing is written to disk.
 
-### Where do the files go?
+Pick a path your app owns. Do not write into the NuGet package folder under `~/.nuget/packages/`. Avoid `AppContext.BaseDirectory` in development builds; that folder is wiped on rebuild.
 
-The path is set by **your application**, the library just reads and writes to wherever you point it.
-The NuGet package folder (`~/.nuget/packages/enkadotnet/`) is read only and shared, files are never written there.
-
-| App type | Recommended path | Resolves to (example) |
-|---|---|---|
-| ASP.NET Core / Worker Service | `Path.Combine(builder.Environment.ContentRootPath, "enka_assets")` | `/myapp/enka_assets/` |
-| Console app | `Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EnkaDotNet", "assets")` | `C:/Users/john/AppData/Local/EnkaDotNet/assets` |
-| Docker | Mount a volume and set the path explicitly | `/data/enka_assets` |
-
-> **Avoid using `AppContext.BaseDirectory`** that resolves to the build output folder (`bin/Release/net8.0/`) which is wiped on each rebuild.
-
-**Full ASP.NET Core example:**
+| App type | Suggested path |
+|----------|----------------|
+| ASP.NET Core / Worker | `Path.Combine(builder.Environment.ContentRootPath, "enka_assets")` |
+| Console | `Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EnkaDotNet", "assets")` |
+| Docker | Mount a volume and set the path explicitly |
 
 ```csharp
 builder.Services.AddEnkaNetClient(options =>
 {
-    // Writes to <project-root>/enka_assets/ which survives rebuilds
     options.AssetFallbackDirectory =
         Path.Combine(builder.Environment.ContentRootPath, "enka_assets");
-
-    options.PreloadedLanguages = new List<Language> { Language.English, Language.Japanese };
+    options.PreloadedLanguages = new List<Language> { Language.English };
 });
 ```
 
-**Saved file layout:**
+Saved layout:
 
 ```
 enka_assets/
-  genshin/ characters.json  text_map.json  namecards.json  ...
-  hsr/     honker_characters.json  honker_weps.json  ...
-  zzz/     avatars.json  weapons.json  property.json  ...
+  genshin/  characters.json  text_map.json  namecards.json  ...
+  hsr/      honker_characters.json  honker_weps.json  ...
+  zzz/      avatars.json  weapons.json  property.json  ...
 ```
 
 ## Requirements
 
-* .NET Standard 2.0 compatible framework (.NET Core 2.0+, .NET Framework 4.6.1+, .NET 5+)
+* .NET Standard 2.0 or later (.NET Framework 4.6.1+, .NET Core 2.0+, .NET 5+)
 
 ## Support
 
-Having questions or issues? Join our Discord server: [Alg's Dev Env](https://discord.gg/d4UgxagmwF)
+Questions and issues: [Alg's Dev Env](https://discord.gg/d4UgxagmwF) on Discord.
 
 ## License
 
-This project is licensed under the Apache 2.0 License - see the LICENSE file for details.
+Apache 2.0. See the LICENSE file.
 
 ## Acknowledgments
 
-* [Enka.Network](https://enka.network/) for providing the API
+* [Enka.Network](https://enka.network/) for the API
 * [seriaati](https://github.com/seriaati) for the inspiration
-
----
 
 ## Disclaimer
 

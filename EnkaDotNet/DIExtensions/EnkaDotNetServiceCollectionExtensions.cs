@@ -3,6 +3,7 @@ using EnkaDotNet.Assets;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Assets.ZZZ;
+using EnkaDotNet.Caching;
 using EnkaDotNet.Utils;
 using EnkaDotNet.Utils.Common;
 using Microsoft.Extensions.Caching.Memory;
@@ -31,10 +32,22 @@ namespace EnkaDotNet.DIExtensions
             services.TryAddSingleton<IMemoryCache>(sp => new MemoryCache(new MemoryCacheOptions()));
             services.AddHttpClient();
 
+            services.TryAddSingleton<IEnkaCache>(sp =>
+            {
+                var opts = sp.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
+
+                // Resolved here rather than at registration time so an opt in provider package can
+                // be added before or after this call without changing the outcome.
+                var providerFactory = sp.GetService<IEnkaCacheProviderFactory>();
+                return providerFactory != null
+                    ? providerFactory.CreateCache(opts)
+                    : CacheFactory.CreateCache(opts, sp.GetService<IMemoryCache>());
+            });
+
             services.AddHttpClient<IHttpHelper, HttpHelper>((serviceProvider, client) =>
             {
                 var opts = serviceProvider.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
-                client.BaseAddress = new Uri(opts.BaseUrl ?? Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
+                client.BaseAddress = new Uri(opts.BaseUrl ?? Constants.DefaultEnkaProfileApiBaseUrl);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(opts.UserAgent ?? Constants.DefaultUserAgent);
                 client.Timeout = TimeSpan.FromSeconds(opts.TimeoutSeconds);
             }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate });
@@ -43,7 +56,7 @@ namespace EnkaDotNet.DIExtensions
             {
                 var tempOptions = new EnkaClientOptions();
                 configureOptionsAction?.Invoke(tempOptions);
-                client.BaseAddress = new Uri(Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
+                client.BaseAddress = new Uri(Constants.DefaultEnkaProfileApiBaseUrl);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(tempOptions.UserAgent ?? Constants.DefaultUserAgent);
                 client.Timeout = TimeSpan.FromSeconds(tempOptions.TimeoutSeconds);
             }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate });
@@ -70,7 +83,8 @@ namespace EnkaDotNet.DIExtensions
                     var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
                     var httpClient = httpClientFactory.CreateClient("GenshinAssetClient");
                     var logger = sp.GetService<ILogger<GenshinAssets>>() ?? NullLogger<GenshinAssets>.Instance;
-                    return await AssetsFactory.CreateGenshinAssetsAsync(language, httpClient, logger).ConfigureAwait(false);
+                    var opts = sp.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
+                    return await AssetsFactory.CreateGenshinAssetsAsync(language, httpClient, logger, opts.AssetFallbackDirectory).ConfigureAwait(false);
                 };
             });
 
@@ -81,7 +95,8 @@ namespace EnkaDotNet.DIExtensions
                     var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
                     var httpClient = httpClientFactory.CreateClient("HSRAssetClient");
                     var logger = sp.GetService<ILogger<HSRAssets>>() ?? NullLogger<HSRAssets>.Instance;
-                    return await AssetsFactory.CreateHSRAssetsAsync(language, httpClient, logger).ConfigureAwait(false);
+                    var opts = sp.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
+                    return await AssetsFactory.CreateHSRAssetsAsync(language, httpClient, logger, opts.AssetFallbackDirectory).ConfigureAwait(false);
                 };
             });
 
@@ -92,7 +107,8 @@ namespace EnkaDotNet.DIExtensions
                     var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
                     var httpClient = httpClientFactory.CreateClient("ZZZAssetClient");
                     var logger = sp.GetService<ILogger<ZZZAssets>>() ?? NullLogger<ZZZAssets>.Instance;
-                    return await AssetsFactory.CreateZZZAssetsAsync(language, httpClient, logger).ConfigureAwait(false);
+                    var opts = sp.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
+                    return await AssetsFactory.CreateZZZAssetsAsync(language, httpClient, logger, opts.AssetFallbackDirectory).ConfigureAwait(false);
                 };
             });
 

@@ -364,3 +364,8 @@ FodyWeavers.xsd
 
 # Kiro
 .kiro
+
+# Local-only experiments (not part of the published NuGet surface yet)
+EnkaDotNet.Tui/
+EnkaDotNet.Tool/
+Examples/TuiShowcase/

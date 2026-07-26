@@ -39,7 +39,7 @@ namespace EnkaDotNet.Components.HSR
 
         private KeyValuePair<string, string> GetFormattedStat(string propertyType, double value)
         {
-            bool raw = Options?.Raw ?? false;
+            bool raw = Options?.UseRawStatValues ?? false;
             string key = raw ? propertyType : HSRStatPropertyUtils.GetDisplayName(propertyType, Assets);
             string formattedValue = raw ? value.ToString(CultureInfo.InvariantCulture) : Math.Floor(value).ToString(CultureInfo.InvariantCulture);
             return new KeyValuePair<string, string>(key, formattedValue);

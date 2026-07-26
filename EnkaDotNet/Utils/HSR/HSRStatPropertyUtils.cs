@@ -6,7 +6,7 @@ namespace EnkaDotNet.Utils.HSR
 {
     public static class HSRStatPropertyUtils
     {
-        private static readonly Dictionary<string, string> DisplayNameToPropertyType = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> _displayNameToPropertyType = new Dictionary<string, string>
         {
             { "HP", "HPDelta" },
             { "HP%", "HPAddedRatio" },
@@ -25,9 +25,9 @@ namespace EnkaDotNet.Utils.HSR
 
         };
 
-        private static readonly Dictionary<string, string> PropertyTypeToDisplayName = new Dictionary<string, string>();
+        private static readonly Dictionary<string, string> _propertyTypeToDisplayName = new Dictionary<string, string>();
 
-        private static readonly Dictionary<string, bool> IsPercentProperty = new Dictionary<string, bool>
+        private static readonly Dictionary<string, bool> _isPercentProperty = new Dictionary<string, bool>
         {
             { "HPDelta", false },
             { "HPAddedRatio", true },
@@ -72,7 +72,7 @@ namespace EnkaDotNet.Utils.HSR
         };
 
 
-        private static readonly Dictionary<string, string> FinalStatKeyToDisplayName = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> _finalStatKeyToDisplayName = new Dictionary<string, string>
         {
             { "HP", "HP" },
             { "Attack", "ATK" },
@@ -95,7 +95,7 @@ namespace EnkaDotNet.Utils.HSR
             { "ElationDamageBoost", "Elation DMG" }
         };
 
-        private static readonly Dictionary<string, string> FinalStatKeyToPropertyType = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> _finalStatKeyToPropertyType = new Dictionary<string, string>
         {
             { "HP", "MaxHP" },
             { "Attack", "Attack" },
@@ -122,63 +122,63 @@ namespace EnkaDotNet.Utils.HSR
         static HSRStatPropertyUtils()
         {
 
-            foreach (var kvp in DisplayNameToPropertyType)
+            foreach (var kvp in _displayNameToPropertyType)
             {
 
-                if (!PropertyTypeToDisplayName.ContainsKey(kvp.Value))
+                if (!_propertyTypeToDisplayName.ContainsKey(kvp.Value))
                 {
-                    PropertyTypeToDisplayName[kvp.Value] = kvp.Key;
+                    _propertyTypeToDisplayName[kvp.Value] = kvp.Key;
                 }
             }
 
 
-            PropertyTypeToDisplayName["CriticalChanceBase"] = "CRIT Rate";
-            PropertyTypeToDisplayName["CriticalDamageBase"] = "CRIT DMG";
-            PropertyTypeToDisplayName["BreakDamageAddedRatioBase"] = "Break Effect";
-            PropertyTypeToDisplayName["SPRatioBase"] = "Energy Regeneration Rate";
-            PropertyTypeToDisplayName["HealRatioBase"] = "Outgoing Healing";
-            PropertyTypeToDisplayName["StatusProbability"] = "Effect Hit Rate";
-            PropertyTypeToDisplayName["StatusResistance"] = "Effect RES";
+            _propertyTypeToDisplayName["CriticalChanceBase"] = "CRIT Rate";
+            _propertyTypeToDisplayName["CriticalDamageBase"] = "CRIT DMG";
+            _propertyTypeToDisplayName["BreakDamageAddedRatioBase"] = "Break Effect";
+            _propertyTypeToDisplayName["SPRatioBase"] = "Energy Regeneration Rate";
+            _propertyTypeToDisplayName["HealRatioBase"] = "Outgoing Healing";
+            _propertyTypeToDisplayName["StatusProbability"] = "Effect Hit Rate";
+            _propertyTypeToDisplayName["StatusResistance"] = "Effect RES";
 
 
-            PropertyTypeToDisplayName["PhysicalAddedRatio"] = "Physical DMG";
-            PropertyTypeToDisplayName["FireAddedRatio"] = "Fire DMG";
-            PropertyTypeToDisplayName["IceAddedRatio"] = "Ice DMG";
-            PropertyTypeToDisplayName["ThunderAddedRatio"] = "Lightning DMG";
-            PropertyTypeToDisplayName["WindAddedRatio"] = "Wind DMG";
-            PropertyTypeToDisplayName["QuantumAddedRatio"] = "Quantum DMG";
-            PropertyTypeToDisplayName["ImaginaryAddedRatio"] = "Imaginary DMG";
-            PropertyTypeToDisplayName["ElationDamageAddedRatio"] = "Elation DMG";
+            _propertyTypeToDisplayName["PhysicalAddedRatio"] = "Physical DMG";
+            _propertyTypeToDisplayName["FireAddedRatio"] = "Fire DMG";
+            _propertyTypeToDisplayName["IceAddedRatio"] = "Ice DMG";
+            _propertyTypeToDisplayName["ThunderAddedRatio"] = "Lightning DMG";
+            _propertyTypeToDisplayName["WindAddedRatio"] = "Wind DMG";
+            _propertyTypeToDisplayName["QuantumAddedRatio"] = "Quantum DMG";
+            _propertyTypeToDisplayName["ImaginaryAddedRatio"] = "Imaginary DMG";
+            _propertyTypeToDisplayName["ElationDamageAddedRatio"] = "Elation DMG";
 
 
-            PropertyTypeToDisplayName["HPDelta"] = "HP";
-            PropertyTypeToDisplayName["HPAddedRatio"] = "HP%";
-            PropertyTypeToDisplayName["AttackDelta"] = "ATK";
-            PropertyTypeToDisplayName["AttackAddedRatio"] = "ATK%";
-            PropertyTypeToDisplayName["DefenceDelta"] = "DEF";
-            PropertyTypeToDisplayName["DefenceAddedRatio"] = "DEF%";
-            PropertyTypeToDisplayName["SpeedDelta"] = "SPD";
-            PropertyTypeToDisplayName["StatusResistanceBase"] = "Effect RES";
-            PropertyTypeToDisplayName["SpeedAddedRatio"] = "SPD";
+            _propertyTypeToDisplayName["HPDelta"] = "HP";
+            _propertyTypeToDisplayName["HPAddedRatio"] = "HP%";
+            _propertyTypeToDisplayName["AttackDelta"] = "ATK";
+            _propertyTypeToDisplayName["AttackAddedRatio"] = "ATK%";
+            _propertyTypeToDisplayName["DefenceDelta"] = "DEF";
+            _propertyTypeToDisplayName["DefenceAddedRatio"] = "DEF%";
+            _propertyTypeToDisplayName["SpeedDelta"] = "SPD";
+            _propertyTypeToDisplayName["StatusResistanceBase"] = "Effect RES";
+            _propertyTypeToDisplayName["SpeedAddedRatio"] = "SPD";
 
 
-            PropertyTypeToDisplayName["BaseHP"] = "Base HP";
-            PropertyTypeToDisplayName["BaseAttack"] = "Base ATK";
-            PropertyTypeToDisplayName["BaseDefence"] = "Base DEF";
-            PropertyTypeToDisplayName["BaseSpeed"] = "Base SPD";
+            _propertyTypeToDisplayName["BaseHP"] = "Base HP";
+            _propertyTypeToDisplayName["BaseAttack"] = "Base ATK";
+            _propertyTypeToDisplayName["BaseDefence"] = "Base DEF";
+            _propertyTypeToDisplayName["BaseSpeed"] = "Base SPD";
         }
 
         public static bool IsPercentageType(string propertyType)
         {
 
-            return (IsPercentProperty.TryGetValue(propertyType, out bool isPercent) && isPercent)
-                   || (PropertyTypeToDisplayName.TryGetValue(propertyType, out var name) && name.EndsWith("%"));
+            return (_isPercentProperty.TryGetValue(propertyType, out bool isPercent) && isPercent)
+                   || (_propertyTypeToDisplayName.TryGetValue(propertyType, out var name) && name.EndsWith("%"));
         }
 
 
         public static string GetDisplayName(string propertyType)
         {
-            return PropertyTypeToDisplayName.TryGetValue(propertyType, out string displayName)
+            return _propertyTypeToDisplayName.TryGetValue(propertyType, out string displayName)
                 ? displayName
                 : propertyType;
         }
@@ -195,14 +195,14 @@ namespace EnkaDotNet.Utils.HSR
 
         public static string GetFinalStatDisplayName(string finalStatKey)
         {
-            return FinalStatKeyToDisplayName.TryGetValue(finalStatKey, out string displayName)
+            return _finalStatKeyToDisplayName.TryGetValue(finalStatKey, out string displayName)
                ? displayName
                : finalStatKey;
         }
 
         public static string GetFinalStatDisplayName(string finalStatKey, Assets.HSR.IHSRAssets assets)
         {
-            if (assets != null && FinalStatKeyToPropertyType.TryGetValue(finalStatKey, out string propertyType))
+            if (assets != null && _finalStatKeyToPropertyType.TryGetValue(finalStatKey, out string propertyType))
             {
                 return assets.GetPropertyDisplayName(propertyType);
             }
@@ -212,7 +212,7 @@ namespace EnkaDotNet.Utils.HSR
 
         public static string GetPropertyType(string displayName)
         {
-            return DisplayNameToPropertyType.TryGetValue(displayName, out string propertyType)
+            return _displayNameToPropertyType.TryGetValue(displayName, out string propertyType)
                 ? propertyType
                 : displayName;
         }

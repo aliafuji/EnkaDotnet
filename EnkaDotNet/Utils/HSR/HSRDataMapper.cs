@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Globalization;
 using EnkaDotNet.Models.HSR;
 using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Assets.HSR;
@@ -26,7 +27,7 @@ namespace EnkaDotNet.Utils.HSR
             if (response == null) throw new ArgumentNullException(nameof(response));
             if (response.DetailInfo == null) throw new ArgumentException("DetailInfo is null in the API response", nameof(response));
 
-            var displayedCharacters = new List<HSRCharacter>();
+            var displayedCharacters = new List<HSRCharacter>(response.DetailInfo.AvatarDetailList?.Count ?? 0);
             if (response.DetailInfo.AvatarDetailList != null)
             {
                 foreach (var avatarDetail in response.DetailInfo.AvatarDetailList)
@@ -42,8 +43,8 @@ namespace EnkaDotNet.Utils.HSR
             var playerInfo = new HSRPlayerInfo
             {
                 DisplayedCharacters = displayedCharacters,
-                Uid = response.Uid ?? response.DetailInfo.Uid.ToString(),
-                TTL = response.Ttl.ToString(),
+                Uid = response.Uid ?? response.DetailInfo.Uid.ToString(CultureInfo.InvariantCulture),
+                TTL = response.Ttl.ToString(CultureInfo.InvariantCulture),
                 Nickname = response.DetailInfo.Nickname ?? "Unknown",
                 Level = response.DetailInfo.Level,
                 Signature = response.DetailInfo.Signature ?? "",
@@ -84,9 +85,8 @@ namespace EnkaDotNet.Utils.HSR
 
             var character = new HSRCharacter
             {
-                SkillTreeList = new List<HSRSkillTree>(),
-                RelicList = new List<HSRRelic>(),
-                Stats = new ConcurrentDictionary<string, HSRStatValue>(),
+                SkillTreeList = new List<HSRSkillTree>(avatarDetail.SkillTreeList?.Count ?? 0),
+                RelicList = new List<HSRRelic>(avatarDetail.RelicList?.Count ?? 0),
                 Eidolons = new List<Eidolon>(),
                 Id = avatarDetail.AvatarId,
                 Level = avatarDetail.Level,
@@ -101,18 +101,18 @@ namespace EnkaDotNet.Utils.HSR
                 Path = _assets.GetCharacterPath(avatarDetail.AvatarId),
                 Rarity = _assets.GetCharacterRarity(avatarDetail.AvatarId),
                 IconUrl = avatarDetail.DressedSkinId.HasValue && avatarDetail.DressedSkinId.Value > 0
-                    ? $"{EnkaDotNet.Utils.Constants.DEFAULT_HSR_ASSET_CDN_URL}SpriteOutput/AvatarDrawCard/AvatarSkin/{avatarDetail.DressedSkinId.Value}.png"
+                    ? $"{EnkaDotNet.Utils.Constants.DefaultHSRAssetCdnUrl}SpriteOutput/AvatarDrawCard/AvatarSkin/{avatarDetail.DressedSkinId.Value.ToString(CultureInfo.InvariantCulture)}.png"
                     : _assets.GetCharacterIconUrl(avatarDetail.AvatarId),
                 AvatarIconUrl = avatarDetail.DressedSkinId.HasValue && avatarDetail.DressedSkinId.Value > 0
-                    ? $"{EnkaDotNet.Utils.Constants.DEFAULT_HSR_ASSET_CDN_URL}SpriteOutput/AvatarRoundIcon/AvatarSkin/{avatarDetail.DressedSkinId.Value}.png"
+                    ? $"{EnkaDotNet.Utils.Constants.DefaultHSRAssetCdnUrl}SpriteOutput/AvatarRoundIcon/AvatarSkin/{avatarDetail.DressedSkinId.Value.ToString(CultureInfo.InvariantCulture)}.png"
                     : _assets.GetCharacterAvatarIconUrl(avatarDetail.AvatarId),
                 Options = this._options
             };
 
             character.SetAssets(_assets);
 
-            var characterInfo = _assets.GetCharacterInfo(character.Id.ToString());
-            var unlockedEidolonIds = new List<int>();
+            var characterInfo = _assets.GetCharacterInfo(character.Id.ToString(CultureInfo.InvariantCulture));
+            var unlockedEidolonIds = new List<int>(characterInfo?.RankIDList?.Count ?? 0);
             if (characterInfo?.RankIDList != null)
             {
                 for (int i = 0; i < characterInfo.RankIDList.Count; i++)
@@ -154,7 +154,8 @@ namespace EnkaDotNet.Utils.HSR
                         Options = this._options
                     };
 
-                    var pointInfo = _assets.GetSkillTreePointInfo(skillTree.PointId.ToString());
+                    string pointIdKey = skillTree.PointId.ToString(CultureInfo.InvariantCulture);
+                    var pointInfo = _assets.GetSkillTreePointInfo(pointIdKey);
                     if (pointInfo != null)
                     {
                         skillTree.Anchor = pointInfo.Anchor ?? string.Empty;
@@ -162,18 +163,18 @@ namespace EnkaDotNet.Utils.HSR
                         skillTree.MaxLevel = pointInfo.MaxLevel;
                         skillTree.Icon = _assets.GetSkillTreeIconUrl(skillTree.PointId);
                         skillTree.SkillIds = new List<int>(pointInfo.SkillIds ?? new List<int>());
-                        skillTree.Name = _assets.GetSkillTreePointName(skillTree.PointId.ToString());
-                        skillTree.Description = _assets.GetSkillTreePointDescription(skillTree.PointId.ToString());
+                        skillTree.Name = _assets.GetSkillTreePointName(pointIdKey);
+                        skillTree.Description = _assets.GetSkillTreePointDescription(pointIdKey);
 
                         bool boostApplied = false;
                         foreach (int eidolonId in unlockedEidolonIds)
                         {
-                            var eidolonInfo = _assets.GetEidolonInfo(eidolonId.ToString());
+                            var eidolonInfo = _assets.GetEidolonInfo(eidolonId.ToString(CultureInfo.InvariantCulture));
                             if (eidolonInfo?.SkillAddLevelList != null)
                             {
                                 foreach (int skillId in skillTree.SkillIds)
                                 {
-                                    string skillIdStr = skillId.ToString();
+                                    string skillIdStr = skillId.ToString(CultureInfo.InvariantCulture);
                                     if (eidolonInfo.SkillAddLevelList.TryGetValue(skillIdStr, out int levelBoost))
                                     {
                                         skillTree.Level += levelBoost;
@@ -188,7 +189,7 @@ namespace EnkaDotNet.Utils.HSR
                     }
                     else
                     {
-                        skillTree.Name = $"Trace_{skillTree.PointId}";
+                        skillTree.Name = $"Trace_{pointIdKey}";
                         skillTree.Icon = _assets.GetSkillTreeIconUrl(skillTree.PointId);
                     }
 
@@ -228,7 +229,7 @@ namespace EnkaDotNet.Utils.HSR
 
             var lightCone = new HSRLightCone
             {
-                Properties = new List<HSRStatProperty>(),
+                Properties = new List<HSRStatProperty>(equipment.Flat?.Props?.Count ?? 0),
                 Id = equipment.Id,
                 Name = _assets.GetLightConeName(equipment.Id),
                 Level = equipment.Level,
@@ -281,7 +282,7 @@ namespace EnkaDotNet.Utils.HSR
                 return nameFromAssets;
             }
 
-            return nameFromAssets ?? $"Set_{setId}";
+            return nameFromAssets ?? $"Set_{setId.ToString(CultureInfo.InvariantCulture)}";
         }
 
         public HSRRelic MapRelicModelToRelic(HSRRelicModel relicModel)
@@ -291,7 +292,7 @@ namespace EnkaDotNet.Utils.HSR
 
             var relic = new HSRRelic
             {
-                SubStats = new List<HSRStatProperty>(),
+                SubStats = new List<HSRStatProperty>(Math.Max(0, (relicModel.Flat?.Props?.Count ?? 0) - 1)),
                 Id = relicModel.Id,
                 Level = relicModel.Level,
                 Type = relicModel.Type,

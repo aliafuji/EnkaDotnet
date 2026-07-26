@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Components.Genshin;
 using EnkaDotNet.Enums.Genshin;
@@ -23,7 +24,7 @@ namespace EnkaDotNet.Utils.Genshin
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
-            var showcaseCharacterIds = new List<int>();
+            var showcaseCharacterIds = new List<int>(model.ShowAvatarInfoList?.Count ?? 0);
             if (model.ShowAvatarInfoList != null)
             {
                 foreach (var a in model.ShowAvatarInfoList)
@@ -32,7 +33,7 @@ namespace EnkaDotNet.Utils.Genshin
                 }
             }
 
-            var showcaseNameCards = new List<NameCard>();
+            var showcaseNameCards = new List<NameCard>(model.ShowNameCardIdList?.Count ?? 0);
             if (model.ShowNameCardIdList != null)
             {
                 foreach (var id in model.ShowNameCardIdList)
@@ -84,7 +85,7 @@ namespace EnkaDotNet.Utils.Genshin
         {
             if (modelList == null) return new List<Character>();
 
-            var characters = new List<Character>();
+            var characters = new List<Character>(modelList.Count);
             foreach (var model in modelList)
             {
                 characters.Add(MapCharacter(model));
@@ -121,14 +122,14 @@ namespace EnkaDotNet.Utils.Genshin
             }
 
             var unlockedConstellationIds = new List<int>(model.TalentIdList ?? new List<int>());
-            var constellations = new List<Constellation>();
+            var constellations = new List<Constellation>(unlockedConstellationIds.Count);
             int index = 0;
             foreach (var id in unlockedConstellationIds)
             {
                 constellations.Add(new Constellation
                 {
                     Id = id,
-                    Name = _assets?.GetConstellationName(id) ?? $"Constellation_{id}",
+                    Name = _assets?.GetConstellationName(id) ?? $"Constellation_{id.ToString(CultureInfo.InvariantCulture)}",
                     IconUrl = _assets?.GetConstellationIconUrl(id) ?? string.Empty,
                     Position = index + 1,
                     Options = this._options
@@ -149,7 +150,7 @@ namespace EnkaDotNet.Utils.Genshin
                 Talents = MapTalents(model.SkillLevelMap, model.ProudSkillExtraLevelMap),
                 Weapon = weapon,
                 Artifacts = artifacts,
-                Name = _assets?.GetCharacterName(model.AvatarId) ?? $"Character_{model.AvatarId}",
+                Name = _assets?.GetCharacterName(model.AvatarId) ?? $"Character_{model.AvatarId.ToString(CultureInfo.InvariantCulture)}",
                 IconUrl = _assets?.GetCharacterIconUrl(model.AvatarId) ?? string.Empty,
                 Options = this._options,
                 Assets = this._assets,
@@ -226,7 +227,7 @@ namespace EnkaDotNet.Utils.Genshin
                 BaseAttack = baseAtkProp?.StatValue ?? 0,
                 SecondaryStat = secondaryStat,
                 Type = weaponType,
-                Name = _assets?.GetWeaponNameFromHash(flat.NameTextMapHash) ?? $"Weapon_{equip.ItemId}",
+                Name = _assets?.GetWeaponNameFromHash(flat.NameTextMapHash) ?? $"Weapon_{equip.ItemId.ToString(CultureInfo.InvariantCulture)}",
                 IconUrl = _assets?.GetWeaponIconUrlFromIconName(flat.Icon) ?? string.Empty,
                 Options = this._options,
                 Assets = this._assets
@@ -238,7 +239,7 @@ namespace EnkaDotNet.Utils.Genshin
             var mainStat = MapStatProperty(flat.ReliquaryMainstat) ?? new StatProperty { Type = StatType.None, Value = 0, Options = this._options, Assets = this._assets };
             if (mainStat != null) { mainStat.Options = this._options; mainStat.Assets = this._assets; }
 
-            var subStats = new List<StatProperty>();
+            var subStats = new List<StatProperty>(flat.ReliquarySubstats?.Count ?? 0);
             if (flat.ReliquarySubstats != null)
             {
                 foreach (var substatModel in flat.ReliquarySubstats)
@@ -261,7 +262,7 @@ namespace EnkaDotNet.Utils.Genshin
                 MainStat = mainStat,
                 SubStats = subStats,
                 SetName = _assets?.GetArtifactSetNameFromHash(flat.SetNameTextMapHash) ?? "Unknown Set",
-                Name = _assets?.GetArtifactNameFromHash(flat.NameTextMapHash) ?? $"Artifact_{equip.ItemId}",
+                Name = _assets?.GetArtifactNameFromHash(flat.NameTextMapHash) ?? $"Artifact_{equip.ItemId.ToString(CultureInfo.InvariantCulture)}",
                 IconUrl = _assets?.GetArtifactIconUrlFromIconName(flat.Icon) ?? string.Empty,
                 Options = this._options,
                 Assets = this._assets
@@ -313,17 +314,17 @@ namespace EnkaDotNet.Utils.Genshin
             }
         }
 
-        private ConcurrentDictionary<StatType, double> MapStats(Dictionary<string, double> fightPropMap)
+        private Dictionary<StatType, double> MapStats(Dictionary<string, double> fightPropMap)
         {
-            var stats = new ConcurrentDictionary<StatType, double>();
-            if (fightPropMap == null) return stats;
+            if (fightPropMap == null) return new Dictionary<StatType, double>();
 
+            var stats = new Dictionary<StatType, double>(fightPropMap.Count);
             foreach (var kvp in fightPropMap)
             {
                 StatType statType = MapStatTypeKey(kvp.Key);
                 if (statType != StatType.None)
                 {
-                    if (!stats.ContainsKey(statType) || IsFinalStatKey(kvp.Key))
+                    if (IsFinalStatKey(kvp.Key) || !stats.ContainsKey(statType))
                     {
                         stats[statType] = kvp.Value;
                     }
@@ -334,9 +335,9 @@ namespace EnkaDotNet.Utils.Genshin
 
         private IReadOnlyList<Talent> MapTalents(Dictionary<string, int> skillLevelMap, Dictionary<string, int> proudSkillExtraLevelMap)
         {
-            var talents = new List<Talent>();
-            if (skillLevelMap == null) return talents;
+            if (skillLevelMap == null) return new List<Talent>();
 
+            var talents = new List<Talent>(skillLevelMap.Count);
             foreach (var kvp in skillLevelMap)
             {
                 if (!int.TryParse(kvp.Key, out int skillId)) continue;
@@ -351,7 +352,7 @@ namespace EnkaDotNet.Utils.Genshin
                     BaseLevel = baseLevel,
                     ExtraLevel = extraLevel,
                     Level = baseLevel + extraLevel,
-                    Name = _assets?.GetTalentName(skillId) ?? $"Talent_{skillId}",
+                    Name = _assets?.GetTalentName(skillId) ?? $"Talent_{skillId.ToString(CultureInfo.InvariantCulture)}",
                     IconUrl = _assets?.GetTalentIconUrl(skillId) ?? string.Empty,
                     Options = this._options
                 });

@@ -226,12 +226,12 @@ namespace EnkaDotNet.Tests.Common
         public void AllHSRRelicTypeEnumValues_AreRecognized()
         {
             Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.Unknown));
-            Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.HEAD));
-            Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.HAND));
-            Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.BODY));
-            Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.FOOT));
-            Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.NECK));
-            Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.OBJECT));
+            Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.Head));
+            Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.Hands));
+            Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.Body));
+            Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.Feet));
+            Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.PlanarSphere));
+            Assert.True(EnumHelper.IsDefinedHSRRelicType((int)RelicType.LinkRope));
         }
     }
 }

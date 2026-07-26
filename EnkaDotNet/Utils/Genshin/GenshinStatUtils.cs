@@ -11,7 +11,7 @@ namespace EnkaDotNet.Utils.Genshin
         /// <summary>
         /// Maps StatType enum values to their text map keys for localization.
         /// </summary>
-        private static readonly Dictionary<StatType, string> StatTypeToFightPropKey = new Dictionary<StatType, string>
+        private static readonly Dictionary<StatType, string> _statTypeToFightPropKey = new Dictionary<StatType, string>
         {
             { StatType.BaseHP, "FIGHT_PROP_BASE_HP" },
             { StatType.HP_Flat, "FIGHT_PROP_HP" },
@@ -75,7 +75,7 @@ namespace EnkaDotNet.Utils.Genshin
         /// </summary>
         public static string GetDisplayName(StatType statType, IGenshinAssets assets)
         {
-            if (assets != null && StatTypeToFightPropKey.TryGetValue(statType, out string fightPropKey))
+            if (assets != null && _statTypeToFightPropKey.TryGetValue(statType, out string fightPropKey))
             {
                 string localized = assets.GetText(fightPropKey);
                 if (!string.IsNullOrEmpty(localized) && localized != fightPropKey)
@@ -86,7 +86,7 @@ namespace EnkaDotNet.Utils.Genshin
             return GetDisplayName(statType);
         }
 
-        private static readonly Dictionary<StatType, string> StatTypeToDisplayName = new Dictionary<StatType, string>
+        private static readonly Dictionary<StatType, string> _statTypeToDisplayName = new Dictionary<StatType, string>
         {
             { StatType.BaseHP, "Base HP" },
             { StatType.HP_Flat, "HP" },
@@ -158,20 +158,64 @@ namespace EnkaDotNet.Utils.Genshin
 
         public static string GetDisplayName(StatType statType)
         {
-            return StatTypeToDisplayName.TryGetValue(statType, out var name) ? name : statType.ToString();
+            return _statTypeToDisplayName.TryGetValue(statType, out var name) ? name : statType.ToString();
         }
 
+        /// <summary>
+        /// New percentage-valued <see cref="StatType"/> members must be added here explicitly.
+        /// </summary>
         public static bool IsPercentage(StatType statType)
         {
-            string name = statType.ToString();
-            return name.Contains("Percentage") ||
-                   name.Contains("Bonus") ||
-                   name.Contains("Resistance") ||
-                   statType == StatType.CriticalRate ||
-                   statType == StatType.CriticalDamage ||
-                   statType == StatType.EnergyRecharge ||
-                   statType == StatType.CooldownReduction ||
-                   statType == StatType.ShieldStrength;
+            switch (statType)
+            {
+                case StatType.HPPercentage:
+                case StatType.AttackPercentage:
+                case StatType.DefensePercentage:
+                case StatType.SpeedPercentage:
+                case StatType.HPMPPercentage:
+                case StatType.AttackMPPercentage:
+                case StatType.CriticalRate:
+                case StatType.CriticalDamage:
+                case StatType.EnergyRecharge:
+                case StatType.HealingBonus:
+                case StatType.IncomingHealingBonus:
+                case StatType.PhysicalResistance:
+                case StatType.PhysicalDamageBonus:
+                case StatType.PyroDamageBonus:
+                case StatType.ElectroDamageBonus:
+                case StatType.HydroDamageBonus:
+                case StatType.DendroDamageBonus:
+                case StatType.AnemoDamageBonus:
+                case StatType.GeoDamageBonus:
+                case StatType.CryoDamageBonus:
+                case StatType.PyroResistance:
+                case StatType.ElectroResistance:
+                case StatType.HydroResistance:
+                case StatType.DendroResistance:
+                case StatType.AnemoResistance:
+                case StatType.GeoResistance:
+                case StatType.CryoResistance:
+                case StatType.CooldownReduction:
+                case StatType.ShieldStrength:
+                case StatType.NonExtraPhysicalDamageBonus:
+                case StatType.NonExtraPyroDamageBonus:
+                case StatType.NonExtraElectroDamageBonus:
+                case StatType.NonExtraHydroDamageBonus:
+                case StatType.NonExtraDendroDamageBonus:
+                case StatType.NonExtraAnemoDamageBonus:
+                case StatType.NonExtraGeoDamageBonus:
+                case StatType.NonExtraCryoDamageBonus:
+                case StatType.NonExtraPyroResistance:
+                case StatType.NonExtraElectroResistance:
+                case StatType.NonExtraHydroResistance:
+                case StatType.NonExtraDendroResistance:
+                case StatType.NonExtraAnemoResistance:
+                case StatType.NonExtraGeoResistance:
+                case StatType.NonExtraCryoResistance:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         public static string FormatValue(StatType statType, double value, bool raw)

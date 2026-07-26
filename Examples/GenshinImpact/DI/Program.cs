@@ -1,6 +1,5 @@
 using EnkaDotNet;
 using EnkaDotNet.Caching;
-using EnkaDotNet.Caching.Providers;
 using EnkaDotNet.DIExtensions;
 using EnkaDotNet.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,8 +15,8 @@ namespace EnkaDotNet.Examples.GenshinImpact.DI
             var host = Host.CreateDefaultBuilder(args)
                 .ConfigureServices((context, services) =>
                 {
-                    services.AddSingleton<IEnkaCache>(sp => 
-                        new SQLiteCacheProvider(new SQLiteCacheOptions { DatabasePath = "genshin_cache.db" }));
+                    // Requires the EnkaDotNet.Caching.Sqlite package
+                    services.AddEnkaSqliteCache(sqlite => sqlite.DatabasePath = "genshin_cache.db");
 
                     services.AddEnkaNetClient(options =>
                     {

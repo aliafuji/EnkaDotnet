@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using EnkaDotNet.Assets.ZZZ.Models;
+using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
 
 namespace EnkaDotNet.Assets.ZZZ
@@ -33,6 +34,11 @@ namespace EnkaDotNet.Assets.ZZZ
         string GetMedalIconUrl(int medalId);
         string GetNameCardIconUrl(int nameCardId);
         string GetProfilePictureIconUrl(int profilePictureId);
+        /// <summary>
+        /// Always returns <see cref="string.Empty"/>. The upstream Zenless Zone Zero asset feed
+        /// (<c>avatars.json</c>) carries no per skill icon paths, so there is nothing to resolve.
+        /// Kept for interface compatibility until the asset source exposes skill icons.
+        /// </summary>
         string GetSkillIconUrl(int agentId, SkillType skillType);
         ZZZEquipmentSuitInfo GetDiscSetInfo(string suitId);
         Dictionary<string, ZZZEquipmentSuitInfo> GetAllDiscSets();

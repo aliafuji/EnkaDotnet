@@ -1,0 +1,129 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[*.{csproj,props,targets}]
+indent_size = 2
+
+[*.cs]
+dotnet_sort_system_directives_first = true
+csharp_new_line_before_open_brace = all
+csharp_prefer_braces = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_using_directive_placement = outside_namespace:suggestion
+
+# Analyzer severities are staged so the warning list stays small enough to act on. Each
+# "suggestion" below is a backlog category: promote it back to "warning" once its phase lands.
+
+# Naming rules are warnings so CI surfaces drift instead of letting it accumulate.
+dotnet_diagnostic.IDE1006.severity = warning
+
+# Trimming/AOT gaps are deliberately visible: the package advertises IsAotCompatible.
+dotnet_diagnostic.IL2026.severity = warning
+dotnet_diagnostic.IL3050.severity = warning
+
+# Not applicable to this codebase.
+dotnet_diagnostic.CA1510.severity = none         # ArgumentNullException.ThrowIfNull needs net6+
+dotnet_diagnostic.CA1513.severity = none         # ObjectDisposedException.ThrowIf needs net7+
+dotnet_diagnostic.CA1848.severity = none         # LoggerMessage delegates, tracked separately
+dotnet_diagnostic.CA2007.severity = none         # ConfigureAwait is already applied by hand
+dotnet_diagnostic.CA1805.severity = none         # explicit default initialization is the house style
+
+# Backlog: public naming cleanup (SCREAMING_SNAKE constants, enum members). Breaking, so v2.
+dotnet_diagnostic.CA1707.severity = suggestion
+dotnet_diagnostic.CA1720.severity = suggestion
+dotnet_diagnostic.CA1716.severity = suggestion
+
+# Backlog: performance pass (culture-invariant formatting, double lookups, allocations).
+dotnet_diagnostic.CA1305.severity = suggestion
+dotnet_diagnostic.CA1310.severity = suggestion
+dotnet_diagnostic.CA1822.severity = suggestion
+dotnet_diagnostic.CA1847.severity = suggestion
+dotnet_diagnostic.CA1854.severity = suggestion
+dotnet_diagnostic.CA1859.severity = suggestion
+dotnet_diagnostic.CA1863.severity = suggestion
+dotnet_diagnostic.CA1873.severity = suggestion
+
+##########################################
+# Naming: symbol groups
+##########################################
+
+dotnet_naming_symbols.private_instance_fields.applicable_kinds = field
+dotnet_naming_symbols.private_instance_fields.applicable_accessibilities = private, protected, private_protected
+dotnet_naming_symbols.private_instance_fields.required_modifiers =
+
+dotnet_naming_symbols.private_static_fields.applicable_kinds = field
+dotnet_naming_symbols.private_static_fields.applicable_accessibilities = private, protected, private_protected
+dotnet_naming_symbols.private_static_fields.required_modifiers = static
+
+dotnet_naming_symbols.constant_fields.applicable_kinds = field
+dotnet_naming_symbols.constant_fields.applicable_accessibilities = *
+dotnet_naming_symbols.constant_fields.required_modifiers = const
+
+dotnet_naming_symbols.public_members.applicable_kinds = property, method, event, namespace, class, struct, interface, enum, delegate
+dotnet_naming_symbols.public_members.applicable_accessibilities = public, internal, protected, protected_internal
+
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_symbols.interfaces.applicable_accessibilities = *
+
+dotnet_naming_symbols.type_parameters.applicable_kinds = type_parameter
+dotnet_naming_symbols.type_parameters.applicable_accessibilities = *
+
+##########################################
+# Naming: styles
+##########################################
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+
+dotnet_naming_style.i_prefixed_pascal_case.capitalization = pascal_case
+dotnet_naming_style.i_prefixed_pascal_case.required_prefix = I
+
+dotnet_naming_style.t_prefixed_pascal_case.capitalization = pascal_case
+dotnet_naming_style.t_prefixed_pascal_case.required_prefix = T
+
+##########################################
+# Naming: rules
+##########################################
+
+# const fields are PascalCase, not SCREAMING_SNAKE_CASE.
+dotnet_naming_rule.constants_are_pascal_case.symbols = constant_fields
+dotnet_naming_rule.constants_are_pascal_case.style = pascal_case
+dotnet_naming_rule.constants_are_pascal_case.severity = warning
+
+dotnet_naming_rule.private_static_fields_are_underscore_camel.symbols = private_static_fields
+dotnet_naming_rule.private_static_fields_are_underscore_camel.style = underscore_camel_case
+dotnet_naming_rule.private_static_fields_are_underscore_camel.severity = warning
+
+dotnet_naming_rule.private_fields_are_underscore_camel.symbols = private_instance_fields
+dotnet_naming_rule.private_fields_are_underscore_camel.style = underscore_camel_case
+dotnet_naming_rule.private_fields_are_underscore_camel.severity = warning
+
+dotnet_naming_rule.public_members_are_pascal_case.symbols = public_members
+dotnet_naming_rule.public_members_are_pascal_case.style = pascal_case
+dotnet_naming_rule.public_members_are_pascal_case.severity = warning
+
+dotnet_naming_rule.interfaces_start_with_i.symbols = interfaces
+dotnet_naming_rule.interfaces_start_with_i.style = i_prefixed_pascal_case
+dotnet_naming_rule.interfaces_start_with_i.severity = warning
+
+dotnet_naming_rule.type_parameters_start_with_t.symbols = type_parameters
+dotnet_naming_rule.type_parameters_start_with_t.style = t_prefixed_pascal_case
+dotnet_naming_rule.type_parameters_start_with_t.severity = warning
+
+[EnkaDotNet.Tests/**.cs]
+dotnet_diagnostic.IDE1006.severity = suggestion
+
+[Examples/**.cs]
+dotnet_diagnostic.IDE1006.severity = none

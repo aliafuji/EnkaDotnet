@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
@@ -12,7 +13,7 @@ namespace EnkaDotNet.Utils.ZZZ
         /// <summary>
         /// Maps stat category keys to their locs.json text map keys for localization.
         /// </summary>
-        private static readonly Dictionary<string, string> CategoryToLocsKey = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> _categoryToLocsKey = new Dictionary<string, string>
         {
             { "HP", "HpMax" },
             { "HP%", "HpMax_Ratio" },
@@ -45,7 +46,7 @@ namespace EnkaDotNet.Utils.ZZZ
         /// </summary>
         public static string GetLocalizedStatCategoryDisplay(string englishCategory, IZZZAssets assets)
         {
-            if (assets != null && CategoryToLocsKey.TryGetValue(englishCategory, out string locsKey))
+            if (assets != null && _categoryToLocsKey.TryGetValue(englishCategory, out string locsKey))
             {
                 string localized = assets.GetLocalizedText(locsKey);
                 if (!string.IsNullOrEmpty(localized) && localized != locsKey)
@@ -66,20 +67,20 @@ namespace EnkaDotNet.Utils.ZZZ
             return GetLocalizedStatCategoryDisplay(englishCategory, assets);
         }
 
-        private const double BASE_CRIT_RATE = 0;
-        private const double BASE_CRIT_DMG = 0;
-        private const double BASE_ENERGY_REGEN = 0;
+        private const double BaseCritRate = 0;
+        private const double BaseCritDmg = 0;
+        private const double BaseEnergyRegen = 0;
         
         // Ben's agent ID for special DEF-to-ATK conversion
-        private const int BEN_AGENT_ID = 1121;
+        private const int BenAgentId = 1121;
         
         // Ben's DEF-to-ATK multipliers based on core skill enhancement level (0-6)
-        private static readonly double[] BEN_DEF_TO_ATK_MULTIPLIERS = { 0.4, 0.46, 0.52, 0.6, 0.66, 0.72, 0.8 };
+        private static readonly double[] _benDefToAtkMultipliers = { 0.4, 0.46, 0.52, 0.6, 0.66, 0.72, 0.8 };
 
         public static Dictionary<string, StatSummary> CalculateAllTotalStats(ZZZAgent agent, IZZZAssets assets)
         {
             var breakdown = CalculateTotalBreakdown(agent, assets);
-            var result = new Dictionary<string, StatSummary>();
+            var result = new Dictionary<string, StatSummary>(breakdown.Count);
             foreach (var kvp in breakdown)
             {
                 double finalVal = kvp.Value.TryGetValue("Final", out var final) ? final : 0;
@@ -145,6 +146,75 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.EtherDMGBonusFlat:
                 case StatType.WindDMGBonusBase:
                 case StatType.WindDMGBonusFlat:
+                    return true;
+                default: return false;
+            }
+        }
+
+        /// <summary>
+        /// Every <see cref="StatType"/> member that represents a base (as opposed to flat or
+        /// percentage) contribution must be listed here explicitly.
+        /// </summary>
+        private static bool IsBaseStat(StatType statType)
+        {
+            switch (statType)
+            {
+                case StatType.HPBase:
+                case StatType.ATKBase:
+                case StatType.DefBase:
+                case StatType.ImpactBase:
+                case StatType.SheerForceBase:
+                case StatType.CritRateBase:
+                case StatType.CritDMGBase:
+                case StatType.PenRatioBase:
+                case StatType.PENBase:
+                case StatType.EnergyRegenBase:
+                case StatType.AnomalyProficiencyBase:
+                case StatType.AnomalyMasteryBase:
+                case StatType.AutomaticAdrenalineAccumulationBase:
+                case StatType.PhysicalDMGBonusBase:
+                case StatType.FireDMGBonusBase:
+                case StatType.IceDMGBonusBase:
+                case StatType.ElectricDMGBonusBase:
+                case StatType.EtherDMGBonusBase:
+                case StatType.WindDMGBonusBase:
+                case StatType.SheerDMGBonusBase:
+                    return true;
+                default: return false;
+            }
+        }
+
+        /// <summary>
+        /// Every DMG bonus <see cref="StatType"/> member must be listed here or in
+        /// <see cref="IsDMGBonusFlatStat"/>.
+        /// </summary>
+        private static bool IsDMGBonusStat(StatType statType)
+        {
+            switch (statType)
+            {
+                case StatType.PhysicalDMGBonusBase:
+                case StatType.FireDMGBonusBase:
+                case StatType.IceDMGBonusBase:
+                case StatType.ElectricDMGBonusBase:
+                case StatType.EtherDMGBonusBase:
+                case StatType.WindDMGBonusBase:
+                case StatType.SheerDMGBonusBase:
+                    return true;
+                default: return IsDMGBonusFlatStat(statType);
+            }
+        }
+
+        private static bool IsDMGBonusFlatStat(StatType statType)
+        {
+            switch (statType)
+            {
+                case StatType.PhysicalDMGBonusFlat:
+                case StatType.FireDMGBonusFlat:
+                case StatType.IceDMGBonusFlat:
+                case StatType.ElectricDMGBonusFlat:
+                case StatType.EtherDMGBonusFlat:
+                case StatType.WindDMGBonusFlat:
+                case StatType.SheerDMGBonusFlat:
                     return true;
                 default: return false;
             }
@@ -306,10 +376,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 }
             }
 
-            if (!breakdown.ContainsKey("Sheer Force"))
-            {
-                GetOrCreateCategory(breakdown, "Sheer Force");
-            }
+            GetOrCreateCategory(breakdown, "Sheer Force");
 
             ApplySetBonuses(agent, breakdown, assets);
             CalculateFinalValues(breakdown, agent);
@@ -330,9 +397,9 @@ namespace EnkaDotNet.Utils.ZZZ
                 };
                 breakdown[category] = subDict;
 
-                if (category == "CRIT Rate") subDict["Agent_Base"] = BASE_CRIT_RATE;
-                else if (category == "CRIT DMG") subDict["Agent_Base"] = BASE_CRIT_DMG;
-                else if (category == "Energy Regen") subDict["Agent_Base"] = BASE_ENERGY_REGEN;
+                if (category == "CRIT Rate") subDict["Agent_Base"] = BaseCritRate;
+                else if (category == "CRIT DMG") subDict["Agent_Base"] = BaseCritDmg;
+                else if (category == "Energy Regen") subDict["Agent_Base"] = BaseEnergyRegen;
             }
             return subDict;
         }
@@ -348,7 +415,7 @@ namespace EnkaDotNet.Utils.ZZZ
 
             if (category == "CRIT Rate" || category == "CRIT DMG")
             {
-                if (sourcePrefix == "Agent" && statType.ToString().EndsWith("Base"))
+                if (sourcePrefix == "Agent" && IsBaseStat(statType))
                 {
                     targetBucketSuffix = "Base";
                 }
@@ -362,7 +429,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 bool isPercentForCalc = IsCalculationPercentageStat(statType);
                 if (sourcePrefix == "Agent")
                 {
-                    if (statType.ToString().EndsWith("Base"))
+                    if (IsBaseStat(statType))
                     {
                         targetBucketSuffix = "Base";
                         // Base values are stored raw
@@ -377,7 +444,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 {
                     if (isPercentForCalc)
                     {
-                        targetBucketSuffix = (statType == StatType.EnergyRegenFlat || statType == StatType.PenRatioFlat || statType.ToString().Contains("DMGBonusFlat")) ? "Flat" : "Percent";
+                        targetBucketSuffix = (statType == StatType.EnergyRegenFlat || statType == StatType.PenRatioFlat || IsDMGBonusFlatStat(statType)) ? "Flat" : "Percent";
                         // All percentage values are stored raw
                     }
                     else
@@ -393,27 +460,24 @@ namespace EnkaDotNet.Utils.ZZZ
                 bucketKey = sourcePrefix + targetBucketSuffix;
             }
 
-            if (!categoryDict.ContainsKey(bucketKey))
-            {
-                categoryDict[bucketKey] = 0;
-            }
-            categoryDict[bucketKey] += valueToAdd;
+            categoryDict.TryGetValue(bucketKey, out double bucketValue);
+            categoryDict[bucketKey] = bucketValue + valueToAdd;
         }
 
         private static void ApplySetBonuses(ZZZAgent agent, Dictionary<string, Dictionary<string, double>> breakdown, IZZZAssets assets)
         {
-            var equippedSets = new Dictionary<int, int>();
+            var equippedSets = new Dictionary<int, int>(agent.EquippedDiscs.Count);
             foreach (var disc in agent.EquippedDiscs)
             {
-                if (!equippedSets.ContainsKey(disc.SuitId)) equippedSets[disc.SuitId] = 0;
-                equippedSets[disc.SuitId]++;
+                equippedSets.TryGetValue(disc.SuitId, out int pieceCount);
+                equippedSets[disc.SuitId] = pieceCount + 1;
             }
 
             foreach (var set in equippedSets)
             {
                 if (set.Value < 2) continue;
 
-                var suitInfo = assets.GetDiscSetInfo(set.Key.ToString());
+                var suitInfo = assets.GetDiscSetInfo(set.Key.ToString(CultureInfo.InvariantCulture));
                 if (suitInfo?.SetBonusProps == null || suitInfo.SetBonusProps.Count == 0) continue;
 
                 foreach (var prop in suitInfo.SetBonusProps)
@@ -429,7 +493,7 @@ namespace EnkaDotNet.Utils.ZZZ
                         {
                             categoryDict["SetBonus_Flat"] += rawValue;
                         }
-                        else if (statType.ToString().Contains("DMGBonus"))
+                        else if (IsDMGBonusStat(statType))
                         {
                             categoryDict["SetBonus_Flat"] += rawValue;
                         }
@@ -487,10 +551,10 @@ namespace EnkaDotNet.Utils.ZZZ
                 defCat["AddedDisplay"] = calculatedDEF - defBase;
             }
 
-            if (agent.Id == BEN_AGENT_ID && breakdown.TryGetValue("ATK", out var benAtkCat))
+            if (agent.Id == BenAgentId && breakdown.TryGetValue("ATK", out var benAtkCat))
             {
-                int enhancementLevel = Math.Max(0, Math.Min(agent.CoreSkillEnhancement, BEN_DEF_TO_ATK_MULTIPLIERS.Length - 1));
-                double multiplier = BEN_DEF_TO_ATK_MULTIPLIERS[enhancementLevel];
+                int enhancementLevel = Math.Max(0, Math.Min(agent.CoreSkillEnhancement, _benDefToAtkMultipliers.Length - 1));
+                double multiplier = _benDefToAtkMultipliers[enhancementLevel];
                 double bonusATK = Math.Floor(calculatedDEF * multiplier);
                 
                 calculatedATK += bonusATK;

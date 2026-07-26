@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnkaDotNet", "EnkaDotNet\En
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnkaDotNet.Tests", "EnkaDotNet.Tests\EnkaDotNet.Tests.csproj", "{5517DD0C-3F0F-4642-AC93-94368A437DAB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnkaDotNet.Caching.Sqlite", "EnkaDotNet.Caching.Sqlite\EnkaDotNet.Caching.Sqlite.csproj", "{DD21088D-022C-4AF8-B693-0680595BF981}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnkaDotNet.Caching.Redis", "EnkaDotNet.Caching.Redis\EnkaDotNet.Caching.Redis.csproj", "{0A1A3FAA-FBB3-4244-8309-219F8785D160}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +45,30 @@ Global
 		{5517DD0C-3F0F-4642-AC93-94368A437DAB}.Release|x64.Build.0 = Release|Any CPU
 		{5517DD0C-3F0F-4642-AC93-94368A437DAB}.Release|x86.ActiveCfg = Release|Any CPU
 		{5517DD0C-3F0F-4642-AC93-94368A437DAB}.Release|x86.Build.0 = Release|Any CPU
+		{DD21088D-022C-4AF8-B693-0680595BF981}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD21088D-022C-4AF8-B693-0680595BF981}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD21088D-022C-4AF8-B693-0680595BF981}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DD21088D-022C-4AF8-B693-0680595BF981}.Debug|x64.Build.0 = Debug|Any CPU
+		{DD21088D-022C-4AF8-B693-0680595BF981}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DD21088D-022C-4AF8-B693-0680595BF981}.Debug|x86.Build.0 = Debug|Any CPU
+		{DD21088D-022C-4AF8-B693-0680595BF981}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD21088D-022C-4AF8-B693-0680595BF981}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DD21088D-022C-4AF8-B693-0680595BF981}.Release|x64.ActiveCfg = Release|Any CPU
+		{DD21088D-022C-4AF8-B693-0680595BF981}.Release|x64.Build.0 = Release|Any CPU
+		{DD21088D-022C-4AF8-B693-0680595BF981}.Release|x86.ActiveCfg = Release|Any CPU
+		{DD21088D-022C-4AF8-B693-0680595BF981}.Release|x86.Build.0 = Release|Any CPU
+		{0A1A3FAA-FBB3-4244-8309-219F8785D160}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A1A3FAA-FBB3-4244-8309-219F8785D160}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A1A3FAA-FBB3-4244-8309-219F8785D160}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0A1A3FAA-FBB3-4244-8309-219F8785D160}.Debug|x64.Build.0 = Debug|Any CPU
+		{0A1A3FAA-FBB3-4244-8309-219F8785D160}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0A1A3FAA-FBB3-4244-8309-219F8785D160}.Debug|x86.Build.0 = Debug|Any CPU
+		{0A1A3FAA-FBB3-4244-8309-219F8785D160}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A1A3FAA-FBB3-4244-8309-219F8785D160}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A1A3FAA-FBB3-4244-8309-219F8785D160}.Release|x64.ActiveCfg = Release|Any CPU
+		{0A1A3FAA-FBB3-4244-8309-219F8785D160}.Release|x64.Build.0 = Release|Any CPU
+		{0A1A3FAA-FBB3-4244-8309-219F8785D160}.Release|x86.ActiveCfg = Release|Any CPU
+		{0A1A3FAA-FBB3-4244-8309-219F8785D160}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

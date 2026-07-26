@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Assets.ZZZ.Models;
 using EnkaDotNet.Components.ZZZ;
@@ -12,25 +13,45 @@ namespace EnkaDotNet.Utils.ZZZ
     public class ZZZStatsCalculator
     {
         private readonly IZZZAssets _assets;
-        private readonly ConcurrentDictionary<string, object> _calculationCache = new ConcurrentDictionary<string, object>();
+
+        // Dictionary<,> and ZZZStat are both mutable, so cached entries are never handed out
+        // directly: every accessor below returns a defensive copy.
+        private readonly ConcurrentDictionary<(int AgentId, int Level, int PromotionLevel, int CoreSkillEnhancement), Dictionary<StatType, double>> _agentBaseStatsCache =
+            new ConcurrentDictionary<(int, int, int, int), Dictionary<StatType, double>>();
+        private readonly ConcurrentDictionary<(int WeaponId, int Level, int BreakLevel), (ZZZStat MainStat, ZZZStat SecondaryStat)> _weaponStatsCache =
+            new ConcurrentDictionary<(int, int, int), (ZZZStat, ZZZStat)>();
+        private readonly ConcurrentDictionary<(int PropertyId, double BaseValue, int DiscLevel, int PropertyLevel, Rarity Rarity), ZZZStat> _discMainStatCache =
+            new ConcurrentDictionary<(int, double, int, int, Rarity), ZZZStat>();
 
         public ZZZStatsCalculator(IZZZAssets assets)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
         }
 
+        private static ZZZStat CopyStat(ZZZStat stat)
+        {
+            return new ZZZStat
+            {
+                Type = stat.Type,
+                Value = stat.Value,
+                Level = stat.Level,
+                IsPercentage = stat.IsPercentage,
+                IsEnergyRegen = stat.IsEnergyRegen
+            };
+        }
+
         public Dictionary<StatType, double> CalculateAgentBaseStats(int agentId, int level, int promotionLevel, int coreSkillEnhancement)
         {
-            string cacheKey = $"agent_{agentId}_{level}_{promotionLevel}_{coreSkillEnhancement}";
-            if (_calculationCache.TryGetValue(cacheKey, out object cachedStats) && cachedStats is Dictionary<StatType, double> dictStats)
+            var cacheKey = (agentId, level, promotionLevel, coreSkillEnhancement);
+            if (_agentBaseStatsCache.TryGetValue(cacheKey, out var cachedStats))
             {
-                return dictStats;
+                return new Dictionary<StatType, double>(cachedStats);
             }
 
-            var stats = new Dictionary<StatType, double>();
-            var avatarInfo = _assets.GetAvatarInfo(agentId.ToString());
-            if (avatarInfo == null || avatarInfo.BaseProps == null) return stats;
+            var avatarInfo = _assets.GetAvatarInfo(agentId.ToString(CultureInfo.InvariantCulture));
+            if (avatarInfo?.BaseProps == null) return new Dictionary<StatType, double>();
 
+            var stats = new Dictionary<StatType, double>(avatarInfo.BaseProps.Count);
             foreach (var prop in avatarInfo.BaseProps)
             {
                 if (int.TryParse(prop.Key, out int propertyId) && EnumHelper.IsDefinedZZZStatType(propertyId))
@@ -67,32 +88,26 @@ namespace EnkaDotNet.Utils.ZZZ
                     {
                         StatType coreStatType = (StatType)corePropertyId;
                         double coreValue = coreProp.Value;
-                        
-                        if (stats.ContainsKey(coreStatType))
-                        {
-                            stats[coreStatType] += coreValue;
-                        }
-                        else
-                        {
-                            stats[coreStatType] = coreValue;
-                        }
+
+                        stats.TryGetValue(coreStatType, out double existingValue);
+                        stats[coreStatType] = existingValue + coreValue;
                     }
                 }
             }
 
-            _calculationCache[cacheKey] = stats;
-            return stats;
+            _agentBaseStatsCache[cacheKey] = stats;
+            return new Dictionary<StatType, double>(stats);
         }
 
         public (ZZZStat MainStat, ZZZStat SecondaryStat) CalculateWeaponStats(int weaponId, int level, int breakLevel)
         {
-            string cacheKey = $"weapon_{weaponId}_{level}_{breakLevel}";
-            if (_calculationCache.TryGetValue(cacheKey, out object cachedResult) && cachedResult is ValueTuple<ZZZStat, ZZZStat> cachedTuple)
+            var cacheKey = (weaponId, level, breakLevel);
+            if (_weaponStatsCache.TryGetValue(cacheKey, out var cachedResult))
             {
-                return cachedTuple;
+                return (CopyStat(cachedResult.MainStat), CopyStat(cachedResult.SecondaryStat));
             }
 
-            var weaponInfo = _assets.GetWeaponInfo(weaponId.ToString());
+            var weaponInfo = _assets.GetWeaponInfo(weaponId.ToString(CultureInfo.InvariantCulture));
             var weaponLevelDataList = _assets.GetWeaponLevelData();
             var weaponStarDataList = _assets.GetWeaponStarData();
 
@@ -146,17 +161,16 @@ namespace EnkaDotNet.Utils.ZZZ
             double secondaryStatValue = secondaryStatBase * (1 + randRate / 10000.0);
             var secondaryStat = CreateStatWithProperScaling(secondaryStatPropId, Math.Floor(secondaryStatValue));
 
-            var result = (mainStat, secondaryStat);
-            _calculationCache[cacheKey] = result;
-            return result;
+            _weaponStatsCache[cacheKey] = (mainStat, secondaryStat);
+            return (CopyStat(mainStat), CopyStat(secondaryStat));
         }
 
         public ZZZStat CalculateDriveDiscMainStat(int propertyId, double baseValue, int discLevel, int propertyLevel, Rarity rarity)
         {
-            string cacheKey = $"disc_main_{propertyId}_{baseValue}_{discLevel}_{propertyLevel}_{rarity}";
-            if (_calculationCache.TryGetValue(cacheKey, out object cachedStat) && cachedStat is ZZZStat stat)
+            var cacheKey = (propertyId, baseValue, discLevel, propertyLevel, rarity);
+            if (_discMainStatCache.TryGetValue(cacheKey, out var cachedStat))
             {
-                return stat;
+                return CopyStat(cachedStat);
             }
 
             var equipmentLevelDataList = _assets.GetEquipmentLevelData();
@@ -183,8 +197,8 @@ namespace EnkaDotNet.Utils.ZZZ
             double enhanceRate = discLevelData.EnhanceRate;
             double calculatedValue = baseValue * (1 + enhanceRate / 10000.0);
             var resultStat = CreateStatWithProperScaling(propertyId, Math.Floor(calculatedValue), propertyLevel);
-            _calculationCache[cacheKey] = resultStat;
-            return resultStat;
+            _discMainStatCache[cacheKey] = resultStat;
+            return CopyStat(resultStat);
         }
 
         public ZZZStat CreateStatWithProperScaling(int propertyId, double rawValue, int level = 0)
@@ -210,7 +224,9 @@ namespace EnkaDotNet.Utils.ZZZ
 
         public void ClearCache()
         {
-            _calculationCache.Clear();
+            _agentBaseStatsCache.Clear();
+            _weaponStatsCache.Clear();
+            _discMainStatCache.Clear();
         }
     }
 }

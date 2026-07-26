@@ -44,7 +44,7 @@ namespace EnkaDotNet.Internal
 
             if (_directHttpClient.BaseAddress == null)
             {
-                _directHttpClient.BaseAddress = new Uri(Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
+                _directHttpClient.BaseAddress = new Uri(Constants.DefaultEnkaProfileApiBaseUrl);
             }
             if (!_directHttpClient.DefaultRequestHeaders.UserAgent.ToString().Contains(Constants.DefaultUserAgent))
             {
@@ -59,7 +59,7 @@ namespace EnkaDotNet.Internal
                 throw new ArgumentException("Username cannot be null or whitespace", nameof(username));
             }
 
-            string relativeEndpoint = string.Format(Constants.ENKA_PROFILE_ENDPOINT_FORMAT, Uri.EscapeDataString(username));
+            string relativeEndpoint = string.Format(Constants.EnkaProfileEndpointFormat, Uri.EscapeDataString(username));
             EnkaProfileResponse response = null;
 
             if (bypassCache || !_options.EnableCaching)
@@ -140,7 +140,7 @@ namespace EnkaDotNet.Internal
             }
 
             string relativeEndpoint = string.Format(
-                Constants.ENKA_BUILDS_ENDPOINT_FORMAT, 
+                Constants.EnkaBuildsEndpointFormat, 
                 Uri.EscapeDataString(username), 
                 Uri.EscapeDataString(hoyoHash));
 

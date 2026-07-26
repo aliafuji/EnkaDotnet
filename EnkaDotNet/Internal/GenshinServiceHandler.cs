@@ -34,7 +34,7 @@ namespace EnkaDotNet.Internal
         {
             if (uid <= 0) throw new ArgumentException("UID must be a positive integer", nameof(uid));
 
-            string endpoint = string.Format(Constants.DEFAULT_GAME_SPECIFIC_USER_INFO_ENDPOINT_FORMAT, uid);
+            string endpoint = string.Format(Constants.DefaultGameSpecificUserInfoEndpointFormat, uid);
 
             ApiResponse response = await _httpHelper.Get<ApiResponse>(endpoint, bypassCache, cancellationToken).ConfigureAwait(false);
 

@@ -46,7 +46,7 @@ namespace EnkaDotNet.Components.HSR
 
         private KeyValuePair<string, string> GetAllStats(HSRStatProperty stat)
         {
-            bool raw = Options?.Raw ?? false;
+            bool raw = Options?.UseRawStatValues ?? false;
             string key = raw ? stat.Type : HSRStatPropertyUtils.GetDisplayName(stat.Type, Assets);
             string value = raw ? stat.Value.ToString(CultureInfo.InvariantCulture) : stat.DisplayValue;
             return new KeyValuePair<string, string>(key, value);

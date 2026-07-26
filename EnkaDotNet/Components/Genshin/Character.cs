@@ -27,7 +27,7 @@ namespace EnkaDotNet.Components.Genshin
 
         public Dictionary<string, string> GetAllStats()
         {
-            bool raw = this.Options?.Raw ?? false;
+            bool raw = this.Options?.UseRawStatValues ?? false;
             var formatted = new Dictionary<string, string>();
             foreach (var kvp in Stats)
             {
