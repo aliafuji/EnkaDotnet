@@ -46,13 +46,15 @@ namespace EnkaDotNet.Utils.HSR
             { "WindAddedRatio", 0 },
             { "QuantumAddedRatio", 0 },
             { "ImaginaryAddedRatio", 0 },
-            { "ElationAddedRatio", 0 }
+            { "ElationDamageAddedRatio", 0 },
+            { "ElationDamageAddedRatioBase", 0 }
         };
 
         /// <summary>
         /// Maps each element's raw added-ratio stat key to the final stat name it is reported as.
         /// Every key here must also exist in <see cref="_defaultStats"/>, otherwise
         /// <see cref="AddStatValue"/> discards the incoming value.
+        /// Elation is handled separately (Base + AddedRatio) like BreakEffect.
         /// </summary>
         private static readonly Dictionary<string, string> _elementDamageBoostStats = new Dictionary<string, string>
         {
@@ -62,14 +64,14 @@ namespace EnkaDotNet.Utils.HSR
             { "ThunderAddedRatio", "LightningDamageBoost" },
             { "WindAddedRatio", "WindDamageBoost" },
             { "QuantumAddedRatio", "QuantumDamageBoost" },
-            { "ImaginaryAddedRatio", "ImaginaryDamageBoost" },
-            { "ElationAddedRatio", "ElationDamageBoost" }
+            { "ImaginaryAddedRatio", "ImaginaryDamageBoost" }
         };
 
         /// <summary>
-        /// Number of entries <see cref="CalculateFinalStats"/> writes on top of <see cref="_elementDamageBoostStats"/>.
+        /// Number of non element entries <see cref="CalculateFinalStats"/> writes
+        /// (includes <c>ElationDamageBoost</c>).
         /// </summary>
-        private const int FinalStatCount = 11;
+        private const int FinalStatCount = 12;
 
         public HSRStatCalculator(IHSRAssets assets, EnkaClientOptions options)
         {
@@ -275,6 +277,12 @@ namespace EnkaDotNet.Utils.HSR
                 return;
             }
 
+            // Legacy alias seen in older tooling; game/meta uses ElationDamageAddedRatio.
+            if (statType == "ElationAddedRatio")
+            {
+                statType = "ElationDamageAddedRatio";
+            }
+
             // Only keys seeded from _defaultStats are accumulated: anything else is a stat the
             // library does not model yet and is intentionally ignored rather than surfaced raw.
             if (stats.TryGetValue(statType, out var current))
@@ -307,6 +315,12 @@ namespace EnkaDotNet.Utils.HSR
             {
                 finalStats[elem.Value] = PercentStat(Floor1(GetStat(stats, elem.Key) * 100.0));
             }
+
+            AddCombinedPercentStat(
+                finalStats,
+                "ElationDamageBoost",
+                GetStat(stats, "ElationDamageAddedRatio"),
+                GetStat(stats, "ElationDamageAddedRatioBase"));
 
             return finalStats;
         }

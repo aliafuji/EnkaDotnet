@@ -63,6 +63,7 @@ namespace EnkaDotNet.Components.HSR
         public HSRStatValue WindDamageBoost => GetStat("WindDamageBoost");
         public HSRStatValue QuantumDamageBoost => GetStat("QuantumDamageBoost");
         public HSRStatValue ImaginaryDamageBoost => GetStat("ImaginaryDamageBoost");
+        public HSRStatValue ElationDamageBoost => GetStat("ElationDamageBoost");
 
         public HSRStatValue GetStat(string statName)
         {
