@@ -36,6 +36,15 @@ namespace EnkaDotNet.Utils
         public const string DefaultHSRAssetCdnUrl = "https://enka.network/ui/hsr/";
 
         /// <summary>
+        /// Default API base URL for Arknights: Endfield data
+        /// </summary>
+        public const string DefaultEFApiUrl = "https://enka.network/api/ef/";
+        /// <summary>
+        /// Default CDN base URL for Arknights: Endfield assets
+        /// </summary>
+        public const string DefaultEFAssetCdnUrl = "https://enka.network";
+
+        /// <summary>
         /// Default API base URL for Enka.Network user profiles
         /// </summary>
         public const string DefaultEnkaProfileApiBaseUrl = "https://enka.network/api/";
@@ -107,6 +116,23 @@ namespace EnkaDotNet.Utils
             { "equipment_level.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/zzz/equipment_level.json" },
             { "weapon_level.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/zzz/weapon_level.json" },
             { "weapon_star.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/zzz/weapon_star.json" }
+        };
+
+        /// <summary>
+        /// URLs for Arknights: Endfield asset files
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> EFAssetFileUrls = new Dictionary<string, string>()
+        {
+            { "text_map.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/locs.json" },
+            { "avatars.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/avatars.json" },
+            { "weapons.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/weapons.json" },
+            { "equips.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/equips.json" },
+            { "gems.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/gems.json" },
+            { "skills.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/skills.json" },
+            { "weapon_meta.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/weapon_meta.json" },
+            { "pfps.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/pfps.json" },
+            { "namecards.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/namecards.json" },
+            { "medals.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/medals.json" }
         };
     }
 }

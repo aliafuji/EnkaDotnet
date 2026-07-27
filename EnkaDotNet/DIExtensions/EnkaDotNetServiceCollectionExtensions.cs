@@ -3,6 +3,7 @@ using EnkaDotNet.Assets;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Assets.ZZZ;
+using EnkaDotNet.Assets.EF;
 using EnkaDotNet.Caching;
 using EnkaDotNet.Utils;
 using EnkaDotNet.Utils.Common;
@@ -75,6 +76,8 @@ namespace EnkaDotNet.DIExtensions
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate });
             services.AddHttpClient("ZZZAssetClient", configureAssetClient)
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate });
+            services.AddHttpClient("EFAssetClient", configureAssetClient)
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate });
 
             services.TryAddSingleton<Func<string, Task<IGenshinAssets>>>(sp =>
             {
@@ -109,6 +112,18 @@ namespace EnkaDotNet.DIExtensions
                     var logger = sp.GetService<ILogger<ZZZAssets>>() ?? NullLogger<ZZZAssets>.Instance;
                     var opts = sp.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
                     return await AssetsFactory.CreateZZZAssetsAsync(language, httpClient, logger, opts.AssetFallbackDirectory).ConfigureAwait(false);
+                };
+            });
+
+            services.TryAddSingleton<Func<string, Task<IEFAssets>>>(sp =>
+            {
+                return async (language) =>
+                {
+                    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                    var httpClient = httpClientFactory.CreateClient("EFAssetClient");
+                    var logger = sp.GetService<ILogger<EFAssets>>() ?? NullLogger<EFAssets>.Instance;
+                    var opts = sp.GetRequiredService<IOptions<EnkaClientOptions>>().Value;
+                    return await AssetsFactory.CreateEFAssetsAsync(language, httpClient, logger, opts.AssetFallbackDirectory).ConfigureAwait(false);
                 };
             });
 

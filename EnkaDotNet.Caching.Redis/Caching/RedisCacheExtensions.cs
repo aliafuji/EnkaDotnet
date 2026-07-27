@@ -74,8 +74,6 @@ namespace EnkaDotNet.Caching
 
             public IEnkaCache CreateCache(EnkaClientOptions options)
             {
-                // Routed through UseRedisCache so the DI path and the manual path share one
-                // implementation, including the default TTL fallback.
                 options.UseRedisCache(_configure);
                 return CacheFactory.CreateCache(options);
             }

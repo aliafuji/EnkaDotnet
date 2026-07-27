@@ -11,5 +11,8 @@ namespace EnkaDotNet.Enums
 
         [Description("Honkai Star Rail")]
         HSR = 2,
+
+        [Description("Arknights Endfield")]
+        Endfield = 3,
     }
 }

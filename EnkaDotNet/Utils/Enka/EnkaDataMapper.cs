@@ -129,6 +129,11 @@ namespace EnkaDotNet.Utils.Enka
 
             var element = playerInfo.Value;
 
+            if (TryGetProperty(element, "businessCard") || TryGetProperty(element, "charData"))
+            {
+                return GameType.Endfield;
+            }
+
             // ZZZ has unique fields: ShowcaseDetail, SocialDetail
             if (TryGetProperty(element, "ShowcaseDetail") || TryGetProperty(element, "SocialDetail"))
             {
@@ -182,6 +187,9 @@ namespace EnkaDotNet.Utils.Enka
                 case GameType.ZZZ:
                     ExtractZZZPlayerInfo(element, hoyoAccount);
                     break;
+                case GameType.Endfield:
+                    ExtractEFPlayerInfo(element, hoyoAccount);
+                    break;
             }
         }
 
@@ -233,6 +241,23 @@ namespace EnkaDotNet.Utils.Enka
                         hoyoAccount.Level = levelValue;
                     }
                 }
+            }
+        }
+
+        private void ExtractEFPlayerInfo(JsonElement element, HoyoAccount hoyoAccount)
+        {
+            if (!element.TryGetProperty("businessCard", out var card))
+            {
+                return;
+            }
+
+            if (card.TryGetProperty("name", out var name))
+            {
+                hoyoAccount.Nickname = name.GetString();
+            }
+            if (card.TryGetProperty("adventureLevel", out var level) && level.TryGetInt32(out var levelValue))
+            {
+                hoyoAccount.Level = levelValue;
             }
         }
 

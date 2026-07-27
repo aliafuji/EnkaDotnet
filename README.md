@@ -1,6 +1,6 @@
 # Enka.DotNet
 
-C# wrapper for the [Enka.Network](https://enka.network/) API. Fetch player profiles, characters, artifacts, weapons, and builds for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero.
+C# wrapper for the [Enka.Network](https://enka.network/) API. Fetch player profiles, characters, artifacts, weapons, and builds for Genshin Impact, Honkai: Star Rail, Zenless Zone Zero, and Arknights: Endfield.
 
 [![NuGet](https://img.shields.io/nuget/v/EnkaDotNet.svg)](https://www.nuget.org/packages/EnkaDotNet/)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=aliafuji_EnkaDotnet&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=aliafuji_EnkaDotnet)
@@ -12,7 +12,7 @@ C# wrapper for the [Enka.Network](https://enka.network/) API. Fetch player profi
 
 ## Features
 
-* Multi-game support: Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero
+* Multi-game support: Genshin Impact, Honkai: Star Rail, Zenless Zone Zero, and Arknights: Endfield
 * Strongly typed models for player, character, and equipment data
 * Direct client creation or dependency injection
 * Polly retries with exponential backoff and jitter, circuit breaker, and 429 `Retry-After` handling
@@ -24,9 +24,10 @@ C# wrapper for the [Enka.Network](https://enka.network/) API. Fetch player profi
 
 | Game              | Status | Method |
 |-------------------|--------|--------|
-| Genshin Impact    | Ready  | UID    |
-| Honkai: Star Rail | Ready  | UID    |
-| Zenless Zone Zero | Ready  | UID    |
+| Genshin Impact       | Ready  | UID (`int`)  |
+| Honkai: Star Rail    | Ready  | UID (`int`)  |
+| Zenless Zone Zero    | Ready  | UID (`int`)  |
+| Arknights: Endfield  | Ready  | UID (`long`) |
 
 ## Enka Profile Features
 
@@ -167,6 +168,38 @@ foreach (var agent in agents)
 }
 ```
 
+### Arknights: Endfield
+
+Endfield UIDs can exceed `int.MaxValue`, so these APIs take `long`.
+
+```csharp
+long uid = 4228833345;
+var player = await client.GetEFPlayerInfoAsync(uid, Language.English);
+var operators = await client.GetEFOperatorsAsync(uid, Language.English);
+
+Console.WriteLine($"{player.Nickname} AL{player.AdminLevel} EL{player.EndfieldLevel}");
+Console.WriteLine(player.Signature);
+
+foreach (var op in operators)
+{
+    Console.WriteLine($"{op.Name} Lv.{op.Level}");
+    Console.WriteLine($"  Splash: {op.SplashArtUrl}");
+    Console.WriteLine($"  Silhouette: {op.SilhouetteUrl}");
+
+    // Localized display names
+    foreach (var stat in op.GetAllStats())
+    {
+        Console.WriteLine($"  {stat.Key}: {stat.Value}");
+    }
+
+    // Stable English keys for APIs / serialization
+    foreach (var stat in op.GetFinalStats())
+    {
+        Console.WriteLine($"  {stat.Key}: {stat.Value}");
+    }
+}
+```
+
 ### Enka profile and saved builds
 
 ```csharp
@@ -185,7 +218,7 @@ foreach (var account in profile.HoyoAccounts)
 }
 ```
 
-Runnable samples live under `Examples/` in the repository (Genshin, HSR, and ZZZ, each with direct and DI variants).
+Runnable samples live under `Examples/` in the repository (Genshin, HSR, ZZZ, and Endfield, each with direct and DI variants where available).
 
 ## Caching
 
@@ -433,4 +466,4 @@ Apache 2.0. See the LICENSE file.
 
 ## Disclaimer
 
-This project is not affiliated with or endorsed by HoYoverse (COGNOSPHERE PTE. LTD.) or Enka.Network. Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero are trademarks of HoYoverse.
+This project is not affiliated with or endorsed by HoYoverse (COGNOSPHERE PTE. LTD.), Hypergryph, or Enka.Network. Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero are trademarks of HoYoverse. Arknights: Endfield is a trademark of Hypergryph.

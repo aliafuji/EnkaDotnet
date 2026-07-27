@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+* Arknights: Endfield support (`GameType.Endfield`)
+  * `GetEFRawUserResponseAsync`, `GetEFPlayerInfoAsync`, `GetEFOperatorsAsync`
+  * UID type is `long` (Endfield UIDs can be larger than `int`)
+  * Operator stats: HP, ATK, attributes, crit, elemental bonuses
+  * Gear, weapons, gems, and 4 piece suit bonuses are included in the calc
+  * `EFOperator.CalculateAllTotalStats()` / `GetFinalStats()` use stable English keys
+  * `GetAllStats()` uses localized stat names for display
+  * Operator talents via `EFOperator.Talents` (rank + icon from passive skill nodes)
+  * Profile achievements via `EFPlayerInfo.Medals` (name, level, plated icon)
+  * Image URLs on `EFOperator`: icon, round icon, splash art, silhouette, profession icon
+  * Examples in `Examples/Endfield/` (NonDI and DI)
+
 ## 2.0.0
 
 A clean-break release. There are no `[Obsolete]` compatibility aliases for the renamed members,
