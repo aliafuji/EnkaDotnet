@@ -1,12 +1,6 @@
 # Changelog
 
-## Unreleased
-
-### Fixed
-
-* HSR Elation DMG now uses meta keys `ElationDamageAddedRatio` / `ElationDamageAddedRatioBase`
-  (was incorrectly seeded as `ElationAddedRatio`, so Elation props were dropped). Exposed as
-  `HSRCharacter.ElationDamageBoost`.
+## 2.0.1
 
 ### Added
 
@@ -21,6 +15,13 @@
   * Profile achievements via `EFPlayerInfo.Medals` (name, level, plated icon)
   * Image URLs on `EFOperator`: icon, round icon, splash art, silhouette, profession icon
   * Examples in `Examples/Endfield/` (NonDI and DI)
+
+### Fixed
+
+* Endfield namecard icons: map `/ui/ef/friendlistbg/` → `/ui/ef/businesscardbg/` (API-docs path 404s on CDN).
+* HSR Elation DMG now uses meta keys `ElationDamageAddedRatio` / `ElationDamageAddedRatioBase`
+  (was incorrectly seeded as `ElationAddedRatio`, so Elation props were dropped). Exposed as
+  `HSRCharacter.ElationDamageBoost`.
 
 ## 2.0.0
 

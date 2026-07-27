@@ -487,9 +487,23 @@ namespace EnkaDotNet.Assets.EF
         {
             if (_namecards.TryGetValue(nameCardId.ToString(CultureInfo.InvariantCulture), out var card) && !string.IsNullOrEmpty(card.Icon))
             {
-                return BuildCdnUrl(card.Icon);
+                return BuildCdnUrl(NormalizeNameCardIconPath(card.Icon));
             }
             return string.Empty;
+        }
+
+        /// <summary>
+        /// API-docs namecards.json still points at /friendlistbg/, but the live CDN serves
+        /// Endfield business cards under /businesscardbg/
+        /// </summary>
+        private static string NormalizeNameCardIconPath(string iconPath)
+        {
+            if (string.IsNullOrEmpty(iconPath)) return iconPath;
+            const string wrong = "/friendlistbg/";
+            const string correct = "/businesscardbg/";
+            int idx = iconPath.IndexOf(wrong, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return iconPath;
+            return iconPath.Substring(0, idx) + correct + iconPath.Substring(idx + wrong.Length);
         }
 
         public string GetMedalName(int medalId)
