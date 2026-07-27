@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using EnkaDotNet.Assets.EF;
 using EnkaDotNet.Assets.EF.Models;
 using EnkaDotNet.Components.EF;
@@ -172,63 +173,10 @@ namespace EnkaDotNet.Utils.EF
             IEFAssets assets)
         {
             var attrs = new Dictionary<int, double>();
-
-            if (avatar.BaseAttributes != null)
-            {
-                foreach (var kvp in avatar.BaseAttributes)
-                {
-                    if (!int.TryParse(kvp.Key, out int attrId) || kvp.Value == null) continue;
-                    attrs[attrId] = kvp.Value.BaseValue + kvp.Value.AddValue * (level - 1);
-                }
-            }
-
-            if (attrNodes != null && avatar.AttributeNodes != null)
-            {
-                foreach (var node in attrNodes)
-                {
-                    if (string.IsNullOrEmpty(node)) continue;
-                    if (!avatar.AttributeNodes.TryGetValue(node, out var nodeAttrs) || nodeAttrs == null) continue;
-                    foreach (var attr in nodeAttrs)
-                    {
-                        if (!int.TryParse(attr.Key, out int attrId)) continue;
-                        attrs[attrId] = GetOrDefault(attrs, attrId) + attr.Value;
-                    }
-                }
-            }
-
-            if (avatar.PotAttributes != null)
-            {
-                foreach (var pot in avatar.PotAttributes)
-                {
-                    if (pot == null || potentialLevel < pot.Level || pot.Attrs == null) continue;
-                    foreach (var attr in pot.Attrs)
-                    {
-                        if (!int.TryParse(attr.Key, out int attrId) || attr.Value == null) continue;
-                        attrs[attrId] = GetOrDefault(attrs, attrId) + attr.Value.Value;
-                    }
-                }
-            }
-
-            var suitCounts = new Dictionary<string, int>(StringComparer.Ordinal);
-            if (equips != null)
-            {
-                foreach (var equip in equips)
-                {
-                    if (equip == null) continue;
-                    if (!string.IsNullOrEmpty(equip.SuitId))
-                    {
-                        suitCounts.TryGetValue(equip.SuitId, out int count);
-                        suitCounts[equip.SuitId] = count + 1;
-                    }
-
-                    if (equip.Attributes == null) continue;
-                    foreach (var stat in equip.Attributes)
-                    {
-                        if (stat == null) continue;
-                        attrs[stat.AttrId] = GetOrDefault(attrs, stat.AttrId) + stat.Value;
-                    }
-                }
-            }
+            ApplyBaseAttributes(attrs, avatar, level);
+            ApplyAttrNodes(attrs, avatar, attrNodes);
+            ApplyPotentialAttributes(attrs, avatar, potentialLevel);
+            var suitCounts = ApplyEquipAttributes(attrs, equips);
 
             double weaponAtk = weapon?.BaseAtk ?? 0;
             if (weapon != null)
@@ -236,19 +184,7 @@ namespace EnkaDotNet.Utils.EF
                 ApplyWeaponSkills(attrs, weapon, assets);
             }
 
-            foreach (var suitPair in suitCounts)
-            {
-                if (suitPair.Value < 4) continue;
-                var suit = assets.GetSuitInfo(suitPair.Key);
-                if (suit == null || suit.SkillId == 0) continue;
-                var skill = assets.GetSkillProp(suit.SkillId);
-                if (skill?.PropMap == null) continue;
-                foreach (var prop in skill.PropMap)
-                {
-                    if (!int.TryParse(prop.Key, out int attrId) || prop.Value?.Values == null || prop.Value.Values.Count == 0) continue;
-                    attrs[attrId] = GetOrDefault(attrs, attrId) + prop.Value.Values[0];
-                }
-            }
+            ApplySuitBonuses(attrs, suitCounts, assets);
 
             double strength = Math.Floor(GetOrDefault(attrs, (int)EFAttrType.Strength));
             double baseHp = GetLevelValue(avatar.BaseHpByLevel, level);
@@ -268,51 +204,134 @@ namespace EnkaDotNet.Utils.EF
             };
         }
 
+        private static void ApplyBaseAttributes(Dictionary<int, double> attrs, EFAvatarAssetInfo avatar, int level)
+        {
+            if (avatar.BaseAttributes == null) return;
+            foreach (var kvp in avatar.BaseAttributes)
+            {
+                if (!int.TryParse(kvp.Key, out int attrId) || kvp.Value == null) continue;
+                attrs[attrId] = kvp.Value.BaseValue + kvp.Value.AddValue * (level - 1);
+            }
+        }
+
+        private static void ApplyAttrNodes(Dictionary<int, double> attrs, EFAvatarAssetInfo avatar, IReadOnlyList<string> attrNodes)
+        {
+            if (attrNodes == null || avatar.AttributeNodes == null) return;
+            foreach (var node in attrNodes.Where(n => !string.IsNullOrEmpty(n)))
+            {
+                if (!avatar.AttributeNodes.TryGetValue(node, out var nodeAttrs) || nodeAttrs == null) continue;
+                foreach (var attr in nodeAttrs)
+                {
+                    if (!int.TryParse(attr.Key, out int attrId)) continue;
+                    attrs[attrId] = GetOrDefault(attrs, attrId) + attr.Value;
+                }
+            }
+        }
+
+        private static void ApplyPotentialAttributes(Dictionary<int, double> attrs, EFAvatarAssetInfo avatar, int potentialLevel)
+        {
+            if (avatar.PotAttributes == null) return;
+            foreach (var pot in avatar.PotAttributes.Where(p => p != null && potentialLevel >= p.Level && p.Attrs != null))
+            {
+                foreach (var attr in pot.Attrs)
+                {
+                    if (!int.TryParse(attr.Key, out int attrId) || attr.Value == null) continue;
+                    attrs[attrId] = GetOrDefault(attrs, attrId) + attr.Value.Value;
+                }
+            }
+        }
+
+        private static Dictionary<string, int> ApplyEquipAttributes(Dictionary<int, double> attrs, IReadOnlyList<EFEquip> equips)
+        {
+            var suitCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+            if (equips == null) return suitCounts;
+
+            foreach (var equip in equips.Where(e => e != null))
+            {
+                if (!string.IsNullOrEmpty(equip.SuitId))
+                {
+                    suitCounts.TryGetValue(equip.SuitId, out int count);
+                    suitCounts[equip.SuitId] = count + 1;
+                }
+
+                if (equip.Attributes == null) continue;
+                foreach (var stat in equip.Attributes.Where(s => s != null))
+                {
+                    attrs[stat.AttrId] = GetOrDefault(attrs, stat.AttrId) + stat.Value;
+                }
+            }
+
+            return suitCounts;
+        }
+
+        private static void ApplySuitBonuses(Dictionary<int, double> attrs, Dictionary<string, int> suitCounts, IEFAssets assets)
+        {
+            foreach (var suitPair in suitCounts.Where(pair => pair.Value >= 4))
+            {
+                var suit = assets.GetSuitInfo(suitPair.Key);
+                if (suit == null || suit.SkillId == 0) continue;
+                var skill = assets.GetSkillProp(suit.SkillId);
+                if (skill?.PropMap == null) continue;
+                foreach (var prop in skill.PropMap)
+                {
+                    if (!int.TryParse(prop.Key, out int attrId) || prop.Value?.Values == null || prop.Value.Values.Count == 0) continue;
+                    attrs[attrId] = GetOrDefault(attrs, attrId) + prop.Value.Values[0];
+                }
+            }
+        }
+
         private static void ApplyWeaponSkills(Dictionary<int, double> attrs, EFWeapon weapon, IEFAssets assets)
         {
             var weaponInfo = assets.GetWeaponInfo(weapon.Id);
             if (weaponInfo?.SkillList == null || weaponInfo.SkillList.Count == 0) return;
 
             var bounds = assets.GetBreakBounds(weaponInfo.BreakthroughTemplateId, weapon.BreakthroughLevel);
-            var termsByTag = new Dictionary<string, int>(StringComparer.Ordinal);
-            if (weapon.Gem?.Terms != null)
-            {
-                foreach (var term in weapon.Gem.Terms)
-                {
-                    if (term == null || string.IsNullOrEmpty(term.TagId)) continue;
-                    termsByTag[term.TagId] = term.Cost;
-                }
-            }
+            var termsByTag = BuildTermsByTag(weapon);
 
             for (int i = 0; i < weaponInfo.SkillList.Count; i++)
             {
-                int skillId = weaponInfo.SkillList[i];
-                var skill = assets.GetSkillProp(skillId);
+                var skill = assets.GetSkillProp(weaponInfo.SkillList[i]);
                 if (skill?.PropMap == null) continue;
 
-                int lowerBound = 0;
-                if (bounds != null && i < bounds.Count && bounds[i] != null)
-                {
-                    lowerBound = bounds[i].LowerBound;
-                }
-
-                int idx;
-                if (!string.IsNullOrEmpty(skill.TagId) && termsByTag.TryGetValue(skill.TagId, out int cost))
-                {
-                    idx = lowerBound + cost - 1;
-                }
-                else
-                {
-                    idx = lowerBound - 1;
-                }
-
+                int idx = ResolveWeaponSkillIndex(bounds, i, skill.TagId, termsByTag);
                 foreach (var prop in skill.PropMap)
                 {
                     if (!int.TryParse(prop.Key, out int attrId) || prop.Value?.Values == null || prop.Value.Values.Count == 0) continue;
-                    double value = GetValueAt(prop.Value.Values, idx);
-                    attrs[attrId] = GetOrDefault(attrs, attrId) + value;
+                    attrs[attrId] = GetOrDefault(attrs, attrId) + GetValueAt(prop.Value.Values, idx);
                 }
             }
+        }
+
+        private static Dictionary<string, int> BuildTermsByTag(EFWeapon weapon)
+        {
+            var termsByTag = new Dictionary<string, int>(StringComparer.Ordinal);
+            if (weapon.Gem?.Terms == null) return termsByTag;
+
+            foreach (var term in weapon.Gem.Terms.Where(t => t != null && !string.IsNullOrEmpty(t.TagId)))
+            {
+                termsByTag[term.TagId] = term.Cost;
+            }
+            return termsByTag;
+        }
+
+        private static int ResolveWeaponSkillIndex(
+            IReadOnlyList<EFSkillLevelBound> bounds,
+            int skillIndex,
+            string tagId,
+            Dictionary<string, int> termsByTag)
+        {
+            int lowerBound = 0;
+            if (bounds != null && skillIndex < bounds.Count && bounds[skillIndex] != null)
+            {
+                lowerBound = bounds[skillIndex].LowerBound;
+            }
+
+            if (!string.IsNullOrEmpty(tagId) && termsByTag.TryGetValue(tagId, out int cost))
+            {
+                return lowerBound + cost - 1;
+            }
+
+            return lowerBound - 1;
         }
 
         private static double GetLevelValue(IReadOnlyList<double> values, int level)

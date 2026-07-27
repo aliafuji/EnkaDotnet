@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using EnkaDotNet.Assets.EF;
+using EnkaDotNet.Assets.EF.Models;
 using EnkaDotNet.Components.EF;
 using EnkaDotNet.Enums.EF;
 using EnkaDotNet.Models.EF;
@@ -28,60 +29,13 @@ namespace EnkaDotNet.Utils.EF
             if (response.PlayerInfo == null) throw new ArgumentException("PlayerInfo is null", nameof(response));
 
             var card = response.PlayerInfo.BusinessCard;
-            long uid = 0;
-            if (!string.IsNullOrEmpty(response.Uid))
-            {
-                long.TryParse(response.Uid, NumberStyles.Integer, CultureInfo.InvariantCulture, out uid);
-            }
-            if (uid == 0 && !string.IsNullOrEmpty(card?.PlatformRoleId))
-            {
-                long.TryParse(card.PlatformRoleId, NumberStyles.Integer, CultureInfo.InvariantCulture, out uid);
-            }
-
-            var showcaseOperators = new List<EFOperator>();
-            if (response.PlayerInfo.CharData != null)
-            {
-                foreach (var charData in response.PlayerInfo.CharData)
-                {
-                    if (charData == null) continue;
-                    var op = MapOperator(charData);
-                    if (op != null) showcaseOperators.Add(op);
-                }
-            }
-
-            var charList = new List<EFCharListEntry>();
-            if (card?.CharList != null)
-            {
-                foreach (var entry in card.CharList)
-                {
-                    if (entry == null) continue;
-                    int? resolved = _assets.ResolveStrIdToTemplateId(entry.TemplateId);
-                    string name = resolved.HasValue ? _assets.GetOperatorName(resolved.Value) : entry.TemplateId ?? string.Empty;
-                    string icon = resolved.HasValue
-                        ? _assets.GetOperatorIconUrl(resolved.Value)
-                        : _assets.GetOperatorIconUrl(entry.TemplateId);
-
-                    charList.Add(new EFCharListEntry
-                    {
-                        TemplateId = entry.TemplateId ?? string.Empty,
-                        ResolvedTemplateId = resolved,
-                        Name = name,
-                        Level = entry.Level,
-                        PotentialLevel = entry.PotentialLevel,
-                        IconUrl = icon
-                    });
-                }
-            }
-
-            var medals = MapMedals(card?.Achievement);
-
             return new EFPlayerInfo
             {
                 Nickname = card?.Name ?? string.Empty,
                 AdminLevel = card?.AdventureLevel ?? 0,
                 EndfieldLevel = card?.WorldLevel ?? 0,
                 Signature = card?.Signature ?? string.Empty,
-                Uid = uid,
+                Uid = ResolveUid(response.Uid, card?.PlatformRoleId),
                 Region = response.Region ?? string.Empty,
                 Ttl = response.Ttl,
                 ProfilePictureId = card?.UserAvatarId ?? 0,
@@ -91,10 +45,64 @@ namespace EnkaDotNet.Utils.EF
                 CharCount = card?.Statistic?.CharNum ?? 0,
                 WeaponCount = card?.Statistic?.WeaponNum ?? 0,
                 DocCount = card?.Statistic?.DocNum ?? 0,
-                Medals = medals,
-                ShowcaseOperators = showcaseOperators,
-                CharList = charList
+                Medals = MapMedals(card?.Achievement),
+                ShowcaseOperators = MapShowcaseOperators(response.PlayerInfo.CharData),
+                CharList = MapCharList(card?.CharList)
             };
+        }
+
+        private static long ResolveUid(string responseUid, string platformRoleId)
+        {
+            if (!string.IsNullOrEmpty(responseUid)
+                && long.TryParse(responseUid, NumberStyles.Integer, CultureInfo.InvariantCulture, out long uid)
+                && uid != 0)
+            {
+                return uid;
+            }
+
+            if (!string.IsNullOrEmpty(platformRoleId)
+                && long.TryParse(platformRoleId, NumberStyles.Integer, CultureInfo.InvariantCulture, out long fromRole))
+            {
+                return fromRole;
+            }
+
+            return 0;
+        }
+
+        private List<EFOperator> MapShowcaseOperators(List<EFCharDataModel> charData)
+        {
+            var showcaseOperators = new List<EFOperator>();
+            if (charData == null) return showcaseOperators;
+
+            foreach (var entry in charData.Where(c => c != null))
+            {
+                var op = MapOperator(entry);
+                if (op != null) showcaseOperators.Add(op);
+            }
+            return showcaseOperators;
+        }
+
+        private List<EFCharListEntry> MapCharList(List<EFCharListEntryModel> entries)
+        {
+            var charList = new List<EFCharListEntry>();
+            if (entries == null) return charList;
+
+            foreach (var entry in entries.Where(e => e != null))
+            {
+                int? resolved = _assets.ResolveStrIdToTemplateId(entry.TemplateId);
+                charList.Add(new EFCharListEntry
+                {
+                    TemplateId = entry.TemplateId ?? string.Empty,
+                    ResolvedTemplateId = resolved,
+                    Name = resolved.HasValue ? _assets.GetOperatorName(resolved.Value) : entry.TemplateId ?? string.Empty,
+                    Level = entry.Level,
+                    PotentialLevel = entry.PotentialLevel,
+                    IconUrl = resolved.HasValue
+                        ? _assets.GetOperatorIconUrl(resolved.Value)
+                        : _assets.GetOperatorIconUrl(entry.TemplateId)
+                });
+            }
+            return charList;
         }
 
         private List<EFMedal> MapMedals(EFAchievementModel achievement)
@@ -105,18 +113,14 @@ namespace EnkaDotNet.Utils.EF
                 return result;
             }
 
-            var infoById = new Dictionary<int, EFAchievementInfoModel>();
-            foreach (var info in achievement.InfoList)
-            {
-                if (info == null) continue;
-                infoById[info.AchieveNumId] = info;
-            }
+            var infoById = achievement.InfoList
+                .Where(info => info != null)
+                .ToDictionary(info => info.AchieveNumId);
 
             if (achievement.Display != null && achievement.Display.Count > 0)
             {
-                foreach (var slot in achievement.Display.OrderBy(d => d.Key))
+                foreach (var slot in achievement.Display.Where(d => d != null).OrderBy(d => d.Key))
                 {
-                    if (slot == null) continue;
                     if (!infoById.TryGetValue(slot.Value, out var info)) continue;
                     result.Add(CreateMedal(info, slot.Key));
                     infoById.Remove(slot.Value);
@@ -293,48 +297,10 @@ namespace EnkaDotNet.Utils.EF
             var result = new List<EFEquip>();
             if (equipEntries == null) return result;
 
-            foreach (var entry in equipEntries)
+            foreach (var entry in equipEntries.Where(e => e?.Value != null))
             {
-                if (entry?.Value == null) continue;
                 var item = _assets.GetEquipItem(entry.Value.TemplateId);
-                var enhanceMap = new Dictionary<int, int>();
-                if (entry.Value.Enhance != null)
-                {
-                    foreach (var enh in entry.Value.Enhance)
-                    {
-                        enhanceMap[enh.Key] = enh.Value;
-                    }
-                }
-
-                var attributes = new List<EFStat>();
-                if (item?.AttrModifiers != null)
-                {
-                    for (int i = 0; i < item.AttrModifiers.Count; i++)
-                    {
-                        var mod = item.AttrModifiers[i];
-                        int enhanceLevel = enhanceMap.TryGetValue(i, out int el) ? el : 0;
-                        double value = 0;
-                        if (mod.Values != null && mod.Values.Count > 0)
-                        {
-                            int idx = enhanceLevel;
-                            if (idx < 0) idx = 0;
-                            if (idx >= mod.Values.Count) idx = mod.Values.Count - 1;
-                            value = mod.Values[idx];
-                        }
-
-                        bool raw = _options.UseRawStatValues;
-                        attributes.Add(new EFStat
-                        {
-                            AttrId = mod.AttrType,
-                            Type = EFStatsCalculator.MapAttrType(mod.AttrType),
-                            Name = EFStatsHelpers.GetAttrName(mod.AttrType, _assets),
-                            Value = value,
-                            FormattedValue = EFStatsHelpers.FormatAttrValue(mod.AttrType, value, raw),
-                            EnhanceLevel = enhanceLevel
-                        });
-                    }
-                }
-
+                var enhanceMap = BuildEnhanceMap(entry.Value.Enhance);
                 string suitId = item?.SuitId ?? string.Empty;
                 var slot = (EFEquipSlot)entry.Key;
                 result.Add(new EFEquip
@@ -347,108 +313,64 @@ namespace EnkaDotNet.Utils.EF
                     SuitIconUrl = _assets.GetSuitIconUrl(suitId),
                     Rarity = item?.Rarity ?? 0,
                     IconUrl = _assets.GetEquipIconUrl(entry.Value.TemplateId),
-                    Attributes = attributes
+                    Attributes = MapEquipAttributes(item, enhanceMap)
                 });
             }
 
             return result;
         }
 
+        private static Dictionary<int, int> BuildEnhanceMap(List<EFIntKeyValueModel> enhance)
+        {
+            var enhanceMap = new Dictionary<int, int>();
+            if (enhance == null) return enhanceMap;
+            foreach (var enh in enhance)
+            {
+                enhanceMap[enh.Key] = enh.Value;
+            }
+            return enhanceMap;
+        }
+
+        private List<EFStat> MapEquipAttributes(EFEquipItemInfo item, Dictionary<int, int> enhanceMap)
+        {
+            var attributes = new List<EFStat>();
+            if (item?.AttrModifiers == null) return attributes;
+
+            bool raw = _options.UseRawStatValues;
+            for (int i = 0; i < item.AttrModifiers.Count; i++)
+            {
+                var mod = item.AttrModifiers[i];
+                int enhanceLevel = enhanceMap.TryGetValue(i, out int el) ? el : 0;
+                double value = GetClampedValue(mod.Values, enhanceLevel);
+                attributes.Add(new EFStat
+                {
+                    AttrId = mod.AttrType,
+                    Type = EFStatsCalculator.MapAttrType(mod.AttrType),
+                    Name = EFStatsHelpers.GetAttrName(mod.AttrType, _assets),
+                    Value = value,
+                    FormattedValue = EFStatsHelpers.FormatAttrValue(mod.AttrType, value, raw),
+                    EnhanceLevel = enhanceLevel
+                });
+            }
+            return attributes;
+        }
+
+        private static double GetClampedValue(IReadOnlyList<double> values, int index)
+        {
+            if (values == null || values.Count == 0) return 0;
+            int idx = index;
+            if (idx < 0) idx = 0;
+            if (idx >= values.Count) idx = values.Count - 1;
+            return values[idx];
+        }
+
         private EFWeapon MapWeapon(EFWeaponModel model)
         {
             var info = _assets.GetWeaponInfo(model.TemplateId);
             double weaponAtk = info != null ? _assets.GetWeaponAtk(info.LevelTemplateId, model.WeaponLv) : 0;
-
-            EFGem gem = null;
-            var subStats = new List<EFStat>();
-            if (model.AttachedGem != null)
-            {
-                var terms = new List<EFGemTerm>();
-                if (model.AttachedGem.Terms != null)
-                {
-                    foreach (var term in model.AttachedGem.Terms)
-                    {
-                        var termInfo = _assets.GetGemTermTag(term.TermNumId);
-                        terms.Add(new EFGemTerm
-                        {
-                            TermNumId = term.TermNumId,
-                            Cost = term.Cost,
-                            TermType = termInfo?.TermType ?? 0,
-                            TagId = termInfo?.TagId ?? string.Empty,
-                            TagIconUrl = _assets.GetGemTermIconUrl(termInfo?.TagIcon),
-                            TagName = !string.IsNullOrEmpty(termInfo?.TagNameHash)
-                                ? _assets.GetLocalizedText(termInfo.TagNameHash)
-                                : string.Empty
-                        });
-                    }
-                }
-
-                gem = new EFGem
-                {
-                    Id = model.AttachedGem.TemplateId,
-                    IconUrl = _assets.GetGemIconUrl(model.AttachedGem.TemplateId),
-                    OverlayIconUrl = ResolveGemOverlayIconUrl(terms),
-                    DomainId = model.AttachedGem.DomainId,
-                    TotalCost = model.AttachedGem.TotalCost,
-                    Terms = terms
-                };
-
-                if (info?.SkillList != null)
-                {
-                    var bounds = _assets.GetBreakBounds(info.BreakthroughTemplateId, model.BreakthroughLv);
-                    var termsByTag = new Dictionary<string, int>(StringComparer.Ordinal);
-                    foreach (var term in terms)
-                    {
-                        if (!string.IsNullOrEmpty(term.TagId)) termsByTag[term.TagId] = term.Cost;
-                    }
-
-                    for (int i = 0; i < info.SkillList.Count; i++)
-                    {
-                        var skill = _assets.GetSkillProp(info.SkillList[i]);
-                        if (skill?.PropMap == null) continue;
-                        int lowerBound = (bounds != null && i < bounds.Count && bounds[i] != null) ? bounds[i].LowerBound : 0;
-                        int idx = (!string.IsNullOrEmpty(skill.TagId) && termsByTag.TryGetValue(skill.TagId, out int cost))
-                            ? lowerBound + cost - 1
-                            : lowerBound - 1;
-
-                        foreach (var prop in skill.PropMap)
-                        {
-                            if (!int.TryParse(prop.Key, NumberStyles.Integer, CultureInfo.InvariantCulture, out int attrId)
-                                || prop.Value?.Values == null || prop.Value.Values.Count == 0)
-                            {
-                                continue;
-                            }
-
-                            int clampIdx = idx;
-                            if (clampIdx < 0) clampIdx = 0;
-                            if (clampIdx >= prop.Value.Values.Count) clampIdx = prop.Value.Values.Count - 1;
-                            double subValue = prop.Value.Values[clampIdx];
-                            bool raw = _options.UseRawStatValues;
-                            subStats.Add(new EFStat
-                            {
-                                AttrId = attrId,
-                                Type = EFStatsCalculator.MapAttrType(attrId),
-                                Name = EFStatsHelpers.GetAttrName(attrId, _assets),
-                                Value = subValue,
-                                FormattedValue = EFStatsHelpers.FormatAttrValue(attrId, subValue, raw)
-                            });
-                        }
-                    }
-                }
-            }
-
-            int curveLength = 0;
-            if (info != null)
-            {
-                var meta = _assets.GetWeaponMeta();
-                if (meta?.LevelCurves != null && !string.IsNullOrEmpty(info.LevelTemplateId)
-                    && meta.LevelCurves.TryGetValue(info.LevelTemplateId, out var curve) && curve != null)
-                {
-                    curveLength = curve.Count;
-                }
-            }
-
-            int maxLevel = EFStatsHelpers.GetWeaponMaxLevel(model.BreakthroughLv, curveLength);
+            var gem = MapGem(model.AttachedGem);
+            var subStats = gem != null ? MapWeaponSubStats(info, model, gem.Terms) : new List<EFStat>();
+            int maxLevel = EFStatsHelpers.GetWeaponMaxLevel(model.BreakthroughLv, GetWeaponCurveLength(info));
 
             return new EFWeapon
             {
@@ -465,6 +387,102 @@ namespace EnkaDotNet.Utils.EF
                 Gem = gem,
                 SubStats = subStats
             };
+        }
+
+        private EFGem MapGem(EFGemModel attachedGem)
+        {
+            if (attachedGem == null) return null;
+
+            var terms = MapGemTerms(attachedGem.Terms);
+            return new EFGem
+            {
+                Id = attachedGem.TemplateId,
+                IconUrl = _assets.GetGemIconUrl(attachedGem.TemplateId),
+                OverlayIconUrl = ResolveGemOverlayIconUrl(terms),
+                DomainId = attachedGem.DomainId,
+                TotalCost = attachedGem.TotalCost,
+                Terms = terms
+            };
+        }
+
+        private List<EFGemTerm> MapGemTerms(List<EFGemTermModel> termModels)
+        {
+            var terms = new List<EFGemTerm>();
+            if (termModels == null) return terms;
+
+            foreach (var term in termModels)
+            {
+                var termInfo = _assets.GetGemTermTag(term.TermNumId);
+                terms.Add(new EFGemTerm
+                {
+                    TermNumId = term.TermNumId,
+                    Cost = term.Cost,
+                    TermType = termInfo?.TermType ?? 0,
+                    TagId = termInfo?.TagId ?? string.Empty,
+                    TagIconUrl = _assets.GetGemTermIconUrl(termInfo?.TagIcon),
+                    TagName = !string.IsNullOrEmpty(termInfo?.TagNameHash)
+                        ? _assets.GetLocalizedText(termInfo.TagNameHash)
+                        : string.Empty
+                });
+            }
+            return terms;
+        }
+
+        private List<EFStat> MapWeaponSubStats(EFWeaponAssetInfo info, EFWeaponModel model, IReadOnlyList<EFGemTerm> terms)
+        {
+            var subStats = new List<EFStat>();
+            if (info?.SkillList == null) return subStats;
+
+            var bounds = _assets.GetBreakBounds(info.BreakthroughTemplateId, model.BreakthroughLv);
+            var termsByTag = terms
+                .Where(term => !string.IsNullOrEmpty(term.TagId))
+                .ToDictionary(term => term.TagId, term => term.Cost, StringComparer.Ordinal);
+
+            bool raw = _options.UseRawStatValues;
+            for (int i = 0; i < info.SkillList.Count; i++)
+            {
+                var skill = _assets.GetSkillProp(info.SkillList[i]);
+                if (skill?.PropMap == null) continue;
+
+                int lowerBound = (bounds != null && i < bounds.Count && bounds[i] != null) ? bounds[i].LowerBound : 0;
+                int idx = (!string.IsNullOrEmpty(skill.TagId) && termsByTag.TryGetValue(skill.TagId, out int cost))
+                    ? lowerBound + cost - 1
+                    : lowerBound - 1;
+
+                foreach (var prop in skill.PropMap)
+                {
+                    if (!int.TryParse(prop.Key, NumberStyles.Integer, CultureInfo.InvariantCulture, out int attrId)
+                        || prop.Value?.Values == null || prop.Value.Values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    double subValue = GetClampedValue(prop.Value.Values, idx);
+                    subStats.Add(new EFStat
+                    {
+                        AttrId = attrId,
+                        Type = EFStatsCalculator.MapAttrType(attrId),
+                        Name = EFStatsHelpers.GetAttrName(attrId, _assets),
+                        Value = subValue,
+                        FormattedValue = EFStatsHelpers.FormatAttrValue(attrId, subValue, raw)
+                    });
+                }
+            }
+
+            return subStats;
+        }
+
+        private int GetWeaponCurveLength(EFWeaponAssetInfo info)
+        {
+            if (info == null || string.IsNullOrEmpty(info.LevelTemplateId)) return 0;
+            var meta = _assets.GetWeaponMeta();
+            if (meta?.LevelCurves != null
+                && meta.LevelCurves.TryGetValue(info.LevelTemplateId, out var curve)
+                && curve != null)
+            {
+                return curve.Count;
+            }
+            return 0;
         }
 
         private IReadOnlyList<EFSkill> MapSkills(EFSkillInfoModel skillInfo, int operatorId)

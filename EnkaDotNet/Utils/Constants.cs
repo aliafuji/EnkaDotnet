@@ -69,12 +69,15 @@ namespace EnkaDotNet.Utils
         /// </summary>
         public const string DefaultUserAgent = "EnkaDotNet/1.0";
 
+        private const string TextMapFileName = "text_map.json";
+        private const string EfStoreBaseUrl = "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/";
+
         /// <summary>
         /// URLs for Genshin Impact asset files
         /// </summary>
         public static readonly IReadOnlyDictionary<string, string> GenshinAssetFileUrls = new Dictionary<string, string>()
         {
-            { "text_map.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/text_map.json" },
+            { TextMapFileName, "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/text_map.json" },
             { "characters.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/characters.json" },
             { "namecards.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/namecards.json" },
             { "consts.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/consts.json" },
@@ -87,7 +90,7 @@ namespace EnkaDotNet.Utils
         /// </summary>
         public static readonly IReadOnlyDictionary<string, string> HSRAssetFileUrls = new Dictionary<string, string>()
         {
-            { "text_map.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/hsr/hsr.json" },
+            { TextMapFileName, "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/hsr/hsr.json" },
             { "characters.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_characters.json" },
             { "lightcones.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_weps.json" },
             { "relics.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_relics.json" },
@@ -104,7 +107,7 @@ namespace EnkaDotNet.Utils
         /// </summary>
         public static readonly IReadOnlyDictionary<string, string> ZZZAssetFileUrls = new Dictionary<string, string>()
         {
-            { "text_map.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/locs.json" },
+            { TextMapFileName, "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/locs.json" },
             { "avatars.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/avatars.json" },
             { "weapons.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/weapons.json" },
             { "equipments.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/equipments.json" },
@@ -123,16 +126,16 @@ namespace EnkaDotNet.Utils
         /// </summary>
         public static readonly IReadOnlyDictionary<string, string> EFAssetFileUrls = new Dictionary<string, string>()
         {
-            { "text_map.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/locs.json" },
-            { "avatars.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/avatars.json" },
-            { "weapons.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/weapons.json" },
-            { "equips.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/equips.json" },
-            { "gems.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/gems.json" },
-            { "skills.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/skills.json" },
-            { "weapon_meta.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/weapon_meta.json" },
-            { "pfps.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/pfps.json" },
-            { "namecards.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/namecards.json" },
-            { "medals.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/medals.json" }
+            { TextMapFileName, EfStoreBaseUrl + "locs.json" },
+            { "avatars.json", EfStoreBaseUrl + "avatars.json" },
+            { "weapons.json", EfStoreBaseUrl + "weapons.json" },
+            { "equips.json", EfStoreBaseUrl + "equips.json" },
+            { "gems.json", EfStoreBaseUrl + "gems.json" },
+            { "skills.json", EfStoreBaseUrl + "skills.json" },
+            { "weapon_meta.json", EfStoreBaseUrl + "weapon_meta.json" },
+            { "pfps.json", EfStoreBaseUrl + "pfps.json" },
+            { "namecards.json", EfStoreBaseUrl + "namecards.json" },
+            { "medals.json", EfStoreBaseUrl + "medals.json" }
         };
     }
 }

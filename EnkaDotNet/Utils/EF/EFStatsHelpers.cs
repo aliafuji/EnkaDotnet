@@ -9,6 +9,18 @@ namespace EnkaDotNet.Utils.EF
 {
     public static class EFStatsHelpers
     {
+        private const string StatCriticalRate = "Critical Rate";
+        private const string StatCriticalDmg = "Critical DMG";
+        private const string StatTreatmentReceivedBonus = "Treatment Received Bonus";
+        private const string StatPhysicalDmgBonus = "Physical DMG Bonus";
+        private const string StatHeatDmgBonus = "Heat DMG Bonus";
+        private const string StatElectricDmgBonus = "Electric DMG Bonus";
+        private const string StatCryoDmgBonus = "Cryo DMG Bonus";
+        private const string StatNatureDmgBonus = "Nature DMG Bonus";
+        private const string StatAetherDmgBonus = "Æther DMG Bonus";
+        private const string StatUltimateDmgBonus = "Ultimate DMG Bonus";
+        private const string StatArtsIntensity = "Arts Intensity";
+
         private static readonly HashSet<int> _percentageAttrIds = new HashSet<int>
         {
             9, 17, 25, 29, 44, 49, 50, 51, 52, 53, 54, 55
@@ -41,30 +53,30 @@ namespace EnkaDotNet.Utils.EF
             [1] = "HP",
             [2] = "Attack",
             [3] = "Defense",
-            [9] = "Critical Rate",
-            [17] = "Arts Intensity",
+            [9] = StatCriticalRate,
+            [17] = StatArtsIntensity,
             [29] = "Treatment Bonus",
             [39] = "Strength",
             [40] = "Agility",
             [41] = "Intellect",
             [42] = "Will",
-            [44] = "Ultimate DMG Bonus",
-            [50] = "Physical DMG Bonus",
-            [51] = "Heat DMG Bonus",
-            [52] = "Electric DMG Bonus",
-            [53] = "Cryo DMG Bonus",
-            [54] = "Nature DMG Bonus",
-            [55] = "Æther DMG Bonus",
-            [87] = "Arts Intensity"
+            [44] = StatUltimateDmgBonus,
+            [50] = StatPhysicalDmgBonus,
+            [51] = StatHeatDmgBonus,
+            [52] = StatElectricDmgBonus,
+            [53] = StatCryoDmgBonus,
+            [54] = StatNatureDmgBonus,
+            [55] = StatAetherDmgBonus,
+            [87] = StatArtsIntensity
         };
 
         private static readonly Dictionary<string, string> _elementDamageNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["Cryst"] = "Cryo DMG Bonus",
-            ["Fire"] = "Heat DMG Bonus",
-            ["Pulse"] = "Electric DMG Bonus",
-            ["Natural"] = "Nature DMG Bonus",
-            ["Physical"] = "Physical DMG Bonus"
+            ["Cryst"] = StatCryoDmgBonus,
+            ["Fire"] = StatHeatDmgBonus,
+            ["Pulse"] = StatElectricDmgBonus,
+            ["Natural"] = StatNatureDmgBonus,
+            ["Physical"] = StatPhysicalDmgBonus
         };
 
         private static readonly Dictionary<string, string> _elementDamageLocKeys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -85,30 +97,30 @@ namespace EnkaDotNet.Utils.EF
             ["Intellect"] = "Wisd",
             ["Will"] = "Will",
             ["Defense"] = "Def",
-            ["Critical Rate"] = "CriticalRate",
-            ["Critical DMG"] = "CriticalDamageIncrease",
-            ["Treatment Received Bonus"] = "HealTakenIncrease",
-            ["Cryo DMG Bonus"] = "CrystDamageIncrease",
-            ["Heat DMG Bonus"] = "FireDamageIncrease",
-            ["Electric DMG Bonus"] = "PulseDamageIncrease",
-            ["Nature DMG Bonus"] = "NaturalDamageIncrease",
-            ["Physical DMG Bonus"] = "PhysicalDamageIncrease",
-            ["Æther DMG Bonus"] = "EtherDamageIncrease"
+            [StatCriticalRate] = "CriticalRate",
+            [StatCriticalDmg] = "CriticalDamageIncrease",
+            [StatTreatmentReceivedBonus] = "HealTakenIncrease",
+            [StatCryoDmgBonus] = "CrystDamageIncrease",
+            [StatHeatDmgBonus] = "FireDamageIncrease",
+            [StatElectricDmgBonus] = "PulseDamageIncrease",
+            [StatNatureDmgBonus] = "NaturalDamageIncrease",
+            [StatPhysicalDmgBonus] = "PhysicalDamageIncrease",
+            [StatAetherDmgBonus] = "EtherDamageIncrease"
         };
 
         private static readonly HashSet<string> _percentageStatKeys = new HashSet<string>(StringComparer.Ordinal)
         {
-            "Critical Rate",
-            "Critical DMG",
-            "Treatment Received Bonus",
-            "Cryo DMG Bonus",
-            "Heat DMG Bonus",
-            "Electric DMG Bonus",
-            "Nature DMG Bonus",
-            "Physical DMG Bonus",
-            "Æther DMG Bonus",
-            "Ultimate DMG Bonus",
-            "Arts Intensity"
+            StatCriticalRate,
+            StatCriticalDmg,
+            StatTreatmentReceivedBonus,
+            StatCryoDmgBonus,
+            StatHeatDmgBonus,
+            StatElectricDmgBonus,
+            StatNatureDmgBonus,
+            StatPhysicalDmgBonus,
+            StatAetherDmgBonus,
+            StatUltimateDmgBonus,
+            StatArtsIntensity
         };
 
         public static bool IsPercentageAttr(int attrId)
@@ -144,35 +156,46 @@ namespace EnkaDotNet.Utils.EF
             AddStat(result, "Intellect", Math.Floor(GetAttr(calculated.Attrs, EFAttrType.Intellect)), assets, isPercentage: false);
             AddStat(result, "Will", will, assets, isPercentage: false);
             AddStat(result, "Defense", GetAttr(calculated.Attrs, EFAttrType.Defense), assets, isPercentage: false);
-            AddStat(result, "Critical Rate", GetAttr(calculated.Attrs, EFAttrType.CritRate) * 100.0, assets, isPercentage: true);
-            AddStat(result, "Critical DMG", 50.0, assets, isPercentage: true);
-            AddStat(result, "Treatment Received Bonus", will * 0.1, assets, isPercentage: true);
+            AddStat(result, StatCriticalRate, GetAttr(calculated.Attrs, EFAttrType.CritRate) * 100.0, assets, isPercentage: true);
+            AddStat(result, StatCriticalDmg, 50.0, assets, isPercentage: true);
+            AddStat(result, StatTreatmentReceivedBonus, will * 0.1, assets, isPercentage: true);
 
-            string elementKey = GetElementDamageBonusKey(op.Element);
-            double elementBonus = 0;
-            if (calculated.Attrs.TryGetValue((int)EFAttrType.CryoDMG, out double cryst) && cryst != 0)
-            {
-                elementBonus = cryst * 100.0;
-            }
-            else
-            {
-                foreach (int dmgAttr in new[] { 50, 51, 52, 53, 54, 55 })
-                {
-                    if (calculated.Attrs.TryGetValue(dmgAttr, out double bonus) && bonus != 0)
-                    {
-                        elementKey = _attrFallbackNames.TryGetValue(dmgAttr, out string name) ? name : elementKey;
-                        elementBonus = bonus * 100.0;
-                        break;
-                    }
-                }
-            }
+            AddElementDamageBonus(result, op.Element, calculated.Attrs, assets);
+            return result;
+        }
 
+        private static void AddElementDamageBonus(
+            Dictionary<string, EFStatTotal> result,
+            string element,
+            Dictionary<int, double> attrs,
+            IEFAssets assets)
+        {
+            string elementKey = GetElementDamageBonusKey(element);
+            double elementBonus = ResolveElementBonus(attrs, ref elementKey);
             if (elementBonus != 0)
             {
                 AddStat(result, elementKey, elementBonus, assets, isPercentage: true);
             }
+        }
 
-            return result;
+        private static double ResolveElementBonus(Dictionary<int, double> attrs, ref string elementKey)
+        {
+            if (attrs.TryGetValue((int)EFAttrType.CryoDMG, out double cryst) && cryst != 0)
+            {
+                return cryst * 100.0;
+            }
+
+            foreach (int dmgAttr in new[] { 50, 51, 52, 53, 54, 55 })
+            {
+                if (!attrs.TryGetValue(dmgAttr, out double bonus) || bonus == 0) continue;
+                if (_attrFallbackNames.TryGetValue(dmgAttr, out string name))
+                {
+                    elementKey = name;
+                }
+                return bonus * 100.0;
+            }
+
+            return 0;
         }
 
         public static string GetLocalizedStatKey(string englishKey, IEFAssets assets = null)

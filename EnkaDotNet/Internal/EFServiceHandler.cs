@@ -15,16 +15,14 @@ namespace EnkaDotNet.Internal
 {
     internal class EFServiceHandler
     {
-        private readonly IEFAssets _assets;
         private readonly EFDataMapper _dataMapper;
-        private readonly EnkaClientOptions _options;
         private readonly IHttpHelper _httpHelper;
         private readonly ILogger _logger;
 
         public EFServiceHandler(IEFAssets assets, EnkaClientOptions options, IHttpHelper httpHelper, ILogger logger)
         {
-            _assets = assets ?? throw new ArgumentNullException(nameof(assets));
-            _options = options ?? throw new ArgumentNullException(nameof(options));
+            if (assets == null) throw new ArgumentNullException(nameof(assets));
+            if (options == null) throw new ArgumentNullException(nameof(options));
             _httpHelper = httpHelper ?? throw new ArgumentNullException(nameof(httpHelper));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _dataMapper = new EFDataMapper(assets, options);

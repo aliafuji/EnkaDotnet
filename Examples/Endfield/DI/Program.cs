@@ -1,5 +1,4 @@
 using EnkaDotNet;
-using EnkaDotNet.Caching;
 using EnkaDotNet.Components.EF;
 using EnkaDotNet.DIExtensions;
 using EnkaDotNet.Exceptions;
@@ -9,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace EnkaDotNet.Examples.Endfield.DI
 {
-    class Program
+    static class Program
     {
         static async Task Main(string[] args)
         {
@@ -65,38 +64,7 @@ namespace EnkaDotNet.Examples.Endfield.DI
                 _logger.LogInformation("Fetching Endfield data for UID: {Uid}", uid);
 
                 var playerInfo = await _enkaClient.GetEFPlayerInfoAsync(uid, language: "en");
-
-                Console.WriteLine($"\nPlayer: {playerInfo.Nickname}");
-                Console.WriteLine($"AL {playerInfo.AdminLevel} | EL {playerInfo.EndfieldLevel}");
-                Console.WriteLine($"Signature: {playerInfo.Signature}");
-                Console.WriteLine($"Region: {playerInfo.Region}");
-                Console.WriteLine($"UID: {playerInfo.Uid}");
-                Console.WriteLine($"Operators owned: {playerInfo.CharCount}");
-                Console.WriteLine($"Weapons owned: {playerInfo.WeaponCount}");
-                Console.WriteLine($"Docs: {playerInfo.DocCount}");
-                Console.WriteLine($"Player Icon: {playerInfo.ProfilePictureIcon}");
-                Console.WriteLine($"Namecard Icon: {playerInfo.NameCardIcon}");
-
-                if (playerInfo.Medals != null && playerInfo.Medals.Count > 0)
-                {
-                    Console.WriteLine("\nACHIEVEMENTS:");
-                    foreach (var medal in playerInfo.Medals)
-                    {
-                        string plated = medal.IsPlated ? " [plated]" : string.Empty;
-                        Console.WriteLine($"  {medal.Name} Lv.{medal.Level}{plated}");
-                        Console.WriteLine($"    Icon: {medal.IconUrl}");
-                    }
-                }
-
-                if (playerInfo.CharList != null && playerInfo.CharList.Count > 0)
-                {
-                    Console.WriteLine("\nOWNED OPERATORS:");
-                    foreach (var entry in playerInfo.CharList)
-                    {
-                        Console.WriteLine($"  {entry.Name} (Lv.{entry.Level}) Potential {entry.PotentialLevel}");
-                        Console.WriteLine($"    Icon: {entry.IconUrl}");
-                    }
-                }
+                PrintPlayerInfo(playerInfo);
 
                 if (playerInfo.ShowcaseOperators == null || playerInfo.ShowcaseOperators.Count == 0)
                 {
@@ -132,6 +100,48 @@ namespace EnkaDotNet.Examples.Endfield.DI
             }
         }
 
+        private static void PrintPlayerInfo(EFPlayerInfo playerInfo)
+        {
+            Console.WriteLine($"\nPlayer: {playerInfo.Nickname}");
+            Console.WriteLine($"AL {playerInfo.AdminLevel} | EL {playerInfo.EndfieldLevel}");
+            Console.WriteLine($"Signature: {playerInfo.Signature}");
+            Console.WriteLine($"Region: {playerInfo.Region}");
+            Console.WriteLine($"UID: {playerInfo.Uid}");
+            Console.WriteLine($"Operators owned: {playerInfo.CharCount}");
+            Console.WriteLine($"Weapons owned: {playerInfo.WeaponCount}");
+            Console.WriteLine($"Docs: {playerInfo.DocCount}");
+            Console.WriteLine($"Player Icon: {playerInfo.ProfilePictureIcon}");
+            Console.WriteLine($"Namecard Icon: {playerInfo.NameCardIcon}");
+
+            PrintMedals(playerInfo.Medals);
+            PrintOwnedOperators(playerInfo.CharList);
+        }
+
+        private static void PrintMedals(IReadOnlyList<EFMedal> medals)
+        {
+            if (medals == null || medals.Count == 0) return;
+
+            Console.WriteLine("\nACHIEVEMENTS:");
+            foreach (var medal in medals)
+            {
+                string plated = medal.IsPlated ? " [plated]" : string.Empty;
+                Console.WriteLine($"  {medal.Name} Lv.{medal.Level}{plated}");
+                Console.WriteLine($"    Icon: {medal.IconUrl}");
+            }
+        }
+
+        private static void PrintOwnedOperators(IReadOnlyList<EFCharListEntry> charList)
+        {
+            if (charList == null || charList.Count == 0) return;
+
+            Console.WriteLine("\nOWNED OPERATORS:");
+            foreach (var entry in charList)
+            {
+                Console.WriteLine($"  {entry.Name} (Lv.{entry.Level}) Potential {entry.PotentialLevel}");
+                Console.WriteLine($"    Icon: {entry.IconUrl}");
+            }
+        }
+
         private static void PrintOperator(EFOperator op)
         {
             Console.WriteLine("\n" + new string('-', 50));
@@ -146,13 +156,22 @@ namespace EnkaDotNet.Examples.Endfield.DI
             Console.WriteLine($"Silhouette: {op.SilhouetteUrl}");
             Console.WriteLine($"Profession Icon: {op.ProfessionIconUrl}");
 
+            PrintStats(op);
+            PrintWeapon(op.Weapon);
+            PrintEquips(op.Equips);
+            PrintSkills(op.Skills);
+            PrintTalents(op.Talents);
+        }
+
+        private static void PrintStats(EFOperator op)
+        {
             Console.WriteLine("\n  STATS:");
             foreach (var stat in op.GetAllStats())
             {
                 Console.WriteLine($"    {stat.Key}: {stat.Value}");
             }
 
-            Console.WriteLine("\n  FINAL STATS (stable keys):");
+            Console.WriteLine("\n  FINAL STATS (display):");
             foreach (var stat in op.GetFinalStats())
             {
                 Console.WriteLine($"    {stat.Key}: {stat.Value}");
@@ -163,87 +182,96 @@ namespace EnkaDotNet.Examples.Endfield.DI
             {
                 Console.WriteLine($"    {stat.Key}: {stat.Value}");
             }
+        }
 
-            if (op.Weapon != null)
+        private static void PrintWeapon(EFWeapon weapon)
+        {
+            if (weapon == null) return;
+
+            Console.WriteLine("\n  WEAPON:");
+            Console.WriteLine($"    {weapon.Name} Lv.{weapon.Level}/{weapon.MaxLevel}");
+            Console.WriteLine($"    Rarity: {weapon.Rarity} | ATK: {weapon.BaseAtk}");
+            Console.WriteLine($"    Type: {weapon.WeaponType}");
+            Console.WriteLine($"    Breakthrough: {weapon.BreakthroughLevel} | Refine: {weapon.RefineLevel}");
+            Console.WriteLine($"    Icon: {weapon.IconUrl}");
+            foreach (var sub in weapon.SubStats)
             {
-                var weapon = op.Weapon;
-                Console.WriteLine("\n  WEAPON:");
-                Console.WriteLine($"    {weapon.Name} Lv.{weapon.Level}/{weapon.MaxLevel}");
-                Console.WriteLine($"    Rarity: {weapon.Rarity} | ATK: {weapon.BaseAtk}");
-                Console.WriteLine($"    Type: {weapon.WeaponType}");
-                Console.WriteLine($"    Breakthrough: {weapon.BreakthroughLevel} | Refine: {weapon.RefineLevel}");
-                Console.WriteLine($"    Icon: {weapon.IconUrl}");
-                foreach (var sub in weapon.SubStats)
-                {
-                    Console.WriteLine($"    {sub.Name}: {sub.FormattedValue}");
-                }
-
-                if (weapon.Gem != null)
-                {
-                    var gem = weapon.Gem;
-                    Console.WriteLine($"    GEM: Id {gem.Id} | Cost {gem.TotalCost} | Domain {gem.DomainId}");
-                    Console.WriteLine($"      Icon: {gem.IconUrl}");
-                    if (!string.IsNullOrEmpty(gem.OverlayIconUrl))
-                    {
-                        Console.WriteLine($"      Overlay: {gem.OverlayIconUrl}");
-                    }
-                    foreach (var term in gem.Terms)
-                    {
-                        Console.WriteLine($"      {term.TagName} (cost {term.Cost})");
-                        if (!string.IsNullOrEmpty(term.TagIconUrl))
-                        {
-                            Console.WriteLine($"        Icon: {term.TagIconUrl}");
-                        }
-                    }
-                }
+                Console.WriteLine($"    {sub.Name}: {sub.FormattedValue}");
             }
 
-            if (op.Equips != null && op.Equips.Count > 0)
+            PrintGem(weapon.Gem);
+        }
+
+        private static void PrintGem(EFGem gem)
+        {
+            if (gem == null) return;
+
+            Console.WriteLine($"    GEM: Id {gem.Id} | Cost {gem.TotalCost} | Domain {gem.DomainId}");
+            Console.WriteLine($"      Icon: {gem.IconUrl}");
+            if (!string.IsNullOrEmpty(gem.OverlayIconUrl))
             {
-                Console.WriteLine("\n  EQUIP:");
-                foreach (var equip in op.Equips)
+                Console.WriteLine($"      Overlay: {gem.OverlayIconUrl}");
+            }
+            foreach (var term in gem.Terms)
+            {
+                Console.WriteLine($"      {term.TagName} (cost {term.Cost})");
+                if (!string.IsNullOrEmpty(term.TagIconUrl))
                 {
-                    string suitLabel = string.IsNullOrEmpty(equip.SuitName) ? "(no suit)" : equip.SuitName;
-                    Console.WriteLine($"    {equip.SlotName}: {suitLabel} (R{equip.Rarity})");
-                    Console.WriteLine($"      Icon: {equip.IconUrl}");
-                    if (!string.IsNullOrEmpty(equip.SuitIconUrl))
-                    {
-                        Console.WriteLine($"      Suit Icon: {equip.SuitIconUrl}");
-                    }
-                    foreach (var attr in equip.Attributes)
-                    {
-                        Console.WriteLine($"      {attr.Name}: {attr.FormattedValue} (enh {attr.EnhanceLevel})");
-                    }
+                    Console.WriteLine($"        Icon: {term.TagIconUrl}");
                 }
             }
+        }
 
-            if (op.Skills != null && op.Skills.Count > 0)
+        private static void PrintEquips(IReadOnlyList<EFEquip> equips)
+        {
+            if (equips == null || equips.Count == 0) return;
+
+            Console.WriteLine("\n  EQUIP:");
+            foreach (var equip in equips)
             {
-                var combatSkills = op.Skills.Where(s => s.IsCombatSkill).ToList();
-                if (combatSkills.Count > 0)
+                string suitLabel = string.IsNullOrEmpty(equip.SuitName) ? "(no suit)" : equip.SuitName;
+                Console.WriteLine($"    {equip.SlotName}: {suitLabel} (R{equip.Rarity})");
+                Console.WriteLine($"      Icon: {equip.IconUrl}");
+                if (!string.IsNullOrEmpty(equip.SuitIconUrl))
                 {
-                    Console.WriteLine("\n  SKILLS:");
-                    foreach (var skill in combatSkills)
-                    {
-                        Console.WriteLine($"    {skill.Name}: {skill.Level}/{skill.MaxLevel}");
-                        if (!string.IsNullOrEmpty(skill.Element))
-                        {
-                            Console.WriteLine($"      Element: {skill.Element}");
-                        }
-                        Console.WriteLine($"      Icon: {skill.IconUrl}");
-                    }
+                    Console.WriteLine($"      Suit Icon: {equip.SuitIconUrl}");
+                }
+                foreach (var attr in equip.Attributes)
+                {
+                    Console.WriteLine($"      {attr.Name}: {attr.FormattedValue} (enh {attr.EnhanceLevel})");
                 }
             }
+        }
 
-            if (op.Talents != null && op.Talents.Count > 0)
+        private static void PrintSkills(IReadOnlyList<EFSkill> skills)
+        {
+            if (skills == null || skills.Count == 0) return;
+
+            var combatSkills = skills.Where(s => s.IsCombatSkill).ToList();
+            if (combatSkills.Count == 0) return;
+
+            Console.WriteLine("\n  SKILLS:");
+            foreach (var skill in combatSkills)
             {
-                Console.WriteLine("\n  TALENTS:");
-                foreach (var talent in op.Talents)
+                Console.WriteLine($"    {skill.Name}: {skill.Level}/{skill.MaxLevel}");
+                if (!string.IsNullOrEmpty(skill.Element))
                 {
-                    Console.WriteLine($"    {talent.Name} Rank {talent.Rank}");
-                    Console.WriteLine($"      Id: {talent.Id}");
-                    Console.WriteLine($"      Icon: {talent.IconUrl}");
+                    Console.WriteLine($"      Element: {skill.Element}");
                 }
+                Console.WriteLine($"      Icon: {skill.IconUrl}");
+            }
+        }
+
+        private static void PrintTalents(IReadOnlyList<EFTalent> talents)
+        {
+            if (talents == null || talents.Count == 0) return;
+
+            Console.WriteLine("\n  TALENTS:");
+            foreach (var talent in talents)
+            {
+                Console.WriteLine($"    {talent.Name} Rank {talent.Rank}");
+                Console.WriteLine($"      Id: {talent.Id}");
+                Console.WriteLine($"      Icon: {talent.IconUrl}");
             }
         }
     }

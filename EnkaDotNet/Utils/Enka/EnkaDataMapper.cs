@@ -244,7 +244,7 @@ namespace EnkaDotNet.Utils.Enka
             }
         }
 
-        private void ExtractEFPlayerInfo(JsonElement element, HoyoAccount hoyoAccount)
+        private static void ExtractEFPlayerInfo(JsonElement element, HoyoAccount hoyoAccount)
         {
             if (!element.TryGetProperty("businessCard", out var card))
             {

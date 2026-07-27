@@ -70,10 +70,10 @@ namespace EnkaDotNet.Components.EF
         {
             var result = new Dictionary<string, string>(StringComparer.Ordinal);
             bool raw = Options?.UseRawStatValues ?? false;
-            foreach (var pair in CalculateAllTotalStats())
+            foreach (var stat in CalculateAllTotalStats().Values)
             {
-                string key = raw ? pair.Value.Key : pair.Value.LocalizedName;
-                result[key] = FormatStatValue(pair.Value, raw);
+                string key = raw ? stat.Key : stat.LocalizedName;
+                result[key] = FormatStatValue(stat, raw);
             }
             return result;
         }

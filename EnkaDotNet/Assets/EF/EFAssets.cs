@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using EnkaDotNet.Assets.EF.Models;
@@ -253,7 +254,7 @@ namespace EnkaDotNet.Assets.EF
             }
         }
 
-        private string BuildCdnUrl(string path)
+        private static string BuildCdnUrl(string path)
         {
             if (string.IsNullOrEmpty(path)) return string.Empty;
             if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return path;
@@ -515,19 +516,30 @@ namespace EnkaDotNet.Assets.EF
 
         private static string HumanizeMedalIconName(Dictionary<string, string> iconByLevel)
         {
-            if (iconByLevel == null || iconByLevel.Count == 0) return null;
-
-            string path = null;
-            foreach (var kvp in iconByLevel)
-            {
-                if (!string.IsNullOrEmpty(kvp.Value))
-                {
-                    path = kvp.Value;
-                    break;
-                }
-            }
+            string path = FirstNonEmptyValue(iconByLevel);
             if (string.IsNullOrEmpty(path)) return null;
 
+            string file = StripMedalIconFileName(path);
+            string[] parts = file.Split(new[] { '_' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < parts.Length; i++)
+            {
+                parts[i] = HumanizeMedalToken(parts[i]);
+            }
+            return string.Join(" ", parts);
+        }
+
+        private static string FirstNonEmptyValue(Dictionary<string, string> values)
+        {
+            if (values == null || values.Count == 0) return null;
+            foreach (var value in values.Values.Where(v => !string.IsNullOrEmpty(v)))
+            {
+                return value;
+            }
+            return null;
+        }
+
+        private static string StripMedalIconFileName(string path)
+        {
             int slash = path.LastIndexOf('/');
             string file = slash >= 0 ? path.Substring(slash + 1) : path;
             if (file.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
@@ -548,65 +560,46 @@ namespace EnkaDotNet.Assets.EF
             {
                 file = file.Substring(5);
             }
+            return file;
+        }
 
-            string[] parts = file.Split(new[] { '_' }, StringSplitOptions.RemoveEmptyEntries);
-            for (int i = 0; i < parts.Length; i++)
+        private static string HumanizeMedalToken(string token)
+        {
+            if (string.IsNullOrEmpty(token)) return token;
+            if (token.Length <= 2 && IsAllUpperOrDigit(token))
             {
-                string p = parts[i];
-                if (p.Length == 0) continue;
-                if (p.Length <= 2 && IsAllUpperOrDigit(p))
-                {
-                    parts[i] = p.ToUpperInvariant();
-                }
-                else
-                {
-                    parts[i] = char.ToUpperInvariant(p[0]) + p.Substring(1).ToLowerInvariant();
-                }
+                return token.ToUpperInvariant();
             }
-            return string.Join(" ", parts);
+            return char.ToUpperInvariant(token[0]) + token.Substring(1).ToLowerInvariant();
         }
 
         private static bool IsAllUpperOrDigit(string value)
         {
-            foreach (char c in value)
-            {
-                if (!char.IsDigit(c) && !char.IsUpper(c)) return false;
-            }
-            return true;
+            return value.All(c => char.IsDigit(c) || char.IsUpper(c));
         }
 
         public string GetMedalIconUrl(int medalId, int level, bool isPlated = false)
         {
-            if (_medals.TryGetValue(medalId.ToString(CultureInfo.InvariantCulture), out var medal) && medal.IconByLevel != null)
+            if (!_medals.TryGetValue(medalId.ToString(CultureInfo.InvariantCulture), out var medal) || medal.IconByLevel == null)
             {
-                string key = level.ToString(CultureInfo.InvariantCulture);
-                string icon = null;
-                if (medal.IconByLevel.TryGetValue(key, out var byLevel) && !string.IsNullOrEmpty(byLevel))
-                {
-                    icon = byLevel;
-                }
-                else
-                {
-                    foreach (var kvp in medal.IconByLevel)
-                    {
-                        if (!string.IsNullOrEmpty(kvp.Value))
-                        {
-                            icon = kvp.Value;
-                            break;
-                        }
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(icon))
-                {
-                    if (isPlated)
-                    {
-                        icon = ApplyPlatingSuffix(icon);
-                    }
-                    return BuildCdnUrl(icon);
-                }
+                return string.Empty;
             }
-            return string.Empty;
+
+            string key = level.ToString(CultureInfo.InvariantCulture);
+            string icon = medal.IconByLevel.TryGetValue(key, out var byLevel) && !string.IsNullOrEmpty(byLevel)
+                ? byLevel
+                : FirstNonEmptyValue(medal.IconByLevel);
+
+            if (string.IsNullOrEmpty(icon))
+            {
+                return string.Empty;
+            }
+
+            if (isPlated)
+            {
+                icon = ApplyPlatingSuffix(icon);
+            }
+            return BuildCdnUrl(icon);
         }
 
         private static string ApplyPlatingSuffix(string iconPath)
@@ -623,32 +616,53 @@ namespace EnkaDotNet.Assets.EF
         public string GetSkillIconUrl(int operatorId, string skillId)
         {
             var avatar = GetAvatarInfo(operatorId);
-            if (avatar?.SkillInfoMap != null && !string.IsNullOrEmpty(skillId) && avatar.SkillInfoMap.TryGetValue(skillId, out var skillInfo) && !string.IsNullOrEmpty(skillInfo.Icon))
+            string mapped = ResolveMappedSkillIcon(avatar, skillId);
+            if (!string.IsNullOrEmpty(mapped))
             {
-                return BuildCdnUrl(NormalizeSkillIconPath(skillInfo.Icon));
+                return BuildCdnUrl(NormalizeSkillIconPath(mapped));
             }
 
-            if (avatar?.NodeSkillMap != null && !string.IsNullOrEmpty(skillId) && avatar.NodeSkillMap.TryGetValue(skillId, out var nodeInfo) && !string.IsNullOrEmpty(nodeInfo.Icon))
+            return GuessTalentSkillIconUrl(avatar, skillId);
+        }
+
+        private static string ResolveMappedSkillIcon(EFAvatarAssetInfo avatar, string skillId)
+        {
+            if (avatar == null || string.IsNullOrEmpty(skillId)) return null;
+
+            if (avatar.SkillInfoMap != null
+                && avatar.SkillInfoMap.TryGetValue(skillId, out var skillInfo)
+                && !string.IsNullOrEmpty(skillInfo.Icon))
             {
-                return BuildCdnUrl(NormalizeSkillIconPath(nodeInfo.Icon));
+                return skillInfo.Icon;
             }
 
-            if (!string.IsNullOrEmpty(skillId) && skillId.IndexOf("_talent_", StringComparison.Ordinal) >= 0
-                && avatar != null && !string.IsNullOrEmpty(avatar.StrId))
+            if (avatar.NodeSkillMap != null
+                && avatar.NodeSkillMap.TryGetValue(skillId, out var nodeInfo)
+                && !string.IsNullOrEmpty(nodeInfo.Icon))
             {
-                int talentIndex = ParseTalentIndex(skillId);
-                if (talentIndex >= 0)
-                {
-                    string shortName = ExtractOperatorShortName(avatar.StrId);
-                    if (!string.IsNullOrEmpty(shortName))
-                    {
-                        string guessed = $"/ui/ef/skillicon/icon_talent_{shortName}_{talentIndex + 1:00}.png";
-                        return BuildCdnUrl(guessed);
-                    }
-                }
+                return nodeInfo.Icon;
             }
 
-            return string.Empty;
+            return null;
+        }
+
+        private static string GuessTalentSkillIconUrl(EFAvatarAssetInfo avatar, string skillId)
+        {
+            if (string.IsNullOrEmpty(skillId)
+                || skillId.IndexOf("_talent_", StringComparison.Ordinal) < 0
+                || avatar == null
+                || string.IsNullOrEmpty(avatar.StrId))
+            {
+                return string.Empty;
+            }
+
+            int talentIndex = ParseTalentIndex(skillId);
+            if (talentIndex < 0) return string.Empty;
+
+            string shortName = ExtractOperatorShortName(avatar.StrId);
+            if (string.IsNullOrEmpty(shortName)) return string.Empty;
+
+            return BuildCdnUrl($"/ui/ef/skillicon/icon_talent_{shortName}_{talentIndex + 1:00}.png");
         }
 
         public string GetNodeSkillIconUrl(int operatorId, string nodeId)

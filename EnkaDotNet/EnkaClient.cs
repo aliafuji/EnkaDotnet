@@ -436,6 +436,10 @@ namespace EnkaDotNet
             });
 
         /// <inheritdoc/>
+        public Task<EFApiResponse> GetEFRawUserResponseAsync(long uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetEFRawUserResponseAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
         public Task<EFPlayerInfo> GetEFPlayerInfoAsync(long uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
             ExecuteApiCallAsync(async () =>
             {
@@ -444,12 +448,20 @@ namespace EnkaDotNet
             });
 
         /// <inheritdoc/>
+        public Task<EFPlayerInfo> GetEFPlayerInfoAsync(long uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetEFPlayerInfoAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
         public Task<IReadOnlyList<EFOperator>> GetEFOperatorsAsync(long uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
             ExecuteApiCallAsync(async () =>
             {
                 var handler = await GetEFHandlerAsync(language).ConfigureAwait(false);
                 return await handler.GetEFOperatorsAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
             });
+
+        /// <inheritdoc/>
+        public Task<IReadOnlyList<EFOperator>> GetEFOperatorsAsync(long uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetEFOperatorsAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
 
         /// <inheritdoc/>
         public Task<Dictionary<string, List<GenshinBuild>>> GetGenshinBuildsByUsernameAsync(string username, string hoyoHash, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
@@ -679,18 +691,6 @@ namespace EnkaDotNet
         /// <inheritdoc/>
         public Task<IReadOnlyList<ZZZAgent>> GetZZZAgentsAsync(int uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
             GetZZZAgentsAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
-
-        /// <inheritdoc/>
-        public Task<EFApiResponse> GetEFRawUserResponseAsync(long uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
-            GetEFRawUserResponseAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
-
-        /// <inheritdoc/>
-        public Task<EFPlayerInfo> GetEFPlayerInfoAsync(long uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
-            GetEFPlayerInfoAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
-
-        /// <inheritdoc/>
-        public Task<IReadOnlyList<EFOperator>> GetEFOperatorsAsync(long uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
-            GetEFOperatorsAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
 
         /// <inheritdoc/>
         public Task<Dictionary<string, List<GenshinBuild>>> GetGenshinBuildsByUsernameAsync(string username, string hoyoHash, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>

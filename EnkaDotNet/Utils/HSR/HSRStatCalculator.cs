@@ -134,7 +134,7 @@ namespace EnkaDotNet.Utils.HSR
             lightCone.BaseDefense = lcDefence;
         }
 
-        private void AddLightConePassiveStats(Dictionary<string, double> stats, HSRLightCone lightCone)
+        private static void AddLightConePassiveStats(Dictionary<string, double> stats, HSRLightCone lightCone)
         {
             foreach (var prop in lightCone.Properties)
             {
