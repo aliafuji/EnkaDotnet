@@ -19,7 +19,10 @@ namespace EnkaDotNet.Caching
         /// <param name="customCache">Optional custom cache instance for Custom provider.</param>
         /// <returns>An IEnkaCache implementation based on the configured provider.</returns>
         /// <exception cref="ArgumentNullException">Thrown when options is null.</exception>
-        /// <exception cref="InvalidOperationException">Thrown when Custom provider is selected but no custom cache is provided.</exception>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when Custom provider is selected but no custom cache is provided, or when the
+        /// SQLite or Redis provider is selected without the matching opt in package.
+        /// </exception>
         public static IEnkaCache CreateCache(
             EnkaClientOptions options,
             IMemoryCache? memoryCache = null,
@@ -30,56 +33,77 @@ namespace EnkaDotNet.Caching
                 throw new ArgumentNullException(nameof(options));
             }
 
+            // Normalised before the override runs: the opt in packages read these options and
+            // cannot see the internal ExplicitDefaultTtl fallback rules themselves.
+            if (options.SQLiteCache != null)
+            {
+                WithFallbackTtl(options.SQLiteCache, options);
+            }
+
+            if (options.RedisCache != null)
+            {
+                WithFallbackTtl(options.RedisCache, options);
+            }
+
+            if (options.CacheFactoryOverride != null)
+            {
+                return options.CacheFactoryOverride(options);
+            }
+
             return options.CacheProvider switch
             {
                 CacheProvider.Memory => CreateMemoryCache(options, memoryCache),
-                CacheProvider.SQLite => CreateSQLiteCache(options),
-                CacheProvider.Redis => CreateRedisCache(options),
+                CacheProvider.SQLite => throw MissingProviderPackage(
+                    nameof(CacheProvider.SQLite), "EnkaDotNet.Caching.Sqlite", "UseSqliteCache", "AddEnkaSqliteCache"),
+                CacheProvider.Redis => throw MissingProviderPackage(
+                    nameof(CacheProvider.Redis), "EnkaDotNet.Caching.Redis", "UseRedisCache", "AddEnkaRedisCache"),
                 CacheProvider.Custom => CreateCustomCache(customCache),
                 _ => CreateMemoryCache(options, memoryCache)
             };
         }
+
+        private static InvalidOperationException MissingProviderPackage(
+            string provider, string packageId, string optionsMethod, string serviceMethod)
+        {
+            return new InvalidOperationException(
+                $"CacheProvider.{provider} requires the {packageId} package. " +
+                $"Install it and call options.{optionsMethod}(...) or services.{serviceMethod}(...).");
+        }
+
+        /// <summary>
+        /// Default size limit, in serialized characters, applied to memory caches this factory
+        /// creates. Without a limit the cache grows until the process runs out of memory.
+        /// </summary>
+        private const long DefaultMemoryCacheSizeLimit = 64L * 1024 * 1024;
 
         /// <summary>
         /// Creates a memory cache adapter.
         /// </summary>
         private static IEnkaCache CreateMemoryCache(EnkaClientOptions options, IMemoryCache? memoryCache)
         {
-            var cache = memoryCache ?? new MemoryCache(new MemoryCacheOptions());
             var defaultTtl = TimeSpan.FromMinutes(options.CacheDurationMinutes);
-            return new MemoryCacheAdapter(cache, defaultTtl);
+
+            if (memoryCache != null)
+            {
+                // Caller supplied cache: it may be shared with the rest of the application, so the
+                // adapter must not dispose it or assume anything about its size limit.
+                return new MemoryCacheAdapter(memoryCache, defaultTtl);
+            }
+
+            var ownedCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = DefaultMemoryCacheSizeLimit });
+            return new MemoryCacheAdapter(ownedCache, defaultTtl, jsonOptions: null, ownsMemoryCache: true);
         }
 
-        /// <summary>
-        /// Creates a SQLite cache provider.
-        /// </summary>
-        private static IEnkaCache CreateSQLiteCache(EnkaClientOptions options)
+        private static void WithFallbackTtl(SQLiteCacheOptions cacheOptions, EnkaClientOptions options)
         {
-            var sqliteOptions = options.SQLiteCache ?? new SQLiteCacheOptions();
-            
-            // Override default TTL with client options if not explicitly set
-            if (sqliteOptions.DefaultTtl == TimeSpan.FromMinutes(5) && options.CacheDurationMinutes != 5)
-            {
-                sqliteOptions.DefaultTtl = TimeSpan.FromMinutes(options.CacheDurationMinutes);
-            }
-            
-            return new SQLiteCacheProvider(sqliteOptions);
+            cacheOptions.DefaultTtl = cacheOptions.ExplicitDefaultTtl
+                ?? TimeSpan.FromMinutes(options.CacheDurationMinutes);
         }
 
-        /// <summary>
-        /// Creates a Redis cache provider.
-        /// </summary>
-        private static IEnkaCache CreateRedisCache(EnkaClientOptions options)
+        private static void WithFallbackTtl(RedisCacheOptions cacheOptions, EnkaClientOptions options)
         {
-            var redisOptions = options.RedisCache ?? new RedisCacheOptions();
-            
-            // Override default TTL with client options if not explicitly set
-            if (redisOptions.DefaultTtl == TimeSpan.FromMinutes(5) && options.CacheDurationMinutes != 5)
-            {
-                redisOptions.DefaultTtl = TimeSpan.FromMinutes(options.CacheDurationMinutes);
-            }
-            
-            return new RedisCacheProvider(redisOptions);
+            cacheOptions.DefaultTtl = cacheOptions.ExplicitDefaultTtl
+                ?? TimeSpan.FromMinutes(options.CacheDurationMinutes);
         }
 
         /// <summary>

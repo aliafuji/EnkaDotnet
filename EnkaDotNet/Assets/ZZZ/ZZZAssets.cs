@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using EnkaDotNet.Assets.ZZZ.Models;
+using EnkaDotNet.Components.ZZZ;
 using EnkaDotNet.Enums.ZZZ;
 using EnkaDotNet.Utils;
 using EnkaDotNet.Utils.Common;
@@ -12,7 +15,7 @@ using Microsoft.Extensions.Logging;
 
 namespace EnkaDotNet.Assets.ZZZ
 {
-    public class ZZZAssets : BaseAssets, IZZZAssets, IDisposable
+    public class ZZZAssets : BaseAssets, IZZZAssets
     {
         private readonly ConcurrentDictionary<string, ZZZAvatarAssetInfo> _avatars = new ConcurrentDictionary<string, ZZZAvatarAssetInfo>();
         private readonly ConcurrentDictionary<string, ZZZWeaponAssetInfo> _weapons = new ConcurrentDictionary<string, ZZZWeaponAssetInfo>();
@@ -23,17 +26,16 @@ namespace EnkaDotNet.Assets.ZZZ
         private readonly ConcurrentDictionary<string, ZZZPropertyAssetInfo> _properties = new ConcurrentDictionary<string, ZZZPropertyAssetInfo>();
         private readonly ConcurrentDictionary<string, ZZZEquipmentItemInfo> _equipmentItems = new ConcurrentDictionary<string, ZZZEquipmentItemInfo>();
         private readonly ConcurrentDictionary<string, ZZZEquipmentSuitInfo> _equipmentSuits = new ConcurrentDictionary<string, ZZZEquipmentSuitInfo>();
+        private static readonly IReadOnlyList<ZZZAvatarColors> _emptyAvatarColors = Array.Empty<ZZZAvatarColors>();
+        private static readonly IReadOnlyList<ElementType> _emptyElementTypes = Array.Empty<ElementType>();
+        private static readonly IReadOnlyDictionary<string, Skin> _emptySkins = new ReadOnlyDictionary<string, Skin>(new Dictionary<string, Skin>());
+
         private IReadOnlyList<ZZZEquipmentLevelItem> _equipmentLevelData;
         private IReadOnlyList<ZZZWeaponLevelItem> _weaponLevelData;
         private IReadOnlyList<ZZZWeaponStarItem> _weaponStarData;
-        private readonly SemaphoreSlim _loadingSemaphore;
-        private bool _disposed = false;
-
         public ZZZAssets(string language, HttpClient httpClient, ILogger<ZZZAssets> logger, string fallbackDirectory = null)
             : base(language, "zzz", httpClient, logger, fallbackDirectory)
         {
-            int maxConcurrency = MathHelper.Clamp(Environment.ProcessorCount, 1, 8);
-            _loadingSemaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
         }
 
         protected override IReadOnlyDictionary<string, string> GetAssetFileUrls()
@@ -45,44 +47,20 @@ namespace EnkaDotNet.Assets.ZZZ
         {
             var tasks = new List<Task>
             {
-                LoadWithSemaphore(LoadAvatars),
-                LoadWithSemaphore(LoadWeapons),
-                LoadWithSemaphore(LoadEquipments),
-                LoadWithSemaphore(LoadPfps),
-                LoadWithSemaphore(LoadNamecards),
-                LoadWithSemaphore(LoadMedals),
-                LoadWithSemaphore(LoadTitles),
-                LoadWithSemaphore(LoadProperties),
-                LoadWithSemaphore(LoadEquipmentLevel),
-                LoadWithSemaphore(LoadWeaponLevel),
-                LoadWithSemaphore(LoadWeaponStar)
+                RunLoaderAsync(LoadAvatars),
+                RunLoaderAsync(LoadWeapons),
+                RunLoaderAsync(LoadEquipments),
+                RunLoaderAsync(LoadPfps),
+                RunLoaderAsync(LoadNamecards),
+                RunLoaderAsync(LoadMedals),
+                RunLoaderAsync(LoadTitles),
+                RunLoaderAsync(LoadProperties),
+                RunLoaderAsync(LoadEquipmentLevel),
+                RunLoaderAsync(LoadWeaponLevel),
+                RunLoaderAsync(LoadWeaponStar)
             };
 
             await Task.WhenAll(tasks).ConfigureAwait(false);
-        }
-
-        private async Task LoadWithSemaphore(Func<Task> loadFunction)
-        {
-            await _loadingSemaphore.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                var loadTask = loadFunction();
-                var timeout = TimeSpan.FromMinutes(5);
-                var timeoutTask = Task.Delay(timeout);
-
-                var completedTask = await Task.WhenAny(loadTask, timeoutTask).ConfigureAwait(false);
-
-                if (completedTask == timeoutTask)
-                {
-                    throw new TimeoutException($"Asset loading operation '{loadFunction.Method.Name}' timed out after {timeout.TotalMinutes} minutes.");
-                }
-
-                await loadTask.ConfigureAwait(false);
-            }
-            finally
-            {
-                _loadingSemaphore.Release();
-            }
         }
 
         private async Task LoadEquipmentLevel()
@@ -330,15 +308,15 @@ namespace EnkaDotNet.Assets.ZZZ
         public ZZZWeaponAssetInfo GetWeaponInfo(string weaponId) { _weapons.TryGetValue(weaponId, out var info); return info; }
         public IReadOnlyList<ZZZAvatarColors> GetAvatarColors(int agentId)
         {
-            if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && avatarInfo.Colors != null)
+            if (_avatars.TryGetValue(agentId.ToString(CultureInfo.InvariantCulture), out var avatarInfo) && avatarInfo.Colors != null)
             {
                 return new List<ZZZAvatarColors> { avatarInfo.Colors };
             }
-            return new List<ZZZAvatarColors>();
+            return _emptyAvatarColors;
         }
         public string GetAgentName(int agentId)
         {
-            string agentIdStr = agentId.ToString();
+            string agentIdStr = agentId.ToString(CultureInfo.InvariantCulture);
             if (_avatars.TryGetValue(agentIdStr, out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.Name))
             {
                 string localizedName = GetText(avatarInfo.Name);
@@ -354,46 +332,48 @@ namespace EnkaDotNet.Assets.ZZZ
         }
         public string GetAgentIconUrl(int agentId)
         {
-            if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.Image))
+            if (_avatars.TryGetValue(agentId.ToString(CultureInfo.InvariantCulture), out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.Image))
             {
-                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{avatarInfo.Image}";
+                return $"{Constants.DefaultZZZAssetCdnUrl}{avatarInfo.Image}";
             }
             return string.Empty;
         }
         public string GetAgentCircleIconUrl(int agentId)
         {
-            if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.CircleIcon))
+            if (_avatars.TryGetValue(agentId.ToString(CultureInfo.InvariantCulture), out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.CircleIcon))
             {
-                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{avatarInfo.CircleIcon}";
+                return $"{Constants.DefaultZZZAssetCdnUrl}{avatarInfo.CircleIcon}";
             }
             return string.Empty;
         }
         public IReadOnlyList<ElementType> GetAgentElements(int agentId)
         {
-            var elements = new List<ElementType>();
-            if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && avatarInfo.ElementTypes != null)
+            if (!_avatars.TryGetValue(agentId.ToString(CultureInfo.InvariantCulture), out var avatarInfo) || avatarInfo.ElementTypes == null)
             {
-                foreach (var element in avatarInfo.ElementTypes)
-                {
-                    elements.Add(MapElementNameToEnum(element));
-                }
+                return _emptyElementTypes;
+            }
+
+            var elements = new List<ElementType>(avatarInfo.ElementTypes.Count);
+            foreach (var element in avatarInfo.ElementTypes)
+            {
+                elements.Add(MapElementNameToEnum(element));
             }
             return elements;
         }
         public ProfessionType GetAgentProfessionType(int agentId)
         {
-            if (_avatars.TryGetValue(agentId.ToString(), out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.ProfessionType))
+            if (_avatars.TryGetValue(agentId.ToString(CultureInfo.InvariantCulture), out var avatarInfo) && !string.IsNullOrEmpty(avatarInfo.ProfessionType))
             {
                 return MapProfessionNameToEnum(avatarInfo.ProfessionType);
             }
             return ProfessionType.Unknown;
         }
-        public int GetAgentRarity(int agentId) { _avatars.TryGetValue(agentId.ToString(), out var info); return info?.Rarity ?? 0; }
+        public int GetAgentRarity(int agentId) { _avatars.TryGetValue(agentId.ToString(CultureInfo.InvariantCulture), out var info); return info?.Rarity ?? 0; }
         public ZZZEquipmentSuitInfo GetDiscSetInfo(string suitId) { _equipmentSuits.TryGetValue(suitId, out var info); return info; }
         public Dictionary<string, ZZZEquipmentSuitInfo> GetAllDiscSets() => new Dictionary<string, ZZZEquipmentSuitInfo>(_equipmentSuits);
         public string GetWeaponName(int weaponId)
         {
-            if (_weapons.TryGetValue(weaponId.ToString(), out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.ItemName))
+            if (_weapons.TryGetValue(weaponId.ToString(CultureInfo.InvariantCulture), out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.ItemName))
             {
                 return GetText(weaponInfo.ItemName);
             }
@@ -401,24 +381,24 @@ namespace EnkaDotNet.Assets.ZZZ
         }
         public string GetWeaponIconUrl(int weaponId)
         {
-            if (_weapons.TryGetValue(weaponId.ToString(), out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.ImagePath))
+            if (_weapons.TryGetValue(weaponId.ToString(CultureInfo.InvariantCulture), out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.ImagePath))
             {
-                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{weaponInfo.ImagePath}";
+                return $"{Constants.DefaultZZZAssetCdnUrl}{weaponInfo.ImagePath}";
             }
             return string.Empty;
         }
         public ProfessionType GetWeaponType(int weaponId)
         {
-            if (_weapons.TryGetValue(weaponId.ToString(), out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.ProfessionType))
+            if (_weapons.TryGetValue(weaponId.ToString(CultureInfo.InvariantCulture), out var weaponInfo) && !string.IsNullOrEmpty(weaponInfo.ProfessionType))
             {
                 return MapProfessionNameToEnum(weaponInfo.ProfessionType);
             }
             return ProfessionType.Unknown;
         }
-        public int GetWeaponRarity(int weaponId) { _weapons.TryGetValue(weaponId.ToString(), out var info); return info?.Rarity ?? 0; }
+        public int GetWeaponRarity(int weaponId) { _weapons.TryGetValue(weaponId.ToString(CultureInfo.InvariantCulture), out var info); return info?.Rarity ?? 0; }
         public string GetDriveDiscSuitName(int suitId)
         {
-            if (_equipmentSuits.TryGetValue(suitId.ToString(), out var suitInfo) && !string.IsNullOrEmpty(suitInfo.Name))
+            if (_equipmentSuits.TryGetValue(suitId.ToString(CultureInfo.InvariantCulture), out var suitInfo) && !string.IsNullOrEmpty(suitInfo.Name))
             {
                 return GetText(suitInfo.Name);
             }
@@ -426,17 +406,17 @@ namespace EnkaDotNet.Assets.ZZZ
         }
         public string GetDriveDiscSuitIconUrl(int suitId)
         {
-            if (_equipmentSuits.TryGetValue(suitId.ToString(), out var suitInfo) && !string.IsNullOrEmpty(suitInfo.Icon))
+            if (_equipmentSuits.TryGetValue(suitId.ToString(CultureInfo.InvariantCulture), out var suitInfo) && !string.IsNullOrEmpty(suitInfo.Icon))
             {
-                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{suitInfo.Icon}";
+                return $"{Constants.DefaultZZZAssetCdnUrl}{suitInfo.Icon}";
             }
             return string.Empty;
         }
-        public int GetDriveDiscRarity(int discId) { _equipmentItems.TryGetValue(discId.ToString(), out var info); return info?.Rarity ?? 0; }
-        public int GetDriveDiscSuitId(int discId) { _equipmentItems.TryGetValue(discId.ToString(), out var info); return info?.SuitId ?? 0; }
+        public int GetDriveDiscRarity(int discId) { _equipmentItems.TryGetValue(discId.ToString(CultureInfo.InvariantCulture), out var info); return info?.Rarity ?? 0; }
+        public int GetDriveDiscSuitId(int discId) { _equipmentItems.TryGetValue(discId.ToString(CultureInfo.InvariantCulture), out var info); return info?.SuitId ?? 0; }
         public string GetPropertyName(int propertyId)
         {
-            if (_properties.TryGetValue(propertyId.ToString(), out var propertyInfo) && !string.IsNullOrEmpty(propertyInfo.Name))
+            if (_properties.TryGetValue(propertyId.ToString(CultureInfo.InvariantCulture), out var propertyInfo) && !string.IsNullOrEmpty(propertyInfo.Name))
             {
                 return GetText(propertyInfo.Name);
             }
@@ -444,32 +424,38 @@ namespace EnkaDotNet.Assets.ZZZ
         }
         public string FormatPropertyValue(int propertyId, double value)
         {
-            if (_properties.TryGetValue(propertyId.ToString(), out var propertyInfo) && !string.IsNullOrEmpty(propertyInfo.Format))
+            if (_properties.TryGetValue(propertyId.ToString(CultureInfo.InvariantCulture), out var propertyInfo) && !string.IsNullOrEmpty(propertyInfo.Format))
             {
                 try
                 {
                     if (propertyInfo.Format.Contains("%"))
                     {
-                        return string.Format(System.Globalization.CultureInfo.InvariantCulture, propertyInfo.Format, value);
+                        return string.Format(CultureInfo.InvariantCulture, propertyInfo.Format, value);
                     }
                     else
                     {
-                        return string.Format(System.Globalization.CultureInfo.InvariantCulture, propertyInfo.Format, Math.Floor(value));
+                        return string.Format(CultureInfo.InvariantCulture, propertyInfo.Format, Math.Floor(value));
                     }
                 }
                 catch (FormatException ex)
                 {
                     _logger.LogWarning(ex, "Error formatting ZZZ property {PropertyId}", propertyId);
                     bool isPercent = EnkaDotNet.Utils.ZZZ.ZZZStatsHelpers.IsDisplayPercentageStat((StatType)propertyId);
-                    return isPercent ? $"{value:F1}%" : $"{Math.Floor(value)}";
+                    return FormatFallbackPropertyValue(value, isPercent);
                 }
             }
             bool isPercentage = EnkaDotNet.Utils.ZZZ.ZZZStatsHelpers.IsDisplayPercentageStat((StatType)propertyId);
-            return isPercentage ? $"{value:F1}%" : $"{Math.Floor(value)}";
+            return FormatFallbackPropertyValue(value, isPercentage);
+        }
+        private static string FormatFallbackPropertyValue(double value, bool isPercentage)
+        {
+            return isPercentage
+                ? value.ToString("F1", CultureInfo.InvariantCulture) + "%"
+                : Math.Floor(value).ToString(CultureInfo.InvariantCulture);
         }
         public string GetTitleText(int titleId)
         {
-            if (_titles.TryGetValue(titleId.ToString(), out var titleInfo) && !string.IsNullOrEmpty(titleInfo.TitleText))
+            if (_titles.TryGetValue(titleId.ToString(CultureInfo.InvariantCulture), out var titleInfo) && !string.IsNullOrEmpty(titleInfo.TitleText))
             {
                 return GetText(titleInfo.TitleText);
             }
@@ -477,7 +463,7 @@ namespace EnkaDotNet.Assets.ZZZ
         }
         public string GetTitleColorA(int titleId)
         {
-            if (_titles.TryGetValue(titleId.ToString(), out var titleInfo) && !string.IsNullOrEmpty(titleInfo.ColorA))
+            if (_titles.TryGetValue(titleId.ToString(CultureInfo.InvariantCulture), out var titleInfo) && !string.IsNullOrEmpty(titleInfo.ColorA))
             {
                 return $"#{titleInfo.ColorA}";
             }
@@ -485,7 +471,7 @@ namespace EnkaDotNet.Assets.ZZZ
         }
         public string GetTitleColorB(int titleId)
         {
-            if (_titles.TryGetValue(titleId.ToString(), out var titleInfo) && !string.IsNullOrEmpty(titleInfo.ColorB))
+            if (_titles.TryGetValue(titleId.ToString(CultureInfo.InvariantCulture), out var titleInfo) && !string.IsNullOrEmpty(titleInfo.ColorB))
             {
                 return $"#{titleInfo.ColorB}";
             }
@@ -493,7 +479,7 @@ namespace EnkaDotNet.Assets.ZZZ
         }
         public string GetMedalName(int medalId)
         {
-            if (_medals.TryGetValue(medalId.ToString(), out var medalInfo) && !string.IsNullOrEmpty(medalInfo.Name))
+            if (_medals.TryGetValue(medalId.ToString(CultureInfo.InvariantCulture), out var medalInfo) && !string.IsNullOrEmpty(medalInfo.Name))
             {
                 return GetText(medalInfo.Name);
             }
@@ -501,28 +487,29 @@ namespace EnkaDotNet.Assets.ZZZ
         }
         public string GetMedalIconUrl(int medalId)
         {
-            if (_medals.TryGetValue(medalId.ToString(), out var medalInfo) && !string.IsNullOrEmpty(medalInfo.Icon))
+            if (_medals.TryGetValue(medalId.ToString(CultureInfo.InvariantCulture), out var medalInfo) && !string.IsNullOrEmpty(medalInfo.Icon))
             {
-                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{medalInfo.Icon}";
+                return $"{Constants.DefaultZZZAssetCdnUrl}{medalInfo.Icon}";
             }
             return string.Empty;
         }
         public string GetNameCardIconUrl(int nameCardId)
         {
-            if (_namecards.TryGetValue(nameCardId.ToString(), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon))
+            if (_namecards.TryGetValue(nameCardId.ToString(CultureInfo.InvariantCulture), out var nameCardInfo) && !string.IsNullOrEmpty(nameCardInfo.Icon))
             {
-                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{nameCardInfo.Icon}";
+                return $"{Constants.DefaultZZZAssetCdnUrl}{nameCardInfo.Icon}";
             }
             return string.Empty;
         }
         public string GetProfilePictureIconUrl(int profilePictureId)
         {
-            if (_pfps.TryGetValue(profilePictureId.ToString(), out var pfpInfo) && !string.IsNullOrEmpty(pfpInfo.Icon))
+            if (_pfps.TryGetValue(profilePictureId.ToString(CultureInfo.InvariantCulture), out var pfpInfo) && !string.IsNullOrEmpty(pfpInfo.Icon))
             {
-                return $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{pfpInfo.Icon}";
+                return $"{Constants.DefaultZZZAssetCdnUrl}{pfpInfo.Icon}";
             }
             return string.Empty;
         }
+        /// <inheritdoc/>
         public string GetSkillIconUrl(int agentId, SkillType skillType) => string.Empty;
         public IReadOnlyList<ZZZEquipmentLevelItem> GetEquipmentLevelData() => _equipmentLevelData;
         public IReadOnlyList<ZZZWeaponLevelItem> GetWeaponLevelData() => _weaponLevelData;
@@ -532,7 +519,7 @@ namespace EnkaDotNet.Assets.ZZZ
             if (string.IsNullOrWhiteSpace(agentId))
             {
                 _logger?.LogWarning("Invalid agent ID provided: {AgentId}", agentId);
-                return new Dictionary<string, Skin>();
+                return _emptySkins;
             }
 
             _logger?.LogDebug("Fetching skins for agent ID: {AgentId}", agentId);
@@ -540,13 +527,13 @@ namespace EnkaDotNet.Assets.ZZZ
             if (!_avatars.TryGetValue(agentId, out var avatarInfo))
             {
                 _logger?.LogInformation("No avatar found for agent ID: {AgentId}", agentId);
-                return new Dictionary<string, Skin>();
+                return _emptySkins;
             }
 
             if (avatarInfo.Skins == null || avatarInfo.Skins.Count == 0)
             {
                 _logger?.LogInformation("No skins available for agent ID: {AgentId}", agentId);
-                return new Dictionary<string, Skin>();
+                return _emptySkins;
             }
 
             _logger?.LogDebug("Found {SkinCount} skins for agent ID: {AgentId}",
@@ -554,13 +541,13 @@ namespace EnkaDotNet.Assets.ZZZ
 
             try
             {
-                var result = new Dictionary<string, Skin>();
+                var result = new Dictionary<string, Skin>(avatarInfo.Skins.Count);
                 foreach (var skinEntry in avatarInfo.Skins)
                 {
                     result[skinEntry.Key] = new Skin
                     {
-                        Image = $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{skinEntry.Value.Image}",
-                        CircleIcon = $"{Constants.DEFAULT_ZZZ_ASSET_CDN_URL}{skinEntry.Value.CircleIcon}"
+                        Image = $"{Constants.DefaultZZZAssetCdnUrl}{skinEntry.Value.Image}",
+                        CircleIcon = $"{Constants.DefaultZZZAssetCdnUrl}{skinEntry.Value.CircleIcon}"
                     };
                 }
                 return result;
@@ -568,7 +555,7 @@ namespace EnkaDotNet.Assets.ZZZ
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error processing skins for agent ID: {AgentId}", agentId);
-                return new Dictionary<string, Skin>();
+                return _emptySkins;
             }
         }
 
@@ -615,22 +602,5 @@ namespace EnkaDotNet.Assets.ZZZ
             }
         }
 
-        public new void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected new virtual void Dispose(bool disposing)
-        {
-            if (_disposed) return;
-
-            if (disposing)
-            {
-                _loadingSemaphore.Dispose();
-            }
-
-            _disposed = true;
-        }
     }
 }

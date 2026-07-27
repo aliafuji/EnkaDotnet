@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace EnkaDotNet.Assets.HSR
 {
-    public class HSRAssets : BaseAssets, IHSRAssets, IDisposable
+    public class HSRAssets : BaseAssets, IHSRAssets
     {
         private readonly ConcurrentDictionary<string, HSRCharacterAssetInfo> _characters = new ConcurrentDictionary<string, HSRCharacterAssetInfo>();
         private readonly ConcurrentDictionary<string, HSRLightConeAssetInfo> _lightCones = new ConcurrentDictionary<string, HSRLightConeAssetInfo>();
@@ -26,14 +27,9 @@ namespace EnkaDotNet.Assets.HSR
 
         private HSRMetaData _metaData;
         private ConcurrentDictionary<string, HSRSkillTreePointInfo> _skillTreeData;
-        private readonly SemaphoreSlim _loadingSemaphore;
-        private bool _disposed = false;
-
         public HSRAssets(string language, HttpClient httpClient, ILogger<HSRAssets> logger, string fallbackDirectory = null)
             : base(language, "hsr", httpClient, logger, fallbackDirectory)
         {
-            int maxConcurrency = MathHelper.Clamp(Environment.ProcessorCount, 1, 8);
-            _loadingSemaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
         }
 
         protected override IReadOnlyDictionary<string, string> GetAssetFileUrls()
@@ -45,41 +41,17 @@ namespace EnkaDotNet.Assets.HSR
         {
             var tasks = new List<Task>
             {
-                LoadWithSemaphore(LoadMetaData),
-                LoadWithSemaphore(LoadCharacters),
-                LoadWithSemaphore(LoadLightCones),
-                LoadWithSemaphore(LoadRelics),
-                LoadWithSemaphore(LoadSkills),
-                LoadWithSemaphore(LoadAvatars),
-                LoadWithSemaphore(LoadEidolons),
-                LoadWithSemaphore(LoadSkillTree),
-                LoadWithSemaphore(LoadRelicSets)
+                RunLoaderAsync(LoadMetaData),
+                RunLoaderAsync(LoadCharacters),
+                RunLoaderAsync(LoadLightCones),
+                RunLoaderAsync(LoadRelics),
+                RunLoaderAsync(LoadSkills),
+                RunLoaderAsync(LoadAvatars),
+                RunLoaderAsync(LoadEidolons),
+                RunLoaderAsync(LoadSkillTree),
+                RunLoaderAsync(LoadRelicSets)
             };
             await Task.WhenAll(tasks).ConfigureAwait(false);
-        }
-        
-        private async Task LoadWithSemaphore(Func<Task> loadFunction)
-        {
-            await _loadingSemaphore.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                var loadTask = loadFunction();
-                var timeout = TimeSpan.FromMinutes(5);
-                var timeoutTask = Task.Delay(timeout);
-
-                var completedTask = await Task.WhenAny(loadTask, timeoutTask).ConfigureAwait(false);
-
-                if (completedTask == timeoutTask)
-                {
-                    throw new TimeoutException($"Asset loading operation '{loadFunction.Method.Name}' timed out after {timeout.TotalMinutes} minutes.");
-                }
-                
-                await loadTask.ConfigureAwait(false);
-            }
-            finally
-            {
-                _loadingSemaphore.Release();
-            }
         }
 
         private async Task LoadMetaData()
@@ -89,13 +61,13 @@ namespace EnkaDotNet.Assets.HSR
                 _metaData = await FetchAndDeserializeAssetAsync<HSRMetaData>("meta.json").ConfigureAwait(false);
                 if (_metaData == null)
                 {
-                    throw new InvalidOperationException("Failed to load essential Honkai: Star Rail metajson data (result was null).");
+                    throw new InvalidOperationException("Failed to load essential Honkai: Star Rail meta.json data (result was null).");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading Honkai: Star Rail metajson asset.");
-                throw new InvalidOperationException("Failed to load essential Honkai: Star Rail metajson data.", ex);
+                _logger.LogError(ex, "Error loading Honkai: Star Rail meta.json asset.");
+                throw new InvalidOperationException("Failed to load essential Honkai: Star Rail meta.json data.", ex);
             }
         }
 
@@ -197,12 +169,11 @@ namespace EnkaDotNet.Assets.HSR
                 {
                     foreach (var kvp in relicItemsMap)
                     {
+                        if (kvp.Value == null) continue;
+
                         _relicItems[kvp.Key] = kvp.Value;
-                        string setId = kvp.Value.SetID.ToString();
-                        if (!_relicSets.ContainsKey(setId))
-                        {
-                            _relicSets[setId] = new HSRRelicSetInfo { SetName = $"Set {setId}" };
-                        }
+                        string setId = kvp.Value.SetID.ToString(CultureInfo.InvariantCulture);
+                        _relicSets.TryAdd(setId, new HSRRelicSetInfo { SetName = null });
                     }
                 }
             }
@@ -272,10 +243,10 @@ namespace EnkaDotNet.Assets.HSR
 
         public string GetEidolonIconUrl(int eidolonId)
         {
-            string eidolonIdStr = eidolonId.ToString();
+            string eidolonIdStr = eidolonId.ToString(CultureInfo.InvariantCulture);
             if (_eidolons.TryGetValue(eidolonIdStr, out var eidolonInfo) && !string.IsNullOrEmpty(eidolonInfo.IconPath))
             {
-                return $"{Constants.DEFAULT_HSR_ASSET_CDN_URL}{eidolonInfo.IconPath}";
+                return $"{Constants.DefaultHSRAssetCdnUrl}{eidolonInfo.IconPath}";
             }
             return string.Empty;
         }
@@ -288,7 +259,7 @@ namespace EnkaDotNet.Assets.HSR
 
         public string GetCharacterName(int characterId)
         {
-            string characterIdStr = characterId.ToString();
+            string characterIdStr = characterId.ToString(CultureInfo.InvariantCulture);
             if (_characters.TryGetValue(characterIdStr, out var characterInfo) && characterInfo.AvatarName?.Hash != null)
             {
                 string localizedName = GetText(characterInfo.AvatarName.Hash);
@@ -302,27 +273,27 @@ namespace EnkaDotNet.Assets.HSR
 
         public string GetCharacterIconUrl(int characterId)
         {
-            string characterIdStr = characterId.ToString();
+            string characterIdStr = characterId.ToString(CultureInfo.InvariantCulture);
             if (_characters.TryGetValue(characterIdStr, out var characterInfo) && !string.IsNullOrEmpty(characterInfo.AvatarCutinFrontImgPath))
             {
-                return $"{Constants.DEFAULT_HSR_ASSET_CDN_URL}{characterInfo.AvatarCutinFrontImgPath}";
+                return $"{Constants.DefaultHSRAssetCdnUrl}{characterInfo.AvatarCutinFrontImgPath}";
             }
             return string.Empty;
         }
 
         public string GetCharacterAvatarIconUrl(int characterId)
         {
-            string characterIdStr = characterId.ToString();
+            string characterIdStr = characterId.ToString(CultureInfo.InvariantCulture);
             if (_characters.TryGetValue(characterIdStr, out var characterInfo) && !string.IsNullOrEmpty(characterInfo.AvatarSideIconPath))
             {
-                return $"{Constants.DEFAULT_HSR_ASSET_CDN_URL}{characterInfo.AvatarSideIconPath}";
+                return $"{Constants.DefaultHSRAssetCdnUrl}{characterInfo.AvatarSideIconPath}";
             }
             return string.Empty;
         }
 
         public ElementType GetCharacterElement(int characterId)
         {
-            string characterIdStr = characterId.ToString();
+            string characterIdStr = characterId.ToString(CultureInfo.InvariantCulture);
             if (_characters.TryGetValue(characterIdStr, out var characterInfo) && !string.IsNullOrEmpty(characterInfo.Element))
             {
                 return MapElementNameToEnum(characterInfo.Element);
@@ -332,7 +303,7 @@ namespace EnkaDotNet.Assets.HSR
 
         public PathType GetCharacterPath(int characterId)
         {
-            string characterIdStr = characterId.ToString();
+            string characterIdStr = characterId.ToString(CultureInfo.InvariantCulture);
             if (_characters.TryGetValue(characterIdStr, out var characterInfo) && !string.IsNullOrEmpty(characterInfo.AvatarBaseType))
             {
                 return MapPathNameToEnum(characterInfo.AvatarBaseType);
@@ -342,7 +313,7 @@ namespace EnkaDotNet.Assets.HSR
 
         public int GetCharacterRarity(int characterId)
         {
-            string characterIdStr = characterId.ToString();
+            string characterIdStr = characterId.ToString(CultureInfo.InvariantCulture);
             _characters.TryGetValue(characterIdStr, out var characterInfo);
             return characterInfo?.Rarity ?? 0;
         }
@@ -366,7 +337,9 @@ namespace EnkaDotNet.Assets.HSR
                 return null;
             }
 
-            if (info != null && (info.SetName == $"Set {setId}" || string.IsNullOrEmpty(info.SetName)))
+            // relics.json and relic_set.json load concurrently, so names are resolved on first
+            // read. Concurrent callers compute the same value, making the assignment idempotent.
+            if (info != null && string.IsNullOrEmpty(info.SetName))
             {
                 info.SetName = ResolveRelicSetName(setId);
             }
@@ -376,16 +349,16 @@ namespace EnkaDotNet.Assets.HSR
 
         private string ResolveRelicSetName(string setId)
         {
-            if (_relicSetData.TryGetValue(setId, out var assetInfo) && !string.IsNullOrEmpty(assetInfo.NameHash))
+            if (_relicSetData.TryGetValue(setId, out var assetInfo) && !string.IsNullOrEmpty(assetInfo?.NameHash))
             {
-                string fromHash = GetText(assetInfo.NameHash);
-                if (!string.IsNullOrEmpty(fromHash) && fromHash != assetInfo.NameHash)
+                string fromHash = TryGetText(assetInfo.NameHash);
+                if (fromHash != null)
                 {
                     return fromHash;
                 }
             }
 
-            return GetText($"RelicSet_{setId}_Name") ?? GetText(setId) ?? $"Set {setId}";
+            return TryGetText($"RelicSet_{setId}_Name") ?? TryGetText(setId) ?? $"Set {setId}";
         }
 
         public Dictionary<string, HSRRelicSetInfo> GetAllRelicSets() => new Dictionary<string, HSRRelicSetInfo>(_relicSets);
@@ -406,7 +379,7 @@ namespace EnkaDotNet.Assets.HSR
 
         public string GetLightConeName(int lightConeId)
         {
-            string lightConeIdStr = lightConeId.ToString();
+            string lightConeIdStr = lightConeId.ToString(CultureInfo.InvariantCulture);
             if (_lightCones.TryGetValue(lightConeIdStr, out var lightConeInfo) && lightConeInfo.EquipmentName?.Hash != null)
             {
                 return GetText(lightConeInfo.EquipmentName.Hash);
@@ -416,17 +389,17 @@ namespace EnkaDotNet.Assets.HSR
 
         public string GetLightConeIconUrl(int lightConeId)
         {
-            string lightConeIdStr = lightConeId.ToString();
+            string lightConeIdStr = lightConeId.ToString(CultureInfo.InvariantCulture);
             if (_lightCones.TryGetValue(lightConeIdStr, out var lightConeInfo) && !string.IsNullOrEmpty(lightConeInfo.ImagePath))
             {
-                return $"{Constants.DEFAULT_HSR_ASSET_CDN_URL}{lightConeInfo.ImagePath}";
+                return $"{Constants.DefaultHSRAssetCdnUrl}{lightConeInfo.ImagePath}";
             }
             return string.Empty;
         }
 
         public PathType GetLightConePath(int lightConeId)
         {
-            string lightConeIdStr = lightConeId.ToString();
+            string lightConeIdStr = lightConeId.ToString(CultureInfo.InvariantCulture);
             if (_lightCones.TryGetValue(lightConeIdStr, out var lightConeInfo) && !string.IsNullOrEmpty(lightConeInfo.AvatarBaseType))
             {
                 return MapPathNameToEnum(lightConeInfo.AvatarBaseType);
@@ -436,45 +409,45 @@ namespace EnkaDotNet.Assets.HSR
 
         public int GetLightConeRarity(int lightConeId)
         {
-            string lightConeIdStr = lightConeId.ToString();
+            string lightConeIdStr = lightConeId.ToString(CultureInfo.InvariantCulture);
             _lightCones.TryGetValue(lightConeIdStr, out var lightConeInfo);
             return lightConeInfo?.Rarity ?? 0;
         }
 
         public string GetRelicSetName(int setId)
         {
-            string setIdStr = setId.ToString();
+            string setIdStr = setId.ToString(CultureInfo.InvariantCulture);
             var setInfo = GetRelicSetInfo(setIdStr);
             return setInfo?.SetName ?? $"RelicSet_{setId}";
         }
 
         public string GetRelicIconUrl(int relicId)
         {
-            string relicIdStr = relicId.ToString();
+            string relicIdStr = relicId.ToString(CultureInfo.InvariantCulture);
             if (_relicItems.TryGetValue(relicIdStr, out var relicInfo) && !string.IsNullOrEmpty(relicInfo.Icon))
             {
-                return $"{Constants.DEFAULT_HSR_ASSET_CDN_URL}{relicInfo.Icon}";
+                return $"{Constants.DefaultHSRAssetCdnUrl}{relicInfo.Icon}";
             }
             return string.Empty;
         }
 
         public int GetRelicRarity(int relicId)
         {
-            string relicIdStr = relicId.ToString();
+            string relicIdStr = relicId.ToString(CultureInfo.InvariantCulture);
             _relicItems.TryGetValue(relicIdStr, out var relicInfo);
             return relicInfo?.Rarity ?? 0;
         }
 
         public int GetRelicSetId(int relicId)
         {
-            string relicIdStr = relicId.ToString();
+            string relicIdStr = relicId.ToString(CultureInfo.InvariantCulture);
             _relicItems.TryGetValue(relicIdStr, out var relicInfo);
             return relicInfo?.SetID ?? 0;
         }
 
         public RelicType GetRelicType(int relicId)
         {
-            string relicIdStr = relicId.ToString();
+            string relicIdStr = relicId.ToString(CultureInfo.InvariantCulture);
             if (_relicItems.TryGetValue(relicIdStr, out var relicInfo) && !string.IsNullOrEmpty(relicInfo.Type))
             {
                 return MapRelicTypeToEnum(relicInfo.Type);
@@ -497,101 +470,112 @@ namespace EnkaDotNet.Assets.HSR
                 bool isPercentage = HSRStatPropertyUtils.IsPercentageType(propType.ToString());
                 if (isPercentage)
                 {
-                    return $"{value * 100:F1}%";
+                    return (value * 100).ToString("F1", CultureInfo.InvariantCulture) + "%";
                 }
                 if (propType == StatPropertyType.SpeedDelta)
                 {
-                    return $"{value:F1}";
+                    return value.ToString("F1", CultureInfo.InvariantCulture);
                 }
-                return $"{(int)value}";
+                return ((int)value).ToString(CultureInfo.InvariantCulture);
             }
-            return value.ToString();
+            return value.ToString(CultureInfo.InvariantCulture);
         }
 
         public string GetProfilePictureIconUrl(int profilePictureId)
         {
-            string profilePictureIdstr = profilePictureId.ToString();
-            if (_pfps.TryGetValue(profilePictureIdstr, out var pfpInfo) && !string.IsNullOrEmpty(pfpInfo.Icon))
+            string profilePictureIdStr = profilePictureId.ToString(CultureInfo.InvariantCulture);
+            if (_pfps.TryGetValue(profilePictureIdStr, out var pfpInfo) && !string.IsNullOrEmpty(pfpInfo.Icon))
             {
-                return $"{Constants.DEFAULT_HSR_ASSET_CDN_URL}{pfpInfo.Icon}";
+                return $"{Constants.DefaultHSRAssetCdnUrl}{pfpInfo.Icon}";
             }
             return string.Empty;
         }
 
         public string GetSkillIconUrl(int skillId)
         {
-            string skillIdStr = skillId.ToString();
+            string skillIdStr = skillId.ToString(CultureInfo.InvariantCulture);
             if (_skills.TryGetValue(skillIdStr, out var skillInfo) && !string.IsNullOrEmpty(skillInfo.IconPath))
             {
-                return $"{Constants.DEFAULT_HSR_ASSET_CDN_URL}{skillInfo.IconPath}";
+                return $"{Constants.DefaultHSRAssetCdnUrl}{skillInfo.IconPath}";
             }
             return string.Empty;
         }
 
         public HSRAvatarMetaStats GetAvatarStats(string avatarId, int promotion)
         {
-            if (_metaData?.AvatarStats != null && _metaData.AvatarStats.TryGetValue(avatarId, out var promoDict))
+            if (_metaData?.AvatarStats != null
+                && _metaData.AvatarStats.TryGetValue(avatarId, out var promoDict)
+                && promoDict != null
+                && promoDict.TryGetValue(promotion.ToString(CultureInfo.InvariantCulture), out var stats))
             {
-                if (promoDict != null && promoDict.TryGetValue(promotion.ToString(), out var stats))
-                {
-                    return stats;
-                }
+                return stats;
             }
+
             return null;
         }
 
         public HSREquipmentMetaStats GetEquipmentStats(string equipmentId, int promotion)
         {
-            if (_metaData?.EquipmentStats != null && _metaData.EquipmentStats.TryGetValue(equipmentId, out var promoDict))
+            if (_metaData?.EquipmentStats != null
+                && _metaData.EquipmentStats.TryGetValue(equipmentId, out var promoDict)
+                && promoDict != null
+                && promoDict.TryGetValue(promotion.ToString(CultureInfo.InvariantCulture), out var stats))
             {
-                if (promoDict != null && promoDict.TryGetValue(promotion.ToString(), out var stats))
-                {
-                    return stats;
-                }
+                return stats;
             }
+
             return null;
         }
 
         public Dictionary<string, double> GetEquipmentSkillProps(string skillId, int rank)
         {
-            if (_metaData?.EquipmentSkills != null && _metaData.EquipmentSkills.TryGetValue(skillId, out var rankDict))
+            if (_metaData?.EquipmentSkills != null
+                && _metaData.EquipmentSkills.TryGetValue(skillId, out var rankDict)
+                && rankDict != null
+                && rankDict.TryGetValue(rank.ToString(CultureInfo.InvariantCulture), out var skillInfo))
             {
-                if (rankDict != null && rankDict.TryGetValue(rank.ToString(), out var skillInfo))
-                {
-                    return skillInfo?.Props ?? new Dictionary<string, double>();
-                }
+                return skillInfo?.Props ?? new Dictionary<string, double>();
             }
+
             return new Dictionary<string, double>();
         }
 
         public HSRRelicMainAffixInfo GetRelicMainAffixInfo(int groupId, int affixId)
         {
-            if (_metaData?.RelicInfo?.MainAffix != null &&
-                _metaData.RelicInfo.MainAffix.TryGetValue(groupId.ToString(), out var groupDict))
+            if (_metaData?.RelicInfo?.MainAffix != null
+                && _metaData.RelicInfo.MainAffix.TryGetValue(groupId.ToString(CultureInfo.InvariantCulture), out var groupDict)
+                && groupDict != null
+                && groupDict.TryGetValue(affixId.ToString(CultureInfo.InvariantCulture), out var affixInfo))
             {
-                if (groupDict != null && groupDict.TryGetValue(affixId.ToString(), out var affixInfo))
-                    return affixInfo;
+                return affixInfo;
             }
+
             return null;
         }
 
         public HSRRelicSubAffixInfo GetRelicSubAffixInfo(int groupId, int affixId)
         {
-            if (_metaData?.RelicInfo?.SubAffix != null && _metaData.RelicInfo.SubAffix.TryGetValue(groupId.ToString(), out var groupDict))
+            if (_metaData?.RelicInfo?.SubAffix != null
+                && _metaData.RelicInfo.SubAffix.TryGetValue(groupId.ToString(CultureInfo.InvariantCulture), out var groupDict)
+                && groupDict != null
+                && groupDict.TryGetValue(affixId.ToString(CultureInfo.InvariantCulture), out var affixInfo))
             {
-                if (groupDict != null && groupDict.TryGetValue(affixId.ToString(), out var affixInfo))
-                    return affixInfo;
+                return affixInfo;
             }
+
             return null;
         }
 
         public Dictionary<string, double> GetSkillTreeProps(string pointId, int level)
         {
-            if (_metaData?.SkillTreeInfo != null && _metaData.SkillTreeInfo.TryGetValue(pointId, out var levelDict))
+            if (_metaData?.SkillTreeInfo != null
+                && _metaData.SkillTreeInfo.TryGetValue(pointId, out var levelDict)
+                && levelDict != null
+                && levelDict.TryGetValue(level.ToString(CultureInfo.InvariantCulture), out var skillInfo))
             {
-                if (levelDict != null && levelDict.TryGetValue(level.ToString(), out var skillInfo))
-                    return skillInfo?.Props ?? new Dictionary<string, double>();
+                return skillInfo?.Props ?? new Dictionary<string, double>();
             }
+
             return new Dictionary<string, double>();
         }
 
@@ -609,7 +593,7 @@ namespace EnkaDotNet.Assets.HSR
             var pointInfo = GetSkillTreePointInfo(pointId);
             if (pointInfo?.SkillIds != null && pointInfo.SkillIds.Count > 0)
             {
-                string skillIdStr = pointInfo.SkillIds[0].ToString();
+                string skillIdStr = pointInfo.SkillIds[0].ToString(CultureInfo.InvariantCulture);
                 string skillNameKey = $"SkillName_{skillIdStr}";
                 string localizedName = GetText(skillNameKey);
                 if (!string.IsNullOrEmpty(localizedName) && localizedName != skillNameKey)
@@ -632,7 +616,7 @@ namespace EnkaDotNet.Assets.HSR
             var pointInfo = GetSkillTreePointInfo(pointId);
             if (pointInfo?.SkillIds != null && pointInfo.SkillIds.Count > 0)
             {
-                string skillIdStr = pointInfo.SkillIds[0].ToString();
+                string skillIdStr = pointInfo.SkillIds[0].ToString(CultureInfo.InvariantCulture);
                 string skillDescKey = $"SkillDesc_{skillIdStr}";
                 string localizedDesc = GetText(skillDescKey);
                 if (!string.IsNullOrEmpty(localizedDesc) && localizedDesc != skillDescKey)
@@ -653,10 +637,10 @@ namespace EnkaDotNet.Assets.HSR
 
         public string GetSkillTreeIconUrl(int pointId)
         {
-            var pointInfo = GetSkillTreePointInfo(pointId.ToString());
+            var pointInfo = GetSkillTreePointInfo(pointId.ToString(CultureInfo.InvariantCulture));
             if (pointInfo != null && !string.IsNullOrEmpty(pointInfo.Icon))
             {
-                return $"{Constants.DEFAULT_HSR_ASSET_CDN_URL}{pointInfo.Icon}";
+                return $"{Constants.DefaultHSRAssetCdnUrl}{pointInfo.Icon}";
             }
             return string.Empty;
         }
@@ -664,8 +648,8 @@ namespace EnkaDotNet.Assets.HSR
         public Dictionary<string, double> GetRelicSetEffects(int setId, int pieceCount)
         {
             if (_metaData?.RelicInfo?.SetSkill == null) return new Dictionary<string, double>();
-            string setIdStr = setId.ToString();
-            string pieceCountStr = pieceCount.ToString();
+            string setIdStr = setId.ToString(CultureInfo.InvariantCulture);
+            string pieceCountStr = pieceCount.ToString(CultureInfo.InvariantCulture);
 
             if (_metaData.RelicInfo.SetSkill.TryGetValue(setIdStr, out var setData) &&
                 setData != null &&
@@ -710,32 +694,15 @@ namespace EnkaDotNet.Assets.HSR
         {
             switch (relicType?.ToUpperInvariant())
             {
-                case "HEAD": return RelicType.HEAD;
-                case "HAND": return RelicType.HAND;
-                case "BODY": return RelicType.BODY;
-                case "FOOT": return RelicType.FOOT;
-                case "NECK": return RelicType.NECK;
-                case "OBJECT": return RelicType.OBJECT;
+                case "HEAD": return RelicType.Head;
+                case "HAND": return RelicType.Hands;
+                case "BODY": return RelicType.Body;
+                case "FOOT": return RelicType.Feet;
+                case "NECK": return RelicType.PlanarSphere;
+                case "OBJECT": return RelicType.LinkRope;
                 default: return RelicType.Unknown;
             }
         }
 
-        public new void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected new virtual void Dispose(bool disposing)
-        {
-            if (_disposed) return;
-
-            if (disposing)
-            {
-                _loadingSemaphore.Dispose();
-            }
-
-            _disposed = true;
-        }
     }
 }

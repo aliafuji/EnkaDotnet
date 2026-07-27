@@ -19,12 +19,13 @@ namespace EnkaDotNet.Caching.Providers
     public class MemoryCacheAdapter : IEnkaCache
     {
         private readonly IMemoryCache _memoryCache;
+        private readonly bool _ownsMemoryCache;
         private readonly ConcurrentDictionary<string, bool> _trackedKeys;
         private readonly TimeSpan _defaultTtl;
         private readonly JsonSerializerOptions? _jsonOptions;
         private long _hitCount;
         private long _missCount;
-        private bool _disposed;
+        private volatile bool _disposed;
 
         /// <summary>
         /// Initializes a new instance of the MemoryCacheAdapter class.
@@ -32,9 +33,15 @@ namespace EnkaDotNet.Caching.Providers
         /// <param name="memoryCache">The underlying IMemoryCache instance to wrap.</param>
         /// <param name="defaultTtl">Default time-to-live for cache entries. Defaults to 5 minutes.</param>
         /// <param name="jsonOptions">Optional JSON serializer options. If null, uses EnkaJsonContext for AOT compatibility on .NET 8+.</param>
-        public MemoryCacheAdapter(IMemoryCache memoryCache, TimeSpan? defaultTtl = null, JsonSerializerOptions? jsonOptions = null)
+        /// <param name="ownsMemoryCache">
+        /// When true, <see cref="Dispose()"/> also disposes <paramref name="memoryCache"/>. Pass true
+        /// only when the caller created the cache purely for this adapter, never for a cache that
+        /// came from dependency injection and is shared with the rest of the application.
+        /// </param>
+        public MemoryCacheAdapter(IMemoryCache memoryCache, TimeSpan? defaultTtl = null, JsonSerializerOptions? jsonOptions = null, bool ownsMemoryCache = false)
         {
             _memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
+            _ownsMemoryCache = ownsMemoryCache;
             _trackedKeys = new ConcurrentDictionary<string, bool>();
             _defaultTtl = defaultTtl ?? TimeSpan.FromMinutes(5);
             _jsonOptions = jsonOptions;
@@ -155,13 +162,25 @@ namespace EnkaDotNet.Caching.Providers
                 Expiration = expiration
             };
 
+            // Without the eviction callback, _trackedKeys would keep every key ever cached and grow
+            // without bound even as the underlying entries expire.
             var entryOptions = new MemoryCacheEntryOptions()
-                .SetAbsoluteExpiration(effectiveTtl);
+                .SetAbsoluteExpiration(effectiveTtl)
+                .SetSize(jsonValue.Length)
+                .RegisterPostEvictionCallback(OnEntryEvicted, _trackedKeys);
 
             _memoryCache.Set(key, entry, entryOptions);
             _trackedKeys.TryAdd(key, true);
 
             return Task.CompletedTask;
+        }
+
+        private static void OnEntryEvicted(object key, object? value, EvictionReason reason, object? state)
+        {
+            if (state is ConcurrentDictionary<string, bool> trackedKeys && key is string stringKey)
+            {
+                trackedKeys.TryRemove(stringKey, out _);
+            }
         }
 
         /// <inheritdoc/>
@@ -280,6 +299,10 @@ namespace EnkaDotNet.Caching.Providers
                 if (disposing)
                 {
                     _trackedKeys.Clear();
+                    if (_ownsMemoryCache)
+                    {
+                        (_memoryCache as IDisposable)?.Dispose();
+                    }
                 }
                 _disposed = true;
             }

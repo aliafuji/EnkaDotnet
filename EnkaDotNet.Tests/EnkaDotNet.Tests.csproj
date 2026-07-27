@@ -23,12 +23,12 @@
     <PackageReference Include="FsCheck" Version="2.16.6" />
     <PackageReference Include="FsCheck.Xunit" Version="2.16.6" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.4" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" />
-    <PackageReference Include="StackExchange.Redis" Version="2.8.41" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\EnkaDotNet\EnkaDotNet.csproj" />
+    <ProjectReference Include="..\EnkaDotNet.Caching.Sqlite\EnkaDotNet.Caching.Sqlite.csproj" />
+    <ProjectReference Include="..\EnkaDotNet.Caching.Redis\EnkaDotNet.Caching.Redis.csproj" />
   </ItemGroup>
 
 </Project>

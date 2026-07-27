@@ -44,7 +44,7 @@ namespace EnkaDotNet.Internal
 
             if (_directHttpClient.BaseAddress == null)
             {
-                _directHttpClient.BaseAddress = new Uri(Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
+                _directHttpClient.BaseAddress = new Uri(Constants.DefaultEnkaProfileApiBaseUrl);
             }
             if (!_directHttpClient.DefaultRequestHeaders.UserAgent.ToString().Contains(Constants.DefaultUserAgent))
             {
@@ -59,7 +59,7 @@ namespace EnkaDotNet.Internal
                 throw new ArgumentException("Username cannot be null or whitespace", nameof(username));
             }
 
-            string relativeEndpoint = string.Format(Constants.ENKA_PROFILE_ENDPOINT_FORMAT, Uri.EscapeDataString(username));
+            string relativeEndpoint = string.Format(Constants.EnkaProfileEndpointFormat, Uri.EscapeDataString(username));
             EnkaProfileResponse response = null;
 
             if (bypassCache || !_options.EnableCaching)
@@ -77,10 +77,11 @@ namespace EnkaDotNet.Internal
                     }
 
                     httpResponse.EnsureSuccessStatusCode();
-                    string jsonContent = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 #if NET8_0_OR_GREATER
+                    string jsonContent = await httpResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                     response = JsonSerializer.Deserialize<EnkaProfileResponse>(jsonContent, EnkaJsonContext.Default.Options);
 #else
+                    string jsonContent = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 #pragma warning disable IL2026, IL3050
                     response = JsonSerializer.Deserialize<EnkaProfileResponse>(jsonContent);
 #pragma warning restore IL2026, IL3050
@@ -140,7 +141,7 @@ namespace EnkaDotNet.Internal
             }
 
             string relativeEndpoint = string.Format(
-                Constants.ENKA_BUILDS_ENDPOINT_FORMAT, 
+                Constants.EnkaBuildsEndpointFormat, 
                 Uri.EscapeDataString(username), 
                 Uri.EscapeDataString(hoyoHash));
 
@@ -161,10 +162,11 @@ namespace EnkaDotNet.Internal
                     }
 
                     httpResponse.EnsureSuccessStatusCode();
-                    string jsonContent = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 #if NET8_0_OR_GREATER
+                    string jsonContent = await httpResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                     response = JsonSerializer.Deserialize<Dictionary<string, List<RawBuildModel>>>(jsonContent, EnkaJsonContext.Default.Options);
 #else
+                    string jsonContent = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 #pragma warning disable IL2026, IL3050
                     response = JsonSerializer.Deserialize<Dictionary<string, List<RawBuildModel>>>(jsonContent);
 #pragma warning restore IL2026, IL3050

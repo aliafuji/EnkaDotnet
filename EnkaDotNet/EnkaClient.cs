@@ -9,11 +9,13 @@ using EnkaDotNet.Assets;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Assets.HSR;
 using EnkaDotNet.Assets.ZZZ;
+using EnkaDotNet.Assets.EF;
 using EnkaDotNet.Caching;
 using EnkaDotNet.Components.EnkaProfile;
 using EnkaDotNet.Components.Genshin;
 using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Components.ZZZ;
+using EnkaDotNet.Components.EF;
 using EnkaDotNet.Exceptions;
 using EnkaDotNet.Internal;
 using EnkaDotNet.Enums;
@@ -21,6 +23,7 @@ using EnkaDotNet.Models.EnkaProfile;
 using EnkaDotNet.Models.Genshin;
 using EnkaDotNet.Models.HSR;
 using EnkaDotNet.Models.ZZZ;
+using EnkaDotNet.Models.EF;
 using EnkaDotNet.Utils;
 using EnkaDotNet.Utils.Common;
 using EnkaDotNet.Utils.Enka;
@@ -49,15 +52,17 @@ namespace EnkaDotNet
         private readonly ConcurrentDictionary<string, Lazy<Task<IGenshinAssets>>> _genshinAssetsCache = new ConcurrentDictionary<string, Lazy<Task<IGenshinAssets>>>();
         private readonly ConcurrentDictionary<string, Lazy<Task<IHSRAssets>>> _hsrAssetsCache = new ConcurrentDictionary<string, Lazy<Task<IHSRAssets>>>();
         private readonly ConcurrentDictionary<string, Lazy<Task<IZZZAssets>>> _zzzAssetsCache = new ConcurrentDictionary<string, Lazy<Task<IZZZAssets>>>();
+        private readonly ConcurrentDictionary<string, Lazy<Task<IEFAssets>>> _efAssetsCache = new ConcurrentDictionary<string, Lazy<Task<IEFAssets>>>();
 
         private readonly ConcurrentDictionary<string, Lazy<Task<GenshinServiceHandler>>> _genshinHandlerCache = new ConcurrentDictionary<string, Lazy<Task<GenshinServiceHandler>>>();
         private readonly ConcurrentDictionary<string, Lazy<Task<HSRServiceHandler>>> _hsrHandlerCache = new ConcurrentDictionary<string, Lazy<Task<HSRServiceHandler>>>();
         private readonly ConcurrentDictionary<string, Lazy<Task<ZZZServiceHandler>>> _zzzHandlerCache = new ConcurrentDictionary<string, Lazy<Task<ZZZServiceHandler>>>();
+        private readonly ConcurrentDictionary<string, Lazy<Task<EFServiceHandler>>> _efHandlerCache = new ConcurrentDictionary<string, Lazy<Task<EFServiceHandler>>>();
 
         private readonly IHttpClientFactory _httpClientFactory;
 
-        private const string DEFAULT_LANGUAGE = "en";
-        private static readonly int maxConcurrency = MathHelper.Clamp(Environment.ProcessorCount, 1, 8);
+        private const string DefaultLanguage = "en";
+        private static readonly int _maxConcurrency = MathHelper.Clamp(Environment.ProcessorCount, 1, 8);
 
 
         /// <inheritdoc/>
@@ -91,7 +96,7 @@ namespace EnkaDotNet
             _enkaDataMapper = new EnkaDataMapper(_options);
 
             HttpClient enkaProfileHttpClient = _httpClientFactory.CreateClient("EnkaProfileClient");
-            if (enkaProfileHttpClient.BaseAddress == null) enkaProfileHttpClient.BaseAddress = new Uri(Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
+            if (enkaProfileHttpClient.BaseAddress == null) enkaProfileHttpClient.BaseAddress = new Uri(Constants.DefaultEnkaProfileApiBaseUrl);
 
             _enkaProfileServiceHandler = new EnkaProfileServiceHandler(
                 _options,
@@ -166,7 +171,7 @@ namespace EnkaDotNet
 
         private Task<IGenshinAssets> GetGenshinAssetsAsync(string language)
         {
-            language = (language ?? DEFAULT_LANGUAGE).ToLowerInvariant();
+            language = (language ?? DefaultLanguage).ToLowerInvariant();
             return _genshinAssetsCache.GetOrAdd(language, lang =>
                 new Lazy<Task<IGenshinAssets>>(() => LoadGenshinAssetsAsync(lang))
             ).Value;
@@ -195,7 +200,7 @@ namespace EnkaDotNet
 
         private Task<GenshinServiceHandler> GetGenshinHandlerAsync(string language)
         {
-            language = (language ?? DEFAULT_LANGUAGE).ToLowerInvariant();
+            language = (language ?? DefaultLanguage).ToLowerInvariant();
             return _genshinHandlerCache.GetOrAdd(language, lang =>
                 new Lazy<Task<GenshinServiceHandler>>(async () =>
                 {
@@ -207,7 +212,7 @@ namespace EnkaDotNet
 
         private Task<IHSRAssets> GetHSRAssetsAsync(string language)
         {
-            language = (language ?? DEFAULT_LANGUAGE).ToLowerInvariant();
+            language = (language ?? DefaultLanguage).ToLowerInvariant();
             return _hsrAssetsCache.GetOrAdd(language, lang =>
                 new Lazy<Task<IHSRAssets>>(() => LoadHSRAssetsAsync(lang))
             ).Value;
@@ -236,7 +241,7 @@ namespace EnkaDotNet
 
         private Task<HSRServiceHandler> GetHSRHandlerAsync(string language)
         {
-            language = (language ?? DEFAULT_LANGUAGE).ToLowerInvariant();
+            language = (language ?? DefaultLanguage).ToLowerInvariant();
             return _hsrHandlerCache.GetOrAdd(language, lang =>
                 new Lazy<Task<HSRServiceHandler>>(async () =>
                 {
@@ -248,7 +253,7 @@ namespace EnkaDotNet
 
         private Task<IZZZAssets> GetZZZAssetsAsync(string language)
         {
-            language = (language ?? DEFAULT_LANGUAGE).ToLowerInvariant();
+            language = (language ?? DefaultLanguage).ToLowerInvariant();
             return _zzzAssetsCache.GetOrAdd(language, lang =>
                 new Lazy<Task<IZZZAssets>>(() => LoadZZZAssetsAsync(lang))
             ).Value;
@@ -277,12 +282,53 @@ namespace EnkaDotNet
 
         private Task<ZZZServiceHandler> GetZZZHandlerAsync(string language)
         {
-            language = (language ?? DEFAULT_LANGUAGE).ToLowerInvariant();
+            language = (language ?? DefaultLanguage).ToLowerInvariant();
             return _zzzHandlerCache.GetOrAdd(language, lang =>
                 new Lazy<Task<ZZZServiceHandler>>(async () =>
                 {
                     var langAssets = await GetZZZAssetsAsync(lang).ConfigureAwait(false);
                     return new ZZZServiceHandler(langAssets, _options, _httpHelper, Logger);
+                })
+            ).Value;
+        }
+
+        private Task<IEFAssets> GetEFAssetsAsync(string language)
+        {
+            language = (language ?? DefaultLanguage).ToLowerInvariant();
+            return _efAssetsCache.GetOrAdd(language, lang =>
+                new Lazy<Task<IEFAssets>>(() => LoadEFAssetsAsync(lang))
+            ).Value;
+        }
+
+        private async Task<IEFAssets> LoadEFAssetsAsync(string language)
+        {
+            try
+            {
+                var assetsFactoryFunc = _serviceProvider?.GetService<Func<string, Task<IEFAssets>>>();
+                if (assetsFactoryFunc != null)
+                {
+                    return await assetsFactoryFunc(language).ConfigureAwait(false);
+                }
+                var logger = _loggerFactory.CreateLogger<EFAssets>();
+                var httpClient = _httpClientFactory.CreateClient("EFAssetClient");
+                return await AssetsFactory.CreateEFAssetsAsync(language, httpClient, logger, _options.AssetFallbackDirectory).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex)
+            {
+                _efAssetsCache.TryRemove(language, out _);
+                Logger.LogError(ex, "Timeout while fetching Endfield assets for language {Language}", language);
+                throw new EnkaNetworkException($"Timeout while fetching Endfield assets for language {language}", ex);
+            }
+        }
+
+        private Task<EFServiceHandler> GetEFHandlerAsync(string language)
+        {
+            language = (language ?? DefaultLanguage).ToLowerInvariant();
+            return _efHandlerCache.GetOrAdd(language, lang =>
+                new Lazy<Task<EFServiceHandler>>(async () =>
+                {
+                    var langAssets = await GetEFAssetsAsync(lang).ConfigureAwait(false);
+                    return new EFServiceHandler(langAssets, _options, _httpHelper, Logger);
                 })
             ).Value;
         }
@@ -382,6 +428,42 @@ namespace EnkaDotNet
             });
 
         /// <inheritdoc/>
+        public Task<EFApiResponse> GetEFRawUserResponseAsync(long uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            ExecuteApiCallAsync(async () =>
+            {
+                var handler = await GetEFHandlerAsync(language).ConfigureAwait(false);
+                return await handler.GetRawEFUserResponseAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+            });
+
+        /// <inheritdoc/>
+        public Task<EFApiResponse> GetEFRawUserResponseAsync(long uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetEFRawUserResponseAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<EFPlayerInfo> GetEFPlayerInfoAsync(long uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            ExecuteApiCallAsync(async () =>
+            {
+                var handler = await GetEFHandlerAsync(language).ConfigureAwait(false);
+                return await handler.GetEFPlayerInfoAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+            });
+
+        /// <inheritdoc/>
+        public Task<EFPlayerInfo> GetEFPlayerInfoAsync(long uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetEFPlayerInfoAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<IReadOnlyList<EFOperator>> GetEFOperatorsAsync(long uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            ExecuteApiCallAsync(async () =>
+            {
+                var handler = await GetEFHandlerAsync(language).ConfigureAwait(false);
+                return await handler.GetEFOperatorsAsync(uid, bypassCache, cancellationToken).ConfigureAwait(false);
+            });
+
+        /// <inheritdoc/>
+        public Task<IReadOnlyList<EFOperator>> GetEFOperatorsAsync(long uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default) =>
+            GetEFOperatorsAsync(uid, ResolveLanguage(language), bypassCache, cancellationToken);
+
+        /// <inheritdoc/>
         public Task<Dictionary<string, List<GenshinBuild>>> GetGenshinBuildsByUsernameAsync(string username, string hoyoHash, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default) =>
             ExecuteApiCallAsync(async () =>
             {
@@ -414,13 +496,13 @@ namespace EnkaDotNet
                             try
                             {
 #if NET8_0_OR_GREATER
-                                var avatarInfo = System.Text.Json.JsonSerializer.Deserialize<Models.Genshin.AvatarInfoModel>(
-                                    rawBuild.AvatarData.GetRawText(), 
-                                    Serialization.EnkaJsonContext.Default.Options);
+                                var avatarInfo = System.Text.Json.JsonSerializer.Deserialize(
+                                    rawBuild.AvatarData,
+                                    Serialization.EnkaJsonContext.Default.AvatarInfoModel);
 #else
 #pragma warning disable IL2026, IL3050
                                 var avatarInfo = System.Text.Json.JsonSerializer.Deserialize<Models.Genshin.AvatarInfoModel>(
-                                    rawBuild.AvatarData.GetRawText());
+                                    rawBuild.AvatarData);
 #pragma warning restore IL2026, IL3050
 #endif
                                 if (avatarInfo != null)
@@ -476,13 +558,13 @@ namespace EnkaDotNet
                             try
                             {
 #if NET8_0_OR_GREATER
-                                var avatarDetail = System.Text.Json.JsonSerializer.Deserialize<Models.HSR.HSRAvatarDetail>(
-                                    rawBuild.AvatarData.GetRawText(), 
-                                    Serialization.EnkaJsonContext.Default.Options);
+                                var avatarDetail = System.Text.Json.JsonSerializer.Deserialize(
+                                    rawBuild.AvatarData,
+                                    Serialization.EnkaJsonContext.Default.HSRAvatarDetail);
 #else
 #pragma warning disable IL2026, IL3050
                                 var avatarDetail = System.Text.Json.JsonSerializer.Deserialize<Models.HSR.HSRAvatarDetail>(
-                                    rawBuild.AvatarData.GetRawText());
+                                    rawBuild.AvatarData);
 #pragma warning restore IL2026, IL3050
 #endif
                                 if (avatarDetail != null)
@@ -538,13 +620,13 @@ namespace EnkaDotNet
                             try
                             {
 #if NET8_0_OR_GREATER
-                                var avatarModel = System.Text.Json.JsonSerializer.Deserialize<Models.ZZZ.ZZZAvatarModel>(
-                                    rawBuild.AvatarData.GetRawText(), 
-                                    Serialization.EnkaJsonContext.Default.Options);
+                                var avatarModel = System.Text.Json.JsonSerializer.Deserialize(
+                                    rawBuild.AvatarData,
+                                    Serialization.EnkaJsonContext.Default.ZZZAvatarModel);
 #else
 #pragma warning disable IL2026, IL3050
                                 var avatarModel = System.Text.Json.JsonSerializer.Deserialize<Models.ZZZ.ZZZAvatarModel>(
-                                    rawBuild.AvatarData.GetRawText());
+                                    rawBuild.AvatarData);
 #pragma warning restore IL2026, IL3050
 #endif
                                 if (avatarModel != null)
@@ -642,16 +724,17 @@ namespace EnkaDotNet
                 "Preloading assets for {Count} language(s): {Languages}",
                 langList.Count, string.Join(", ", langList));
 
-            using var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+            using var semaphore = new SemaphoreSlim(_maxConcurrency, _maxConcurrency);
             using var activity = EnkaTelemetry.ActivitySource.StartActivity("EnkaClient.PreloadAssets");
             activity?.SetTag("enka.languages", string.Join(",", langList));
 
-            var tasks = new List<Task>(langList.Count * 3);
+            var tasks = new List<Task>(langList.Count * 4);
             foreach (var lang in langList)
             {
                 tasks.Add(RunWithSemaphoreAsync(semaphore, () => GetGenshinAssetsAsync(lang)));
                 tasks.Add(RunWithSemaphoreAsync(semaphore, () => GetHSRAssetsAsync(lang)));
                 tasks.Add(RunWithSemaphoreAsync(semaphore, () => GetZZZAssetsAsync(lang)));
+                tasks.Add(RunWithSemaphoreAsync(semaphore, () => GetEFAssetsAsync(lang)));
             }
 
             try
@@ -691,13 +774,46 @@ namespace EnkaDotNet
         {
             if (_disposed) throw new ObjectDisposedException(nameof(EnkaClient));
             _httpHelper.ClearCache();
-            _genshinAssetsCache.Clear();
-            _hsrAssetsCache.Clear();
-            _zzzAssetsCache.Clear();
+            DiscardAssetCaches();
+            Logger.LogInformation("Cleared EnkaClient language asset and handler caches");
+        }
+
+        /// <summary>
+        /// Drops every cached asset set and handler. Asset instances hold semaphores, so they are
+        /// disposed rather than left to the garbage collector.
+        /// </summary>
+        private void DiscardAssetCaches()
+        {
+            DisposeAssets(_genshinAssetsCache);
+            DisposeAssets(_hsrAssetsCache);
+            DisposeAssets(_zzzAssetsCache);
+            DisposeAssets(_efAssetsCache);
             _genshinHandlerCache.Clear();
             _hsrHandlerCache.Clear();
             _zzzHandlerCache.Clear();
-            Logger.LogInformation("Cleared EnkaClient language asset and handler caches");
+            _efHandlerCache.Clear();
+        }
+
+        private void DisposeAssets<T>(ConcurrentDictionary<string, Lazy<Task<T>>> cache) where T : class
+        {
+            foreach (var entry in cache)
+            {
+                if (!cache.TryRemove(entry.Key, out var lazyAssets)) continue;
+
+                // Only completed loads own anything worth releasing: an in-flight or faulted load
+                // must not be awaited here, and its own failure path already cleans up.
+                var loadTask = lazyAssets.IsValueCreated ? lazyAssets.Value : null;
+                if (loadTask?.Status != TaskStatus.RanToCompletion) continue;
+
+                try
+                {
+                    (loadTask.Result as IDisposable)?.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to dispose cached {AssetType} instance", typeof(T).Name);
+                }
+            }
         }
 
         protected virtual void Dispose(bool disposing)
@@ -706,14 +822,9 @@ namespace EnkaDotNet
             {
                 if (disposing)
                 {
+                    DiscardAssetCaches();
                     (_httpHelper as IDisposable)?.Dispose();
                     (_httpClientFactory as IDisposable)?.Dispose();
-                    _genshinAssetsCache.Clear();
-                    _hsrAssetsCache.Clear();
-                    _zzzAssetsCache.Clear();
-                    _genshinHandlerCache.Clear();
-                    _hsrHandlerCache.Clear();
-                    _zzzHandlerCache.Clear();
                 }
                 _disposed = true;
             }
@@ -767,7 +878,7 @@ namespace EnkaDotNet
                 var client = new HttpClient();
 #endif
                 if (name == "EnkaProfileClient" || name == "DefaultEnkaClient")
-                    client.BaseAddress = new Uri(Constants.DEFAULT_ENKA_PROFILE_API_BASE_URL);
+                    client.BaseAddress = new Uri(Constants.DefaultEnkaProfileApiBaseUrl);
 
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(Constants.DefaultUserAgent);
                 return client;

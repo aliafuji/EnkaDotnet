@@ -16,7 +16,7 @@ namespace EnkaProfileViewer
                 var options = new EnkaClientOptions
                 {
                     UserAgent = "HSRStatsViewer/1.0",
-                    Raw = false
+                    UseRawStatValues = false
                 };
 
                 var services = new ServiceCollection();

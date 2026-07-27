@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using EnkaDotNet.Models.ZZZ;
 using EnkaDotNet.Components.ZZZ;
@@ -16,14 +17,14 @@ namespace EnkaDotNet.Utils.ZZZ
         private readonly ZZZStatsCalculator _statsCalculator;
         private readonly EnkaClientOptions _options;
 
-        private static readonly Regex GenderedTextPattern =
+        private static readonly Regex _genderedTextPattern =
             new Regex(@"\{([MF])#([^{}]*)\}", RegexOptions.Compiled, TimeSpan.FromMilliseconds(100));
 
         private string ParseGenderedText(string text)
         {
             if (string.IsNullOrEmpty(text)) return text;
             string token = _options.ZZZGender == Enums.ZZZ.Gender.Female ? "F" : "M";
-            return GenderedTextPattern.Replace(text, m => m.Groups[1].Value == token ? m.Groups[2].Value : string.Empty);
+            return _genderedTextPattern.Replace(text, m => m.Groups[1].Value == token ? m.Groups[2].Value : string.Empty);
         }
 
         public ZZZDataMapper(IZZZAssets assets, EnkaClientOptions options)
@@ -73,7 +74,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 }
             }
 
-            var showcaseAgents = new List<ZZZAgent>();
+            var showcaseAgents = new List<ZZZAgent>(response.PlayerInfo.ShowcaseDetail?.AvatarList?.Count ?? 0);
             if (response.PlayerInfo.ShowcaseDetail?.AvatarList != null)
             {
                 foreach (var avatarModel in response.PlayerInfo.ShowcaseDetail.AvatarList)
@@ -85,8 +86,8 @@ namespace EnkaDotNet.Utils.ZZZ
 
             return new ZZZPlayerInfo
             {
-                Uid = response.Uid ?? uidFromProfile.ToString(),
-                TTL = response.Ttl.ToString(),
+                Uid = response.Uid ?? uidFromProfile.ToString(CultureInfo.InvariantCulture),
+                TTL = response.Ttl.ToString(CultureInfo.InvariantCulture),
                 Nickname = nickname,
                 Level = level,
                 Signature = socialDetail?.Desc ?? response.PlayerInfo.Desc ?? "",
@@ -108,7 +109,7 @@ namespace EnkaDotNet.Utils.ZZZ
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
-            var coreSkillEnhancements = new List<int>();
+            var coreSkillEnhancements = new List<int>(Math.Max(0, model.CoreSkillEnhancement));
             if (model.CoreSkillEnhancement > 0)
             {
                 for (int i = 0; i < model.CoreSkillEnhancement; i++)
@@ -129,7 +130,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 }
             }
 
-            var claimedRewards = new List<int>();
+            var claimedRewards = new List<int>(model.ClaimedRewardList?.Count ?? 0);
             if (model.ClaimedRewardList != null)
             {
                 foreach (var reward in model.ClaimedRewardList)
@@ -184,6 +185,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 }
             }
 
+            string skinIdKey = model.SkinId.ToString(CultureInfo.InvariantCulture);
             var agent = new ZZZAgent
             {
                 Id = model.Id,
@@ -194,7 +196,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 CoreSkillEnhancement = model.CoreSkillEnhancement,
                 PotentialId = model.UpgradeId,
                 Skins = (model.SkinId != 0)
-                    ? new ConcurrentDictionary<string, Skin>(new[] { new KeyValuePair<string, Skin>(model.SkinId.ToString(), _assets.GetAgentSkin(model.Id.ToString(), model.SkinId.ToString())) })
+                    ? new ConcurrentDictionary<string, Skin>(new[] { new KeyValuePair<string, Skin>(skinIdKey, _assets.GetAgentSkin(model.Id.ToString(CultureInfo.InvariantCulture), skinIdKey)) })
                     : new ConcurrentDictionary<string, Skin>(),
                 WeaponEffectState = (WEngineEffectState)model.WeaponEffectState,
                 IsHidden = model.IsHidden,
@@ -203,7 +205,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 CircleIconUrl = _assets.GetAgentCircleIconUrl(model.Id),
                 Rarity = (Rarity)_assets.GetAgentRarity(model.Id),
                 ProfessionType = _assets.GetAgentProfessionType(model.Id),
-                ElementTypes = new List<ElementType>(FilterUnknownElements(_assets.GetAgentElements(model.Id))),
+                ElementTypes = FilterUnknownElements(_assets.GetAgentElements(model.Id)),
                 Colors = new List<Assets.ZZZ.Models.ZZZAvatarColors>(_assets.GetAvatarColors(model.Id)),
                 Options = this._options,
                 Assets = this._assets,
@@ -244,7 +246,7 @@ namespace EnkaDotNet.Utils.ZZZ
 
             return new ZZZWEngine
             {
-                Uid = model.Uid.ToString(),
+                Uid = model.Uid.ToString(CultureInfo.InvariantCulture),
                 Id = model.Id,
                 Level = model.Level,
                 BreakLevel = model.BreakLevel,
@@ -283,7 +285,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 mainStat = new ZZZStat { Type = StatType.None };
             }
 
-            var subStats = new List<ZZZStat>();
+            var subStats = new List<ZZZStat>(model.RandomPropertyList?.Count ?? 0);
             if (model.RandomPropertyList != null)
             {
                 foreach (var property in model.RandomPropertyList)
@@ -297,7 +299,7 @@ namespace EnkaDotNet.Utils.ZZZ
 
             return new ZZZDriveDisc
             {
-                Uid = model.Uid.ToString(),
+                Uid = model.Uid.ToString(CultureInfo.InvariantCulture),
                 Id = model.Id,
                 Level = model.Level,
                 BreakLevel = model.BreakLevel,
@@ -334,12 +336,7 @@ namespace EnkaDotNet.Utils.ZZZ
 
             if (uniqueValidElements.Count > 0)
             {
-                var result = new List<ElementType>();
-                foreach (var element in uniqueValidElements)
-                {
-                    result.Add(element);
-                }
-                return result;
+                return new List<ElementType>(uniqueValidElements);
             }
 
             return new List<ElementType> { ElementType.Unknown };

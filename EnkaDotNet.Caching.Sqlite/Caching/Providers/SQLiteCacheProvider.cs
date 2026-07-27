@@ -25,7 +25,7 @@ namespace EnkaDotNet.Caching.Providers
         private readonly Timer? _cleanupTimer;
         private long _hitCount;
         private long _missCount;
-        private bool _disposed;
+        private volatile bool _disposed;
 
         /// <summary>
         /// Initializes a new instance of the SQLiteCacheProvider class.
@@ -62,7 +62,12 @@ namespace EnkaDotNet.Caching.Providers
                 }
             }
 
-            _connectionString = $"Data Source={_options.DatabasePath}";
+            _connectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = _options.DatabasePath,
+                Mode = SqliteOpenMode.ReadWriteCreate,
+                Cache = SqliteCacheMode.Shared,
+            }.ToString();
 
             try
             {
@@ -96,6 +101,9 @@ namespace EnkaDotNet.Caching.Providers
 
             using var command = connection.CreateCommand();
             command.CommandText = @"
+                PRAGMA journal_mode = WAL;
+                PRAGMA busy_timeout = 5000;
+
                 CREATE TABLE IF NOT EXISTS cache_entries (
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL,
@@ -378,7 +386,6 @@ namespace EnkaDotNet.Caching.Providers
             using var connection = new SqliteConnection(_connectionString);
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
-            // Get entry count (only non-expired entries)
             using (var countCommand = connection.CreateCommand())
             {
                 countCommand.CommandText = "SELECT COUNT(*) FROM cache_entries WHERE expiration > @now";
@@ -436,11 +443,13 @@ namespace EnkaDotNet.Caching.Providers
         {
             if (!_disposed)
             {
+                // Set first: Timer.Dispose does not wait for a callback that is already running,
+                // so the flag is what stops that callback from touching a disposed provider
+                _disposed = true;
                 if (disposing)
                 {
                     _cleanupTimer?.Dispose();
                 }
-                _disposed = true;
             }
         }
     }

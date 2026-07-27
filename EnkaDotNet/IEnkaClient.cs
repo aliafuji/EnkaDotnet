@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 using EnkaDotNet.Components.Genshin;
 using EnkaDotNet.Components.HSR;
 using EnkaDotNet.Components.ZZZ;
+using EnkaDotNet.Components.EF;
 using EnkaDotNet.Components.EnkaProfile;
 using EnkaDotNet.Models.Genshin;
 using EnkaDotNet.Models.HSR;
 using EnkaDotNet.Models.ZZZ;
+using EnkaDotNet.Models.EF;
 using EnkaDotNet.Models.EnkaProfile;
 
 namespace EnkaDotNet
@@ -131,6 +133,42 @@ namespace EnkaDotNet
         /// <param name="bypassCache">Whether to bypass the cache for this request.</param>
         /// <param name="cancellationToken">A cancellation token to cancel the request.</param>
         Task<IReadOnlyList<ZZZAgent>> GetZZZAgentsAsync(int uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Retrieves the raw API response for an Arknights: Endfield user.
+        /// </summary>
+        /// <param name="uid">The User ID (UID) of the Endfield player. Endfield UIDs may exceed <see cref="int.MaxValue"/>.</param>
+        /// <param name="language">Optional language code for localized data. Defaults to "en" if null.</param>
+        /// <param name="bypassCache">Whether to bypass the cache for this request.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the request.</param>
+        Task<EFApiResponse> GetEFRawUserResponseAsync(long uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetEFRawUserResponseAsync(long, string, bool, CancellationToken)"/>
+        Task<EFApiResponse> GetEFRawUserResponseAsync(long uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Retrieves player information for an Arknights: Endfield user.
+        /// </summary>
+        /// <param name="uid">The User ID (UID) of the Endfield player. Endfield UIDs may exceed <see cref="int.MaxValue"/>.</param>
+        /// <param name="language">Optional language code for localized data. Defaults to "en" if null.</param>
+        /// <param name="bypassCache">Whether to bypass the cache for this request.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the request.</param>
+        Task<EFPlayerInfo> GetEFPlayerInfoAsync(long uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetEFPlayerInfoAsync(long, string, bool, CancellationToken)"/>
+        Task<EFPlayerInfo> GetEFPlayerInfoAsync(long uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Retrieves a list of showcase operators for an Arknights: Endfield user.
+        /// </summary>
+        /// <param name="uid">The User ID (UID) of the Endfield player. Endfield UIDs may exceed <see cref="int.MaxValue"/>.</param>
+        /// <param name="language">Optional language code for localized data. Defaults to "en" if null.</param>
+        /// <param name="bypassCache">Whether to bypass the cache for this request.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the request.</param>
+        Task<IReadOnlyList<EFOperator>> GetEFOperatorsAsync(long uid, string language = null, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+        /// <inheritdoc cref="GetEFOperatorsAsync(long, string, bool, CancellationToken)"/>
+        Task<IReadOnlyList<EFOperator>> GetEFOperatorsAsync(long uid, Language language, bool bypassCache = false, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Retrieves Genshin Impact character builds by Enka.Network username and hoyo hash.

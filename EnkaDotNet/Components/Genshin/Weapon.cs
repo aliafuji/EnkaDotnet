@@ -24,7 +24,7 @@ namespace EnkaDotNet.Components.Genshin
 
         private KeyValuePair<string, string> FormatStat(StatType type, double value)
         {
-            bool raw = Options?.Raw ?? false;
+            bool raw = Options?.UseRawStatValues ?? false;
             string key = raw ? type.ToString() : GenshinStatUtils.GetDisplayName(type, Assets);
             string formattedValue = GenshinStatUtils.FormatValue(type, value, raw);
             return new KeyValuePair<string, string>(key, formattedValue);

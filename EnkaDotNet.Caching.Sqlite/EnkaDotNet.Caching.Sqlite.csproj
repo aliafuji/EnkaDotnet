@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+		<OutputType>Library</OutputType>
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<Version>2.0.0</Version>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackAsTool>False</PackAsTool>
+		<PackageId>EnkaDotNet.Caching.Sqlite</PackageId>
+		<Title>Enka Network Dotnet SQLite Cache</Title>
+		<Product>Enka.DotNet</Product>
+		<Description>SQLite backed persistent cache provider for EnkaDotNet</Description>
+		<PackageIcon>icon.png</PackageIcon>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+		<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+		<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
+		<IsAotCompatible>true</IsAotCompatible>
+		<IsTrimmable>true</IsTrimmable>
+		<EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\assets\icon.png" Pack="True" PackagePath="\" />
+		<None Include="..\LICENSE" Pack="True" PackagePath="\" />
+		<None Include="..\README.md" Pack="True" PackagePath="\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\EnkaDotNet\EnkaDotNet.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" />
+	</ItemGroup>
+</Project>

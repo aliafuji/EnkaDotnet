@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using EnkaDotNet.Assets.Genshin;
 using EnkaDotNet.Assets.ZZZ;
 using EnkaDotNet.Assets.HSR;
+using EnkaDotNet.Assets.EF;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -27,6 +28,13 @@ namespace EnkaDotNet.Assets
         public static async Task<IHSRAssets> CreateHSRAssetsAsync(string language, HttpClient httpClient, ILogger<HSRAssets> logger = null, string fallbackDirectory = null)
         {
             var assets = new HSRAssets(language, httpClient, logger ?? NullLogger<HSRAssets>.Instance, fallbackDirectory);
+            await assets.EnsureInitializedAsync().ConfigureAwait(false);
+            return assets;
+        }
+
+        public static async Task<IEFAssets> CreateEFAssetsAsync(string language, HttpClient httpClient, ILogger<EFAssets> logger = null, string fallbackDirectory = null)
+        {
+            var assets = new EFAssets(language, httpClient, logger ?? NullLogger<EFAssets>.Instance, fallbackDirectory);
             await assets.EnsureInitializedAsync().ConfigureAwait(false);
             return assets;
         }

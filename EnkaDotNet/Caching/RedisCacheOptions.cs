@@ -7,20 +7,52 @@ namespace EnkaDotNet.Caching
     /// </summary>
     public class RedisCacheOptions
     {
+        private static readonly char[] _globMetacharacters = { '*', '?', '[', ']' };
+
         /// <summary>
-        /// Gets or sets the Redis connection string
+        /// Gets or sets the Redis connection string.
         /// </summary>
+        /// <remarks>
+        /// The default connects to a local server over plaintext. For any server reached across a
+        /// network, add <c>ssl=true</c> (and a password) to the connection string, for example
+        /// <c>redis.example.com:6380,ssl=true,password=...</c>. The provider passes the string to
+        /// <c>ConfigurationOptions.Parse</c> unchanged and does not enable TLS on your behalf.
+        /// <para>
+        /// <c>AbortOnConnectFail</c> is forced to <c>false</c> so a temporarily unreachable server
+        /// does not fail application startup; operations will surface the error instead.
+        /// </para>
+        /// </remarks>
         public string ConnectionString { get; set; } = "localhost:6379";
 
         /// <summary>
-        /// Gets or sets the key prefix for namespace isolation
+        /// Gets or sets the key prefix for namespace isolation. Must be non empty: the prefix
+        /// scopes <c>ClearAsync</c> and statistics, so an empty prefix would target every key on
+        /// the server, including keys owned by other applications.
         /// </summary>
         public string KeyPrefix { get; set; } = "enka:";
+
+        private TimeSpan _defaultTtl = TimeSpan.FromMinutes(5);
 
         /// <summary>
         /// Gets or sets the default time-to-live for cache entries
         /// </summary>
-        public TimeSpan DefaultTtl { get; set; } = TimeSpan.FromMinutes(5);
+        public TimeSpan DefaultTtl
+        {
+            get => _defaultTtl;
+            set
+            {
+                _defaultTtl = value;
+                ExplicitDefaultTtl = value;
+            }
+        }
+
+        /// <summary>
+        /// The value assigned to <see cref="DefaultTtl"/>, or <c>null</c> when it was never set.
+        /// Lets <see cref="CacheFactory"/> fall back to
+        /// <see cref="EnkaClientOptions.CacheDurationMinutes"/> without having to guess whether a
+        /// five minute TTL was deliberate.
+        /// </summary>
+        internal TimeSpan? ExplicitDefaultTtl { get; private set; }
 
         /// <summary>
         /// Gets or sets the number of connection retry attempts
@@ -55,6 +87,23 @@ namespace EnkaDotNet.Caching
                     CacheProvider.Redis,
                     "Redis connection string format is invalid. Expected format: 'host:port' or 'host:port,option=value'.",
                     "ConnectionString");
+            }
+
+            if (string.IsNullOrEmpty(KeyPrefix))
+            {
+                throw new Exceptions.CacheException(
+                    CacheProvider.Redis,
+                    "Redis key prefix cannot be null or empty, because it scopes ClearAsync and " +
+                    "statistics to this application's keys.",
+                    "KeyPrefix");
+            }
+
+            if (KeyPrefix.IndexOfAny(_globMetacharacters) >= 0)
+            {
+                throw new Exceptions.CacheException(
+                    CacheProvider.Redis,
+                    "Redis key prefix cannot contain the glob metacharacters '*', '?', '[' or ']'.",
+                    "KeyPrefix");
             }
 
             if (DefaultTtl <= TimeSpan.Zero)

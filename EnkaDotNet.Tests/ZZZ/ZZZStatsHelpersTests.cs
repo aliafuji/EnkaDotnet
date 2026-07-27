@@ -26,6 +26,7 @@ namespace EnkaDotNet.Tests.ZZZ
         [InlineData(ElementType.Ether, 6)]
         [InlineData(ElementType.AuricEther, 7)]
         [InlineData(ElementType.HonedEdge, 8)]
+        [InlineData(ElementType.Wind, 9)]
         public void ElementType_HasCorrectValue(ElementType elementType, int expectedValue)
         {
             Assert.Equal(expectedValue, (int)elementType);
@@ -35,7 +36,7 @@ namespace EnkaDotNet.Tests.ZZZ
         public void ElementType_AllValuesAreDefined()
         {
             var allValues = Enum.GetValues(typeof(ElementType));
-            Assert.Equal(9, allValues.Length);
+            Assert.Equal(10, allValues.Length);
         }
 
         #endregion

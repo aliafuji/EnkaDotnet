@@ -34,7 +34,7 @@ namespace EnkaDotNet.Internal
         {
             if (uid <= 0) throw new ArgumentException("UID must be a positive integer", nameof(uid));
 
-            string relativePath = string.Format(Constants.DEFAULT_GAME_SPECIFIC_USER_INFO_ENDPOINT_FORMAT, uid);
+            string relativePath = string.Format(Constants.DefaultGameSpecificUserInfoEndpointFormat, uid);
             string endpoint = $"zzz/{relativePath}";
 
             ZZZApiResponse response = await _httpHelper.Get<ZZZApiResponse>(endpoint, bypassCache, cancellationToken).ConfigureAwait(false);

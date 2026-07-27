@@ -46,7 +46,7 @@ namespace EnkaDotNet.Components.ZZZ
 
         public Dictionary<string, FormattedStatValues> GetAllStats()
         {
-            bool raw = this.Options?.Raw ?? false;
+            bool raw = this.Options?.UseRawStatValues ?? false;
             var resultStats = new Dictionary<string, FormattedStatValues>();
 
             if (this.Assets == null)
@@ -134,7 +134,7 @@ namespace EnkaDotNet.Components.ZZZ
         public IReadOnlyList<FormattedDriveDiscSetInfo> GetEquippedDiscSets()
         {
             var result = new List<FormattedDriveDiscSetInfo>();
-            bool raw = this.Options?.Raw ?? false;
+            bool raw = this.Options?.UseRawStatValues ?? false;
 
             if (Assets == null)
             {

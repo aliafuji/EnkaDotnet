@@ -11,61 +11,73 @@ namespace EnkaDotNet.Utils
         /// <summary>
         /// Default API base URL for Genshin Impact data
         /// </summary>
-        public const string DEFAULT_GENSHIN_API_URL = "https://enka.network/api/";
+        public const string DefaultGenshinApiUrl = "https://enka.network/api/";
         /// <summary>
         /// Default CDN base URL for Genshin Impact assets
         /// </summary>
-        public const string DEFAULT_GENSHIN_ASSET_CDN_URL = "https://enka.network/ui/";
+        public const string DefaultGenshinAssetCdnUrl = "https://enka.network/ui/";
 
         /// <summary>
         /// Default API base URL for Zenless Zone Zero data
         /// </summary>
-        public const string DEFAULT_ZZZ_API_URL = "https://enka.network/api/zzz/";
+        public const string DefaultZZZApiUrl = "https://enka.network/api/zzz/";
         /// <summary>
         /// Default CDN base URL for Zenless Zone Zero assets
         /// </summary>
-        public const string DEFAULT_ZZZ_ASSET_CDN_URL = "https://enka.network";
+        public const string DefaultZZZAssetCdnUrl = "https://enka.network";
 
         /// <summary>
         /// Default API base URL for Honkai: Star Rail data
         /// </summary>
-        public const string DEFAULT_HSR_API_URL = "https://enka.network/api/hsr/";
+        public const string DefaultHSRApiUrl = "https://enka.network/api/hsr/";
         /// <summary>
         /// Default CDN base URL for Honkai: Star Rail assets
         /// </summary>
-        public const string DEFAULT_HSR_ASSET_CDN_URL = "https://enka.network/ui/hsr/";
+        public const string DefaultHSRAssetCdnUrl = "https://enka.network/ui/hsr/";
+
+        /// <summary>
+        /// Default API base URL for Arknights: Endfield data
+        /// </summary>
+        public const string DefaultEFApiUrl = "https://enka.network/api/ef/";
+        /// <summary>
+        /// Default CDN base URL for Arknights: Endfield assets
+        /// </summary>
+        public const string DefaultEFAssetCdnUrl = "https://enka.network";
 
         /// <summary>
         /// Default API base URL for Enka.Network user profiles
         /// </summary>
-        public const string DEFAULT_ENKA_PROFILE_API_BASE_URL = "https://enka.network/api/";
+        public const string DefaultEnkaProfileApiBaseUrl = "https://enka.network/api/";
         /// <summary>
         /// Endpoint format for Enka.Network user profiles
         /// </summary>
-        public const string ENKA_PROFILE_ENDPOINT_FORMAT = "profile/{0}/?format=json";
+        public const string EnkaProfileEndpointFormat = "profile/{0}/?format=json";
 
         /// <summary>
         /// Endpoint format for Enka.Network user profile builds
         /// Format parameters: {0} = username, {1} = hoyo hash
         /// </summary>
-        public const string ENKA_BUILDS_ENDPOINT_FORMAT = "profile/{0}/hoyos/{1}/builds/";
+        public const string EnkaBuildsEndpointFormat = "profile/{0}/hoyos/{1}/builds/";
 
         /// <summary>
         /// Default endpoint format for game-specific user information, typically by UID
         /// </summary>
-        public const string DEFAULT_GAME_SPECIFIC_USER_INFO_ENDPOINT_FORMAT = "uid/{0}";
+        public const string DefaultGameSpecificUserInfoEndpointFormat = "uid/{0}";
 
         /// <summary>
         /// Default User-Agent string for HTTP requests
         /// </summary>
         public const string DefaultUserAgent = "EnkaDotNet/1.0";
 
+        private const string TextMapFileName = "text_map.json";
+        private const string EfStoreBaseUrl = "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/ef/";
+
         /// <summary>
         /// URLs for Genshin Impact asset files
         /// </summary>
         public static readonly IReadOnlyDictionary<string, string> GenshinAssetFileUrls = new Dictionary<string, string>()
         {
-            { "text_map.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/text_map.json" },
+            { TextMapFileName, "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/text_map.json" },
             { "characters.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/characters.json" },
             { "namecards.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/namecards.json" },
             { "consts.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/consts.json" },
@@ -78,7 +90,7 @@ namespace EnkaDotNet.Utils
         /// </summary>
         public static readonly IReadOnlyDictionary<string, string> HSRAssetFileUrls = new Dictionary<string, string>()
         {
-            { "text_map.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/hsr/hsr.json" },
+            { TextMapFileName, "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/hsr/hsr.json" },
             { "characters.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_characters.json" },
             { "lightcones.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_weps.json" },
             { "relics.json", "https://raw.githubusercontent.com/pizza-studio/EnkaDBGenerator/refs/heads/main/Sources/EnkaDBFiles/Resources/Specimen/HSR/honker_relics.json" },
@@ -95,7 +107,7 @@ namespace EnkaDotNet.Utils
         /// </summary>
         public static readonly IReadOnlyDictionary<string, string> ZZZAssetFileUrls = new Dictionary<string, string>()
         {
-            { "text_map.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/locs.json" },
+            { TextMapFileName, "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/locs.json" },
             { "avatars.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/avatars.json" },
             { "weapons.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/weapons.json" },
             { "equipments.json", "https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store/zzz/equipments.json" },
@@ -107,6 +119,23 @@ namespace EnkaDotNet.Utils
             { "equipment_level.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/zzz/equipment_level.json" },
             { "weapon_level.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/zzz/weapon_level.json" },
             { "weapon_star.json", "https://raw.githubusercontent.com/seriaati/enka-py-assets/main/data/zzz/weapon_star.json" }
+        };
+
+        /// <summary>
+        /// URLs for Arknights: Endfield asset files
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> EFAssetFileUrls = new Dictionary<string, string>()
+        {
+            { TextMapFileName, EfStoreBaseUrl + "locs.json" },
+            { "avatars.json", EfStoreBaseUrl + "avatars.json" },
+            { "weapons.json", EfStoreBaseUrl + "weapons.json" },
+            { "equips.json", EfStoreBaseUrl + "equips.json" },
+            { "gems.json", EfStoreBaseUrl + "gems.json" },
+            { "skills.json", EfStoreBaseUrl + "skills.json" },
+            { "weapon_meta.json", EfStoreBaseUrl + "weapon_meta.json" },
+            { "pfps.json", EfStoreBaseUrl + "pfps.json" },
+            { "namecards.json", EfStoreBaseUrl + "namecards.json" },
+            { "medals.json", EfStoreBaseUrl + "medals.json" }
         };
     }
 }

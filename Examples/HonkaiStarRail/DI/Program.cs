@@ -1,6 +1,5 @@
 using EnkaDotNet;
 using EnkaDotNet.Caching;
-using EnkaDotNet.Caching.Providers;
 using EnkaDotNet.Components.HSR;
 using EnkaDotNet.DIExtensions;
 using EnkaDotNet.Exceptions;
@@ -17,8 +16,8 @@ namespace EnkaDotNet.Examples.HonkaiStarRail.DI
             var host = Host.CreateDefaultBuilder(args)
                 .ConfigureServices((context, services) =>
                 {
-                    services.AddSingleton<IEnkaCache>(sp => 
-                        new SQLiteCacheProvider(new SQLiteCacheOptions { DatabasePath = "hsr_cache.db" }));
+                    // Requires the EnkaDotNet.Caching.Sqlite package
+                    services.AddEnkaSqliteCache(sqlite => sqlite.DatabasePath = "hsr_cache.db");
 
                     services.AddEnkaNetClient(options =>
                     {

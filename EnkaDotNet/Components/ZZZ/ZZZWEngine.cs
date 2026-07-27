@@ -32,7 +32,7 @@ namespace EnkaDotNet.Components.ZZZ
         {
             get
             {
-                bool raw = Options?.Raw ?? false;
+                bool raw = Options?.UseRawStatValues ?? false;
                 string key = raw ? MainStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(MainStat.Type, Assets);
                 string value = Math.Floor(MainStat.Value).ToString(CultureInfo.InvariantCulture);
                 return new KeyValuePair<string, string>(key, value);
@@ -43,7 +43,7 @@ namespace EnkaDotNet.Components.ZZZ
         {
             get
             {
-                bool raw = Options?.Raw ?? false;
+                bool raw = Options?.UseRawStatValues ?? false;
                 string key = raw ? SecondaryStat.Type.ToString() : ZZZStatsHelpers.GetStatCategoryDisplay(SecondaryStat.Type, Assets);
                 string value;
 

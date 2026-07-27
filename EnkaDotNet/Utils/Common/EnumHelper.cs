@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using EnkaDotNet.Enums.ZZZ;
 using EnkaDotNet.Enums.HSR;
 using GenshinStatType = EnkaDotNet.Enums.Genshin.StatType;
@@ -7,7 +10,7 @@ namespace EnkaDotNet.Utils.Common
 {
     public static class EnumHelper
     {
-        private static readonly HashSet<int> ValidZZZStatTypes = new HashSet<int>
+        private static readonly HashSet<int> _validZZZStatTypes = new HashSet<int>
         {
             0,
             11101, 11102, 11103,
@@ -32,29 +35,29 @@ namespace EnkaDotNet.Utils.Common
             32301, 32303
         };
 
-        private static readonly HashSet<int> ValidZZZSkillTypes = new HashSet<int>
+        private static readonly HashSet<int> _validZZZSkillTypes = new HashSet<int>
         {
             0, 1, 2, 3, 5, 6
         };
 
-        private static readonly HashSet<int> ValidHSRStatPropertyTypes = new HashSet<int>
+        private static readonly HashSet<int> _validHSRStatPropertyTypes = new HashSet<int>
         {
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
             20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
             37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54
         };
 
-        private static readonly HashSet<int> ValidHSRTraceTypes = new HashSet<int>
+        private static readonly HashSet<int> _validHSRTraceTypes = new HashSet<int>
         {
             0, 1, 2, 3, 4
         };
 
-        private static readonly HashSet<int> ValidHSRRelicTypes = new HashSet<int>
+        private static readonly HashSet<int> _validHSRRelicTypes = new HashSet<int>
         {
             0, 1, 2, 3, 4, 5, 6
         };
 
-        private static readonly HashSet<int> ValidGenshinStatTypes = new HashSet<int>
+        private static readonly HashSet<int> _validGenshinStatTypes = new HashSet<int>
         {
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
             20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
@@ -74,48 +77,72 @@ namespace EnkaDotNet.Utils.Common
 
         public static bool IsDefinedZZZStatType(int value)
         {
-            return ValidZZZStatTypes.Contains(value);
+            return _validZZZStatTypes.Contains(value);
         }
 
         public static bool IsDefinedZZZSkillType(int value)
         {
-            return ValidZZZSkillTypes.Contains(value);
+            return _validZZZSkillTypes.Contains(value);
         }
 
         public static bool IsDefinedHSRStatPropertyType(int value)
         {
-            return ValidHSRStatPropertyTypes.Contains(value);
+            return _validHSRStatPropertyTypes.Contains(value);
         }
 
         public static bool IsDefinedHSRTraceType(int value)
         {
-            return ValidHSRTraceTypes.Contains(value);
+            return _validHSRTraceTypes.Contains(value);
         }
 
         public static bool IsDefinedHSRRelicType(int value)
         {
-            return ValidHSRRelicTypes.Contains(value);
+            return _validHSRRelicTypes.Contains(value);
         }
 
         public static bool IsDefinedGenshinStatType(int value)
         {
-            return ValidGenshinStatTypes.Contains(value);
+            return _validGenshinStatTypes.Contains(value);
         }
+        /// <summary>
+        /// Caches the EnumMember value of every member of an enum type, so the reflection cost is
+        /// paid once per type instead of once per call. A member with no EnumMemberAttribute is
+        /// stored as null, which keeps a miss from re-reflecting.
+        /// </summary>
+        private static readonly ConcurrentDictionary<Type, Dictionary<string, string>> _enumMemberValues =
+            new ConcurrentDictionary<Type, Dictionary<string, string>>();
+
         public static string GetEnumMemberValue(this System.Enum value)
         {
+            if (value == null)
+            {
+                return null;
+            }
+
             var type = value.GetType();
             var name = System.Enum.GetName(type, value);
             if (name == null)
             {
                 return null;
             }
-            var field = type.GetField(name);
-            if (field == null)
+
+            var lookup = _enumMemberValues.GetOrAdd(type, BuildEnumMemberLookup);
+            return lookup.TryGetValue(name, out var memberValue) ? memberValue : null;
+        }
+
+        private static Dictionary<string, string> BuildEnumMemberLookup(Type enumType)
+        {
+            var names = System.Enum.GetNames(enumType);
+            var lookup = new Dictionary<string, string>(names.Length, StringComparer.Ordinal);
+            foreach (var name in names)
             {
-                return null;
+                var field = enumType.GetField(name);
+                var attribute = field == null
+                    ? null
+                    : System.Attribute.GetCustomAttribute(field, typeof(EnumMemberAttribute)) as EnumMemberAttribute;
+                lookup[name] = attribute?.Value;
             }
-            var attr = System.Attribute.GetCustomAttribute(field, typeof(System.Runtime.Serialization.EnumMemberAttribute)) as System.Runtime.Serialization.EnumMemberAttribute;
-            return attr?.Value;
+            return lookup;
         }
 
         public static Enums.Language ParseLanguage(string value)

@@ -1,4 +1,4 @@
-﻿namespace EnkaDotNet.Enums.ZZZ
+﻿namespace EnkaDotNet.Components.ZZZ
 {
     public class Skin
     {

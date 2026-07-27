@@ -291,6 +291,41 @@ namespace EnkaDotNet.Tests.Caching
             options.Validate();
         }
 
+        [Theory]
+        [InlineData("")]
+        [InlineData(null)]
+        public void RedisOptions_EmptyKeyPrefix_ThrowsCacheException(string keyPrefix)
+        {
+            // An empty prefix makes ClearAsync and GetStatsAsync scan "*", i.e. every key on the
+            // server, including keys owned by other applications sharing the instance.
+            var options = new RedisCacheOptions
+            {
+                ConnectionString = "localhost:6379",
+                KeyPrefix = keyPrefix!
+            };
+
+            var exception = Assert.Throws<CacheException>(() => options.Validate());
+            Assert.Equal(CacheProvider.Redis, exception.Provider);
+            Assert.Equal("KeyPrefix", exception.ConfigurationProperty);
+        }
+
+        [Theory]
+        [InlineData("enka*:")]
+        [InlineData("enka?:")]
+        [InlineData("enka[1]:")]
+        public void RedisOptions_GlobMetacharacterInKeyPrefix_ThrowsCacheException(string keyPrefix)
+        {
+            var options = new RedisCacheOptions
+            {
+                ConnectionString = "localhost:6379",
+                KeyPrefix = keyPrefix
+            };
+
+            var exception = Assert.Throws<CacheException>(() => options.Validate());
+            Assert.Equal(CacheProvider.Redis, exception.Provider);
+            Assert.Equal("KeyPrefix", exception.ConfigurationProperty);
+        }
+
         #endregion
 
         #region CacheException Tests

@@ -21,7 +21,7 @@ namespace EnkaDotNet.Components.HSR
         {
             get
             {
-                bool raw = Options?.Raw ?? false;
+                bool raw = Options?.UseRawStatValues ?? false;
                 if (raw) return Value.ToString(CultureInfo.InvariantCulture);
 
                 if (IsPercentage)
@@ -43,7 +43,7 @@ namespace EnkaDotNet.Components.HSR
 
         public override string ToString()
         {
-            bool raw = Options?.Raw ?? false;
+            bool raw = Options?.UseRawStatValues ?? false;
             string key = raw ? Type : HSRStatPropertyUtils.GetDisplayName(Type, Assets);
             return $"{key}: {DisplayValue}";
         }
@@ -62,7 +62,7 @@ namespace EnkaDotNet.Components.HSR
             Options = options;
             Raw = raw;
             IsPercentage = isPercentage;
-            bool useRawFormatting = Options?.Raw ?? false;
+            bool useRawFormatting = Options?.UseRawStatValues ?? false;
 
             if (useRawFormatting)
             {
@@ -104,7 +104,7 @@ namespace EnkaDotNet.Components.HSR
 
         public override string ToString()
         {
-            bool raw = Options?.Raw ?? false;
+            bool raw = Options?.UseRawStatValues ?? false;
             if (raw) return $"{PointId} - {Level}";
 
             string levelInfo = IsBoosted ? $"{BaseLevel}+{Level - BaseLevel}={Level}" : $"{Level}";

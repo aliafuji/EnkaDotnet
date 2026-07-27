@@ -14,7 +14,7 @@ namespace GenshinStatsViewer
                 var options = new EnkaClientOptions
                 {
                     UserAgent = "GenshinStatsViewer/1.0",
-                    Raw = false
+                    UseRawStatValues = false
                 };
 
                 var services = new ServiceCollection();

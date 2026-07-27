@@ -39,12 +39,12 @@
     public enum RelicType
     {
         Unknown = 0,
-        HEAD = 1,    // Head
-        HAND = 2,    // Hands
-        BODY = 3,    // Body
-        FOOT = 4,    // Feet
-        NECK = 5,    // Planar Sphere (Rope)
-        OBJECT = 6   // Link Rope (Orbit)
+        Head = 1,
+        Hands = 2,
+        Body = 3,
+        Feet = 4,
+        PlanarSphere = 5,
+        LinkRope = 6
     }
 
     public enum StatPropertyType
@@ -195,12 +195,12 @@
         {
             switch (relicType)
             {
-                case RelicType.HEAD: return "Head";
-                case RelicType.HAND: return "Hands";
-                case RelicType.BODY: return "Body";
-                case RelicType.FOOT: return "Feet";
-                case RelicType.NECK: return "Planar Sphere";
-                case RelicType.OBJECT: return "Link Rope";
+                case RelicType.Head: return "Head";
+                case RelicType.Hands: return "Hands";
+                case RelicType.Body: return "Body";
+                case RelicType.Feet: return "Feet";
+                case RelicType.PlanarSphere: return "Planar Sphere";
+                case RelicType.LinkRope: return "Link Rope";
                 default: return "Unknown Relic Type";
             }
         }
