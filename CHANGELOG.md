@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed
+
+* HSR Elation DMG now uses meta keys `ElationDamageAddedRatio` / `ElationDamageAddedRatioBase`
+  (was incorrectly seeded as `ElationAddedRatio`, so Elation props were dropped). Exposed as
+  `HSRCharacter.ElationDamageBoost`.
+
 ### Added
 
 * Arknights: Endfield support (`GameType.Endfield`)
