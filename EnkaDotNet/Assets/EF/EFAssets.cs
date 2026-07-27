@@ -531,11 +531,7 @@ namespace EnkaDotNet.Assets.EF
         private static string FirstNonEmptyValue(Dictionary<string, string> values)
         {
             if (values == null || values.Count == 0) return null;
-            foreach (var value in values.Values.Where(v => !string.IsNullOrEmpty(v)))
-            {
-                return value;
-            }
-            return null;
+            return values.Values.FirstOrDefault(v => !string.IsNullOrEmpty(v));
         }
 
         private static string StripMedalIconFileName(string path)
