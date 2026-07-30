@@ -584,6 +584,8 @@ namespace EnkaDotNet.Assets.ZZZ
                 case "AURICETHER": return ElementType.AuricEther;
                 case "ZHENZHENASSAULT": return ElementType.HonedEdge;
                 case "WIND": return ElementType.Wind;
+                case "LUMEN":
+                case "LUMIFLUX": return ElementType.Lumen;
                 default: return ElementType.Unknown;
             }
         }

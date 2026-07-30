@@ -383,13 +383,20 @@ builder.Services.AddOpenTelemetry()
     .WithMetrics(m => m.AddMeter("EnkaDotNet").AddPrometheusExporter());
 ```
 
-| Metric | Description |
-|--------|-------------|
-| `enka.requests.total` | Total API requests |
-| `enka.cache.hits` | Cache hits |
-| `enka.cache.misses` | Cache misses |
-| `enka.retries.total` | Retry attempts |
-| `enka.request.duration` | Request duration (ms) |
+| Metric | Description | Tags |
+|--------|-------------|------|
+| `enka.requests.total` | Total API requests | `game` |
+| `enka.cache.hits` | Cache hits | `game` |
+| `enka.cache.misses` | Cache misses | `game` |
+| `enka.retries.total` | Retry attempts | `game` |
+| `enka.request.duration` | Request duration (ms) | `game` |
+| `enka.errors.total` | Failed requests | `type`, `game`, `status` |
+
+`game` is one of `genshin`, `hsr`, `zzz`, `endfield`, `profile`, or `unknown`.
+
+`enka.errors.total` `type` values include `not_found`, `private`, `rate_limit`, `maintenance`, `circuit_open`, `timeout`, `canceled`, `http`, `parse`, `network`, and `unknown`. `status` is the HTTP status when known, otherwise `none`.
+
+HTTP activities (`EnkaHttp.Get`) also set `enka.game`, `enka.cache.hit`, and `enka.uid_hash` (short hash of the UID — never the raw UID).
 
 ## Asset Preloading
 

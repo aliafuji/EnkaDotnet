@@ -179,8 +179,9 @@ namespace EnkaDotNet.Utils.Common
         {
             string urlForLog = args.Context.Properties.TryGetValue(_relativeUrlKey, out var u) ? u : "Unknown URL";
             bool is429 = args.Outcome.Result?.StatusCode == (HttpStatusCode)429;
+            var gameTags = EnkaTelemetry.GameTags(EnkaTelemetry.ResolveGame(urlForLog));
 
-            EnkaTelemetry.RetryCount.Add(1);
+            EnkaTelemetry.RetryCount.Add(1, in gameTags);
 
             if (is429)
             {
@@ -203,6 +204,15 @@ namespace EnkaDotNet.Utils.Common
             if (_disposed) throw new ObjectDisposedException(nameof(HttpHelper));
 
             string cacheKey = relativeUrl.ToLowerInvariant();
+            string game = EnkaTelemetry.ResolveGame(relativeUrl);
+            var gameTags = EnkaTelemetry.GameTags(game);
+
+            using var activity = EnkaTelemetry.ActivitySource.StartActivity("EnkaHttp.Get");
+            activity?.SetTag("enka.url", relativeUrl);
+            activity?.SetTag("enka.game", game);
+            string? uidToken = ExtractUidTokenFromUrl(relativeUrl);
+            if (!string.IsNullOrEmpty(uidToken))
+                activity?.SetTag("enka.uid_hash", EnkaTelemetry.HashUid(uidToken));
 
             if (_options.EnableCaching && !bypassCache)
             {
@@ -210,7 +220,8 @@ namespace EnkaDotNet.Utils.Common
                 if (cachedEntry != null && !cachedEntry.IsExpired)
                 {
                     _logger.LogTrace(EnkaEventIds.CacheHit, "Cache hit for {Url}", relativeUrl);
-                    EnkaTelemetry.CacheHits.Add(1);
+                    activity?.SetTag("enka.cache.hit", true);
+                    EnkaTelemetry.CacheHits.Add(1, in gameTags);
                     _trackedCacheKeys.TryAdd(cacheKey, true);
 #if NET8_0_OR_GREATER
                     return JsonSerializer.Deserialize<T>(cachedEntry.JsonResponse, EnkaJsonContext.Default.Options)
@@ -222,19 +233,22 @@ namespace EnkaDotNet.Utils.Common
 #pragma warning restore IL2026, IL3050
 #endif
                 }
-                EnkaTelemetry.CacheMisses.Add(1);
+                activity?.SetTag("enka.cache.hit", false);
+                EnkaTelemetry.CacheMisses.Add(1, in gameTags);
                 _logger.LogTrace(EnkaEventIds.CacheMiss, "Cache miss for {Url}", relativeUrl);
+            }
+            else
+            {
+                activity?.SetTag("enka.cache.hit", false);
             }
 
             HttpResponseMessage? response = null;
             string? jsonString = null;
             ResilienceContext? resilienceContext = null;
             var sw = Stopwatch.StartNew();
+            int? statusCode = null;
 
-            using var activity = EnkaTelemetry.ActivitySource.StartActivity("EnkaHttp.Get");
-            activity?.SetTag("enka.url", relativeUrl);
-
-            EnkaTelemetry.RequestCount.Add(1);
+            EnkaTelemetry.RequestCount.Add(1, in gameTags);
             _logger.LogTrace(EnkaEventIds.RequestStart, "Sending request to {Url}", relativeUrl);
 
             try
@@ -264,12 +278,13 @@ namespace EnkaDotNet.Utils.Common
                     resilienceContext
                 ).ConfigureAwait(false);
 
+                statusCode = (int)response.StatusCode;
+
                 if (response.StatusCode == (HttpStatusCode)429)
                 {
                     _logger.LogWarning(EnkaEventIds.RateLimited,
                         "Rate limit (429) persisted after exhausting retries for {Url}. Retry-After: {RetryAfter}",
                         relativeUrl, response.Headers.RetryAfter);
-                    activity?.SetStatus(ActivityStatusCode.Error, "RateLimited");
                     throw new RateLimitException(
                         $"API rate limit exceeded for URL: {relativeUrl}. Retry-After: {response.Headers.RetryAfter}",
                         response.Headers.RetryAfter);
@@ -301,32 +316,74 @@ namespace EnkaDotNet.Utils.Common
 
                 if (response.IsSuccessStatusCode && _options.EnableCaching)
                 {
-                    // Expiration is read here, while the response is still alive: the write itself
-                    // is fire and forget so a slow cache backend cannot delay the caller.
                     var expiration = CalculateExpiration(response, _options.CacheDurationMinutes);
                     _ = CacheSuccessfulResponseAsync(cacheKey, jsonString, expiration, relativeUrl);
                 }
 
-                activity?.SetTag("enka.status_code", (int)response.StatusCode);
+                activity?.SetTag("enka.status_code", statusCode.Value);
                 return deserializedObject!;
             }
             catch (JsonException ex)
             {
-                // The snippet is player data from the API, so it stays in the caller's own log
-                // sink and out of the exception message, which tends to travel further.
                 string snippet = jsonString?.Length > 200 ? jsonString.Substring(0, 200) + "..." : jsonString ?? "null";
                 _logger.LogDebug("Unparsable response body from {Url}: {Snippet}", relativeUrl, snippet);
                 _logger.LogError(ex, "Failed to parse JSON from {Url}", relativeUrl);
-                activity?.SetStatus(ActivityStatusCode.Error, "JsonParseFailed");
+                RecordRequestError("parse", game, statusCode, activity, "JsonParseFailed");
                 throw new EnkaNetworkException($"Failed to parse JSON response from {relativeUrl}.", ex);
+            }
+            catch (Exception ex)
+            {
+                RecordRequestError(ClassifyError(ex), game, statusCode ?? InferStatusCode(ex), activity);
+                throw;
             }
             finally
             {
                 sw.Stop();
-                EnkaTelemetry.RequestDurationMs.Record(sw.Elapsed.TotalMilliseconds);
+                EnkaTelemetry.RequestDurationMs.Record(sw.Elapsed.TotalMilliseconds, in gameTags);
                 response?.Dispose();
                 if (resilienceContext != null)
                     ResilienceContextPool.Shared.Return(resilienceContext);
+            }
+        }
+
+        private static void RecordRequestError(string type, string game, int? statusCode, Activity? activity, string? activityError = null)
+        {
+            EnkaTelemetry.RecordError(type, game, statusCode?.ToString());
+            if (activity != null)
+            {
+                activity.SetTag("enka.error.type", type);
+                if (statusCode.HasValue)
+                    activity.SetTag("enka.status_code", statusCode.Value);
+                activity.SetStatus(ActivityStatusCode.Error, activityError ?? type);
+            }
+        }
+
+        private static string ClassifyError(Exception ex)
+        {
+            switch (ex)
+            {
+                case PlayerNotFoundException _: return "not_found";
+                case ProfilePrivateException _: return "private";
+                case RateLimitException _: return "rate_limit";
+                case GameMaintenanceException _: return "maintenance";
+                case BrokenCircuitException _: return "circuit_open";
+                case TimeoutException _: return "timeout";
+                case OperationCanceledException _: return "canceled";
+                case HttpRequestException _: return "http";
+                case EnkaNetworkException _: return "network";
+                default: return "unknown";
+            }
+        }
+
+        private static int? InferStatusCode(Exception ex)
+        {
+            switch (ex)
+            {
+                case PlayerNotFoundException _: return 404;
+                case ProfilePrivateException _: return 403;
+                case RateLimitException _: return 429;
+                case GameMaintenanceException _: return 424;
+                default: return null;
             }
         }
 
@@ -436,17 +493,26 @@ namespace EnkaDotNet.Utils.Common
 
         private int ExtractUidFromUrl(string url)
         {
-            var parts = url?.Split('/');
-            if (parts != null)
+            var token = ExtractUidTokenFromUrl(url);
+            return int.TryParse(token, out int uid) ? uid : 0;
+        }
+
+        private static string? ExtractUidTokenFromUrl(string? url)
+        {
+            if (string.IsNullOrEmpty(url))
+                return null;
+
+            var parts = url.Split('/');
+            for (int i = 0; i < parts.Length; i++)
             {
-                for (int i = 0; i < parts.Length; i++)
-                {
-                    if (parts[i].Equals("uid", StringComparison.OrdinalIgnoreCase) && i + 1 < parts.Length && int.TryParse(parts[i + 1], out int uid1)) return uid1;
-                    if (i == parts.Length - 1 && int.TryParse(parts[i], out int uid2)) return uid2;
-                    if (i == 0 && int.TryParse(parts[i], out int uid3)) return uid3;
-                }
+                if (parts[i].Equals("uid", StringComparison.OrdinalIgnoreCase) && i + 1 < parts.Length && !string.IsNullOrEmpty(parts[i + 1]))
+                    return parts[i + 1];
             }
-            return 0;
+
+            if (parts.Length > 0 && long.TryParse(parts[parts.Length - 1], out _))
+                return parts[parts.Length - 1];
+
+            return null;
         }
 
         public void Dispose()
