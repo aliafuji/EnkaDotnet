@@ -12,5 +12,8 @@ namespace EnkaDotNet.Assets.ZZZ.Models
 
         [JsonPropertyName("TipNum")]
         public string TipNum { get; set; }
+
+        [JsonPropertyName("PrefixIcon")]
+        public string PrefixIcon { get; set; }
     }
 }

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.2
+
+### Added
+
+* ZZZ `ElementType.Lumen` (Lumiflux) for Remielle and future Lumiflux agents
+
+### Improved
+
+* Observability: existing metrics now include a `game` tag (`genshin` / `hsr` / `zzz` / `endfield` / `profile`)
+* Added `enka.errors.total` counter with tags `type`, `game`, and `status`
+* HTTP activities now set `enka.game`, `enka.cache.hit`, and `enka.uid_hash` (hashed UID, not raw)
+
 ## 2.0.1
 
 ### Added

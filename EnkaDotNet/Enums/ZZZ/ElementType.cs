@@ -11,6 +11,7 @@
         Ether,
         AuricEther,
         HonedEdge,
-        Wind
+        Wind,
+        Lumen
     }
 }
