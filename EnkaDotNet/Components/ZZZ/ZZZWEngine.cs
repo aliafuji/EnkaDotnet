@@ -58,6 +58,7 @@ namespace EnkaDotNet.Components.ZZZ
                 {
                     if (SecondaryStat.Type == StatType.EnergyRegenPercent) value = (SecondaryStat.Value / 100.0).ToString("F1", CultureInfo.InvariantCulture) + "%";
                     else if (SecondaryStat.IsPercentage) value = (SecondaryStat.Value / 100.0).ToString("F1", CultureInfo.InvariantCulture) + "%";
+                    else if (ZZZStatsHelpers.IsSharpnessRecoveryStat(SecondaryStat.Type)) value = (SecondaryStat.Value / 100.0).ToString("0.##", CultureInfo.InvariantCulture);
                     else value = Math.Floor(SecondaryStat.Value).ToString(CultureInfo.InvariantCulture);
                 }
                 return new KeyValuePair<string, string>(key, value);

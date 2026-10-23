@@ -23,6 +23,7 @@ namespace EnkaDotNet.Utils.ZZZ
             { "DEF%", "Def_Ratio" },
             { "CRIT Rate", "Crit" },
             { "CRIT DMG", "CritDmg" },
+            { "Laceration DMG", "SharpCriticalDamage" },
             { "Impact", "BreakStun" },
             { "Energy Regen", "SpRecover" },
             { "Anomaly Mastery", "ElementAbnormalPower" },
@@ -37,7 +38,8 @@ namespace EnkaDotNet.Utils.ZZZ
             { "Wind DMG", "AddedDamageRatio_Wind" },
             { "Sheer Force", "SkipDefAtk" },
             { "Sheer DMG", "SkipDefDamageRatio" },
-            { "Automatic Adrenaline Accumulation", "RpRecover" }
+            { "Automatic Adrenaline Accumulation", "RpRecover" },
+            { "Automatic Sharpness Accumulation", "EpRecover" }
         };
 
         /// <summary>
@@ -93,7 +95,8 @@ namespace EnkaDotNet.Utils.ZZZ
                                   kvp.Key == "Impact" || kvp.Key == "PEN" || kvp.Key == "Sheer Force" ||
                                   kvp.Key == "Automatic Adrenaline Accumulation";
 
-                if (isPercentageDisplay)
+                // ASA recovery is stored in hundredths, but is not a percentage.
+                if (isPercentageDisplay || kvp.Key == "Automatic Sharpness Accumulation")
                 {
                     finalVal /= 100.0;
                     baseVal /= 100.0;
@@ -126,10 +129,13 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.ImpactPercent:
                 case StatType.EnergyRegenPercent:
                 case StatType.AnomalyMasteryPercent:
+                case StatType.AutomaticSharpnessAccumulationPercent:
                 case StatType.CritRateBase:
                 case StatType.CritRateFlat:
                 case StatType.CritDMGBase:
                 case StatType.CritDMGFlat:
+                case StatType.LacerationDMGBase:
+                case StatType.LacerationDMGFlat:
                 case StatType.EnergyRegenBase:
                 case StatType.EnergyRegenFlat:
                 case StatType.PenRatioBase:
@@ -166,12 +172,14 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.SheerForceBase:
                 case StatType.CritRateBase:
                 case StatType.CritDMGBase:
+                case StatType.LacerationDMGBase:
                 case StatType.PenRatioBase:
                 case StatType.PENBase:
                 case StatType.EnergyRegenBase:
                 case StatType.AnomalyProficiencyBase:
                 case StatType.AnomalyMasteryBase:
                 case StatType.AutomaticAdrenalineAccumulationBase:
+                case StatType.AutomaticSharpnessAccumulationBase:
                 case StatType.PhysicalDMGBonusBase:
                 case StatType.FireDMGBonusBase:
                 case StatType.IceDMGBonusBase:
@@ -234,8 +242,10 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.ImpactPercent: return "Impact";
                 case StatType.CritRateBase: case StatType.CritRateFlat: return "CRIT Rate";
                 case StatType.CritDMGBase: case StatType.CritDMGFlat: return "CRIT DMG";
+                case StatType.LacerationDMGBase: case StatType.LacerationDMGFlat: return "Laceration DMG";
                 case StatType.EnergyRegenBase: case StatType.EnergyRegenPercent: case StatType.EnergyRegenFlat: return "Energy Regen";
                 case StatType.AutomaticAdrenalineAccumulationBase: case StatType.AutomaticAdrenalineAccumulationFlat: case StatType.AutomaticAdrenalineAccumulationPercent: return "Automatic Adrenaline Accumulation";
+                case StatType.AutomaticSharpnessAccumulationBase: case StatType.AutomaticSharpnessAccumulationFlat: case StatType.AutomaticSharpnessAccumulationPercent: return "Automatic Sharpness Accumulation";
                 case StatType.AnomalyMasteryBase: case StatType.AnomalyMasteryPercent: case StatType.AnomalyMasteryFlat: return "Anomaly Mastery";
                 case StatType.AnomalyProficiencyBase: case StatType.AnomalyProficiencyFlat: return "Anomaly Proficiency";
                 case StatType.PenRatioBase: case StatType.PenRatioFlat: return "Pen Ratio";
@@ -263,6 +273,7 @@ namespace EnkaDotNet.Utils.ZZZ
                 case "Impact": return isPercentage ? StatType.ImpactPercent : StatType.ImpactBase;
                 case "CRIT Rate": return StatType.CritRateFlat;
                 case "CRIT DMG": return StatType.CritDMGFlat;
+                case "Laceration DMG": return StatType.LacerationDMGFlat;
                 case "Anomaly Mastery": return StatType.AnomalyMasteryFlat;
                 case "Anomaly Proficiency": return StatType.AnomalyProficiencyFlat;
                 case "Pen Ratio": return StatType.PenRatioFlat;
@@ -274,13 +285,15 @@ namespace EnkaDotNet.Utils.ZZZ
                 case "Ether DMG": return StatType.EtherDMGBonusFlat;
                 case "Wind DMG": return StatType.WindDMGBonusFlat;
                 case "Automatic Adrenaline Accumulation": return StatType.AutomaticAdrenalineAccumulationBase;
+                case "Automatic Sharpness Accumulation": return StatType.AutomaticSharpnessAccumulationBase;
                 default: return StatType.None;
             }
         }
 
         public static bool IsDisplayPercentageStat(StatType statType)
         {
-            if (statType == StatType.AnomalyMasteryPercent || statType == StatType.AutomaticAdrenalineAccumulationPercent)
+            if (statType == StatType.AnomalyMasteryPercent || statType == StatType.AutomaticAdrenalineAccumulationPercent ||
+                statType == StatType.AutomaticSharpnessAccumulationPercent)
                 return true;
 
             string category = GetStatCategoryDisplay(statType);
@@ -288,6 +301,7 @@ namespace EnkaDotNet.Utils.ZZZ
             {
                 case "CRIT Rate":
                 case "CRIT DMG":
+                case "Laceration DMG":
                 case "Pen Ratio":
                 case "Physical DMG":
                 case "Fire DMG":
@@ -305,6 +319,10 @@ namespace EnkaDotNet.Utils.ZZZ
                 default: return false;
             }
         }
+
+        internal static bool IsSharpnessRecoveryStat(StatType statType) =>
+            statType == StatType.AutomaticSharpnessAccumulationBase ||
+            statType == StatType.AutomaticSharpnessAccumulationFlat;
 
         internal static Dictionary<string, Dictionary<string, double>> CalculateTotalBreakdown(ZZZAgent agent, IZZZAssets assets)
         {
@@ -413,7 +431,7 @@ namespace EnkaDotNet.Utils.ZZZ
             string targetBucketSuffix;
             double valueToAdd = value;
 
-            if (category == "CRIT Rate" || category == "CRIT DMG")
+            if (category == "CRIT Rate" || category == "CRIT DMG" || category == "Laceration DMG")
             {
                 if (sourcePrefix == "Agent" && IsBaseStat(statType))
                 {
@@ -489,7 +507,7 @@ namespace EnkaDotNet.Utils.ZZZ
                         string category = GetStatCategory(statType);
                         var categoryDict = GetOrCreateCategory(breakdown, category);
 
-                        if (category == "CRIT Rate" || category == "CRIT DMG")
+                        if (category == "CRIT Rate" || category == "CRIT DMG" || category == "Laceration DMG")
                         {
                             categoryDict["SetBonus_Flat"] += rawValue;
                         }
@@ -580,6 +598,7 @@ namespace EnkaDotNet.Utils.ZZZ
                         break;
                     case "CRIT Rate":
                     case "CRIT DMG":
+                    case "Laceration DMG":
                         finalValue = agentBase + totalDelta;
                         break;
                     case "Energy Regen":
@@ -642,8 +661,10 @@ namespace EnkaDotNet.Utils.ZZZ
                 case StatType.ImpactBase: case StatType.ImpactPercent: return "Impact";
                 case StatType.CritRateBase: case StatType.CritRateFlat: return "CRIT Rate";
                 case StatType.CritDMGBase: case StatType.CritDMGFlat: return "CRIT DMG";
+                case StatType.LacerationDMGBase: case StatType.LacerationDMGFlat: return "Laceration DMG";
                 case StatType.EnergyRegenBase: case StatType.EnergyRegenPercent: case StatType.EnergyRegenFlat: return "Energy Regen";
                 case StatType.AutomaticAdrenalineAccumulationBase: case StatType.AutomaticAdrenalineAccumulationFlat: case StatType.AutomaticAdrenalineAccumulationPercent: return "Automatic Adrenaline Accumulation";
+                case StatType.AutomaticSharpnessAccumulationBase: case StatType.AutomaticSharpnessAccumulationFlat: case StatType.AutomaticSharpnessAccumulationPercent: return "Automatic Sharpness Accumulation";
                 case StatType.AnomalyMasteryBase: case StatType.AnomalyMasteryPercent: case StatType.AnomalyMasteryFlat: return "Anomaly Mastery";
                 case StatType.AnomalyProficiencyBase: case StatType.AnomalyProficiencyFlat: return "Anomaly Proficiency";
                 case StatType.PenRatioBase: case StatType.PenRatioFlat: return "Pen Ratio";
@@ -666,6 +687,7 @@ namespace EnkaDotNet.Utils.ZZZ
             {
                 case "CRIT Rate":
                 case "CRIT DMG":
+                case "Laceration DMG":
                 case "Pen Ratio":
                 case "Physical DMG":
                 case "Fire DMG":

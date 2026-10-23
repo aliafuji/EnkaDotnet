@@ -595,6 +595,7 @@ namespace EnkaDotNet.Assets.ZZZ
             switch (professionName?.ToUpperInvariant())
             {
                 case "RUPTURE": return ProfessionType.Rupture;
+                case "ARMORER": return ProfessionType.Armorer;
                 case "ATTACK": return ProfessionType.Attack;
                 case "STUN": return ProfessionType.Stun;
                 case "ANOMALY": return ProfessionType.Anomaly;

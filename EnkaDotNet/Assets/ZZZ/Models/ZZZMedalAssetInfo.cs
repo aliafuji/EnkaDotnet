@@ -1,5 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 
+using System.Collections.Generic;
+
 namespace EnkaDotNet.Assets.ZZZ.Models
 {
     public class ZZZMedalAssetInfo
@@ -11,7 +13,7 @@ namespace EnkaDotNet.Assets.ZZZ.Models
         public string Icon { get; set; }
 
         [JsonPropertyName("TipNum")]
-        public string TipNum { get; set; }
+        public List<int> TipNum { get; set; } = new List<int>();
 
         [JsonPropertyName("PrefixIcon")]
         public string PrefixIcon { get; set; }

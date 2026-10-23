@@ -33,6 +33,13 @@
         CritDMGBase = 21101,     // Crit DMG [Base]
         CritDMGFlat = 21103,     // Crit DMG [Flat]
 
+        // Armorer Agent Specific Stats
+        LacerationDMGBase = 21301,
+        LacerationDMGFlat = 21303,
+        AutomaticSharpnessAccumulationBase = 32401,
+        AutomaticSharpnessAccumulationPercent = 32402,
+        AutomaticSharpnessAccumulationFlat = 32403,
+
         // Penetration Stats
         PenRatioBase = 23101,    // Pen Ratio [Base]
         PenRatioFlat = 23103,    // Pen Ratio [Flat]

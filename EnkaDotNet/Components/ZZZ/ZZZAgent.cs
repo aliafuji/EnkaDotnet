@@ -91,6 +91,12 @@ namespace EnkaDotNet.Components.ZZZ
                     displayBase = Math.Abs(baseValue) < 0.01 ? "0" : (baseValue.ToString("F2", invariantCulture).TrimEnd('0'));
                     displayAdded = Math.Abs(addedValue) < 0.01 ? "0" : (addedValue.ToString("F2", invariantCulture).TrimEnd('0'));
                 }
+                else if (friendlyKey == "Automatic Sharpness Accumulation")
+                {
+                    displayValue = numericValue.ToString("0.##", invariantCulture);
+                    displayBase = baseValue.ToString("0.##", invariantCulture);
+                    displayAdded = addedValue.ToString("0.##", invariantCulture);
+                }
                 else
                 {
                     displayValue = numericValue.ToString("F0", invariantCulture);
@@ -187,7 +193,9 @@ namespace EnkaDotNet.Components.ZZZ
                             }
                             else
                             {
-                                value = isDisplayPercent ? $"{(numericValue / 100.0):F1}%" : $"{Math.Floor(numericValue)}";
+                                value = ZZZStatsHelpers.IsSharpnessRecoveryStat(statType)
+                                    ? (numericValue / 100.0).ToString("0.##", CultureInfo.InvariantCulture)
+                                    : isDisplayPercent ? $"{(numericValue / 100.0):F1}%" : $"{Math.Floor(numericValue)}";
                             }
                             setInfo.BonusStats.Add(new KeyValuePair<string, string>(key, value));
                         }
