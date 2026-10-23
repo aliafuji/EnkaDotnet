@@ -19,6 +19,7 @@ namespace EnkaDotNet.Utils.Common
             13101, 13102, 13103,
             20101, 20103,
             21101, 21103,
+            21301, 21303,
             23101, 23103,
             23201, 23203,
             30501, 30502, 30503,
@@ -32,7 +33,8 @@ namespace EnkaDotNet.Utils.Common
             32001, 32002, 32003,
             12301, 12302,
             32201, 32203,
-            32301, 32303
+            32301, 32303,
+            32401, 32402, 32403
         };
 
         private static readonly HashSet<int> _validZZZSkillTypes = new HashSet<int>

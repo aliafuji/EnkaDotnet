@@ -8,6 +8,7 @@
         Anomaly,
         Defense,
         Support,
-        Rupture
+        Rupture,
+        Armorer
     }
 }

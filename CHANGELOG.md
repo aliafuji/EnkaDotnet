@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.3
+
+### Added
+
+* ZZZ Armorer specialty for agents and W-Engines.
+* ZZZ Laceration DMG and Automatic Sharpness Accumulation (ASA), including stat calculations,
+  localized names, and formatted output.
+
+### Fixed
+
+* ZZZ asset initialization failing on medal `TipNum` arrays. `ZZZMedalAssetInfo.TipNum`
+  now exposes a list of integers matching the upstream schema instead of a string.
+
 ## 2.0.2
 
 ### Added
